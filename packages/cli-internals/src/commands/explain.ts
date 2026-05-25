@@ -56,4 +56,8 @@ const ERROR_BLURBS: Readonly<Record<Errors.ErrorId, string>> = {
     "`.pjt.lock` is corrupted or doesn't match the expected schema. Delete it and rerun `pjt remodel` to rebuild.",
   "pjt.lock.version-mismatch":
     "`.pjt.lock` was written by a newer projitect than the one currently installed. Upgrade the `projitect` devDep.",
+  "pjt.git.not-a-repo":
+    "Required a git repository, but `.git/` was missing. Run `git init` first.",
+  "pjt.git.command-failed":
+    "A `git` command exited non-zero or git isn't installed. The underlying error is included in the message.",
 }

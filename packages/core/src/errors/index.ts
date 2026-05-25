@@ -172,6 +172,26 @@ export class DriftDetected extends Schema.TaggedErrorClass<DriftDetected>()("Dri
 }) {}
 
 // ---------------------------------------------------------------------------
+// Git errors
+// ---------------------------------------------------------------------------
+
+export class GitNotARepo extends Schema.TaggedErrorClass<GitNotARepo>()("GitNotARepo", {
+  id: Schema.Literal("pjt.git.not-a-repo"),
+  projectRoot: Schema.String,
+  message: Schema.String,
+}) {}
+
+export class GitCommandFailed extends Schema.TaggedErrorClass<GitCommandFailed>()(
+  "GitCommandFailed",
+  {
+    id: Schema.Literal("pjt.git.command-failed"),
+    command: Schema.String,
+    cause: Schema.String,
+    message: Schema.String,
+  },
+) {}
+
+// ---------------------------------------------------------------------------
 // Lockfile errors
 // ---------------------------------------------------------------------------
 
@@ -215,6 +235,8 @@ export type InitError = InitGitMissing | InitPackageJsonMissing
 
 export type LockError = LockParseFailed | LockVersionMismatch
 
+export type GitError = GitNotARepo | GitCommandFailed
+
 export type ProjitectError =
   | BlueprintError
   | LoaderError
@@ -223,6 +245,7 @@ export type ProjitectError =
   | ApplyError
   | InitError
   | LockError
+  | GitError
   | DriftDetected
 
 /**
@@ -250,6 +273,8 @@ export const ERROR_IDS = [
   "pjt.drift.detected",
   "pjt.lock.parse-failed",
   "pjt.lock.version-mismatch",
+  "pjt.git.not-a-repo",
+  "pjt.git.command-failed",
 ] as const
 
 export type ErrorId = (typeof ERROR_IDS)[number]

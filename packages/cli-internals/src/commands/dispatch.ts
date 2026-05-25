@@ -156,17 +156,44 @@ const buildCmd = Command.make(
   (input) =>
     Effect.gen(function* () {
       const config = configFromEnv()
-      const result = yield* build({ config, force: input.force }).pipe(
+      const result = yield* build({
+        config,
+        force: input.force,
+        forceDirty: input.forceDirty,
+        yes: input.yes,
+      }).pipe(
         Effect.matchEffect({
-        onSuccess: (r) => Effect.succeed(r),
-        onFailure: (err: Errors.ProjitectError) =>
-          reportError(err).pipe(Effect.as(null)),
-      }),
+          onSuccess: (r) => Effect.succeed(r),
+          onFailure: (err) => {
+            // QuitError from Prompt = user pressed Ctrl-C; treat as graceful cancel.
+            const known = (err as { id?: string }).id
+            if (!known) {
+              process.exitCode = 130
+              return display("Cancelled.\n").pipe(Effect.as(null))
+            }
+            return reportError(err as Errors.ProjitectError).pipe(Effect.as(null))
+          },
+        }),
       )
       if (result === null) return
-      yield* display(
-        "`pjt build --force` is not yet fully implemented in v0.1. Use `pjt remodel` to apply blueprints.\n",
-      )
+      const lines: Array<string> = []
+      if (result.wiped.length === 0 && result.remodel.written.length === 0) {
+        lines.push("Cancelled. No changes made.")
+      } else {
+        if (result.wiped.length > 0) {
+          lines.push(
+            `Wiped ${result.wiped.length} entr${result.wiped.length === 1 ? "y" : "ies"}:`,
+            ...result.wiped.map((p) => `  ${p}`),
+          )
+        }
+        if (result.remodel.written.length > 0) {
+          lines.push(
+            `Rebuilt ${result.remodel.written.length} file${result.remodel.written.length === 1 ? "" : "s"} from the plan:`,
+            ...result.remodel.written.map((p) => `  ${p}`),
+          )
+        }
+      }
+      yield* display(`${lines.join("\n")}\n`)
     }),
 ).pipe(
   Command.withDescription(

@@ -1,28 +1,65 @@
 ---
 title: pjt build
-description: Scratch-build the project from blueprints. Destructive.
+description: Wipe the project tree and rebuild from blueprints. Destructive.
 ---
 
 ```bash
-pjt build --force
+pjt build --force [--force-dirty] [--yes]
 ```
 
-**v0: not yet implemented.** Use `pjt remodel` for day-to-day work.
+**Destructive.** Deletes every file under the project root except a small preserved set (see below), then runs `pjt remodel` to rebuild from the current blueprint plan. Intended for fresh greenfield scaffolds and one-shot migrations off another generator. **Not for day-to-day use** — that's what `pjt remodel` is for.
 
-## Planned behavior (v0.1)
+## Required + optional flags
 
-Wipes the project tree (everything except `.git/`, `node_modules/`, and `.pjt.ts`) and rebuilds
-from the blueprint plan. Useful for:
+| Flag             | Description                                                                                                       |
+|------------------|-------------------------------------------------------------------------------------------------------------------|
+| `--force`        | **Required.** Without it, `pjt build` refuses to run. The wipe is too destructive to fire by accident.            |
+| `--force-dirty`  | Allow wiping even when `git status --porcelain` shows uncommitted changes. Default is to refuse on a dirty tree.  |
+| `--yes`          | Skip the interactive confirmation prompt. Use this in scripts; otherwise the human at the keyboard confirms.      |
 
-- Fresh greenfield scaffolds
-- Migrating off another scaffolder (delete everything, rebuild from spec)
-- Recovering from a corrupted project state
+## What gets preserved
 
-## Why `--force`?
+Everything else under the project root is deleted. These survive:
 
-This is the most destructive command in projitect. `--force` is required so it can't fire
-accidentally. The command also requires a **clean git working tree** — uncommitted changes
-trigger `pjt.apply.dirty-git`.
+- `.git/`
+- `node_modules/`
+- `.pjt.ts`
+- `.pjt.lock`
+- `package.json`
+- `pnpm-lock.yaml` / `package-lock.json` / `yarn.lock` / `bun.lockb`
 
-In CI, never run `pjt build`. Use `pjt inspect` to detect drift and `pjt remodel` to apply
-non-destructive fixes.
+The rationale: keep the manifest, the blueprint spec, the lockfile, the dependency store, and version control. Everything else regenerates from the plan.
+
+## Prerequisites
+
+| Check                                | Failure code                  |
+|--------------------------------------|-------------------------------|
+| Project root has `.git/`             | `pjt.git.not-a-repo`          |
+| `git status --porcelain` is empty    | `pjt.apply.dirty-git` (override with `--force-dirty`) |
+| `--force` flag is present            | `pjt.apply.dirty-git` (with a clarifying message)     |
+
+## Output
+
+```text
+Wiped 4 entries:
+  src
+  tests
+  docs
+  scratch.md
+Rebuilt 1 file from the plan:
+  .gitignore
+```
+
+Or, when the user declines the confirmation:
+
+```text
+Cancelled. No changes made.
+```
+
+## When to use this
+
+- Fresh project: `pjt init` then optionally `pjt build --force --yes` to wipe any leftovers and run the plan from scratch.
+- Migrating off another scaffolder: delete the other tool's lockfile, install projitect via `pjt init`, run `pjt build --force` to clear the old tree and let blueprints rebuild what they own.
+- Recovering from heavy hand-editing: when `pjt remodel` would produce a confusing diff, wipe and rebuild.
+
+For everything else, use `pjt remodel` — it's non-destructive and handles drift, removals, and upgrades incrementally.
