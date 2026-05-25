@@ -1,0 +1,11 @@
+---
+title: pjt.plan.conflict-owned
+slug: errors/pjt.plan.conflict-owned
+description: Two blueprints both claim full ownership of one file.
+sidebar:
+  label: pjt.plan.conflict-owned
+---
+
+**What**: `ownFile` is exclusive — only one blueprint per path. This error fires when two blueprints both call `ownFile` on the same path, or when one calls `ownFile` and another calls `regionFile` on the same path (mixing modes).
+
+**How to fix**: Drop one of the blueprints, or refactor so they don't target the same file. If you need multiple blueprints to coexist in a file, use `region` or `merge` mode instead of `owned`.

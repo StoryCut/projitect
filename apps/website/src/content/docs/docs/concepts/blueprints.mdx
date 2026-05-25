@@ -1,0 +1,94 @@
+---
+title: Blueprints
+description: What a blueprint is, the two shapes of .pjt.ts, and how the plan gets built.
+---
+
+A **blueprint** is one unit of project scaffolding. It declares:
+
+- An **id** (kebab-case namespaced string, e.g. `pjt:gitignore:macos`)
+- A **version** (semver — used for cross-blueprint compatibility once `pjt add` and upgrades land)
+- A list of **permissions** (`read:<glob>`, `write:<glob>`, `exec:<command>`)
+- A **plan** Effect that produces a `ChangeSet`
+
+Blueprints are pure data plus an Effect. The CLI never runs them in a subprocess — it just calls
+`Effect.runPromise` on the plan, provides the permission-gated `BlueprintFileSystem`, and
+collects the resulting `ChangeSet`.
+
+## Two shapes of `.pjt.ts`
+
+For most projects, the simple array form is enough:
+
+```ts
+import { pjt } from "projitect/cli"
+import { gitignores } from "@projitect/blueprint-gitignore"
+
+export default pjt({
+  blueprints: [
+    gitignores.macOs(),
+    gitignores.node(),
+  ],
+})
+```
+
+When you need conditional logic — say, only add a `next()` blueprint if `package.json` lists
+`next` as a dependency — reach for the **Effect form**:
+
+```ts
+import { pjt } from "projitect/cli"
+import { gitignores } from "@projitect/blueprint-gitignore"
+import { readPackageJson } from "@projitect/blueprint"
+import { Effect } from "effect"
+
+export default pjt({
+  blueprints: Effect.gen(function* () {
+    const pkg = yield* readPackageJson()
+    const hasNext =
+      typeof pkg === "object" && pkg !== null &&
+      "dependencies" in pkg && pkg.dependencies !== null &&
+      typeof pkg.dependencies === "object" && "next" in pkg.dependencies
+
+    return [
+      gitignores.macOs(),
+      gitignores.node(),
+      ...(hasNext ? [gitignores.next()] : []),
+    ]
+  }),
+})
+```
+
+Both forms produce the same kind of value — a `ProjitectFile` — so every command (`inspect`,
+`remodel`, `build`) treats them identically.
+
+## The plan lifecycle
+
+When you run `pjt inspect` (or `remodel`):
+
+1. **Loader** dynamic-imports your `.pjt.ts` via tsx (or native strip-types on Node 23.6+).
+   The default export must be a `pjt({...})` call.
+2. **Planner** unwraps the blueprint tree, calls each blueprint's `plan` Effect with a
+   permission-gated `BlueprintFileSystem` Layer, and collects the `ChangeSet`s.
+3. **Reducer** groups operations by file path, checks for ownership conflicts (two blueprints
+   claiming the same region, JSON key, or whole file), and produces a `ProjectPlan`.
+4. **Differ** compares the plan against current disk state and produces a structured diff.
+5. **Applier** writes the diff (or, for `inspect`, just reports it).
+
+This is the Terraform model: **plan → apply**, with `inspect` being a dry-run.
+
+## Why Effect?
+
+A blueprint's `plan` is an `Effect<ChangeSet, BlueprintError, BlueprintFileSystem>`. That gives
+authors:
+
+- **Typed errors**: every failure mode has a `Schema.TaggedError` class, so the CLI can render
+  them with semantic ids and `pjt explain` works out of the box.
+- **Conditional logic**: `Effect.if`, `Effect.when`, generators — no custom DSL.
+- **Layered dependencies**: blueprints can require helper services beyond `BlueprintFileSystem`
+  (e.g. a network fetcher for templates), and the CLI provides them at runtime.
+
+You don't have to *use* Effect heavily as a project maintainer — the array form has zero Effect
+boilerplate. But blueprint authors do.
+
+## Next
+
+- [Ownership modes](/docs/concepts/ownership-modes/) — region / merge / owned / seed
+- [Authoring guide](/docs/authoring/) — write your first blueprint

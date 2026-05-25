@@ -1,0 +1,11 @@
+---
+title: pjt.fs.write-failed
+slug: errors/pjt.fs.write-failed
+description: An OS-level write failed.
+sidebar:
+  label: pjt.fs.write-failed
+---
+
+**What**: The blueprint asked to write a file, the permission gate passed, but the underlying `fs.writeFile` call failed. Disk full, read-only filesystem, or parent directory issues are common causes.
+
+**How to fix**: Check disk space and file permissions on the target directory. The cause string in the error names the specific OS error.

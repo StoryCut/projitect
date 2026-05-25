@@ -1,0 +1,11 @@
+---
+title: pjt.init.package-json-missing
+slug: errors/pjt.init.package-json-missing
+description: pjt init requires a package.json.
+sidebar:
+  label: pjt.init.package-json-missing
+---
+
+**What**: There's no `package.json` at the project root. `pjt init` needs to add the `projitect` devDep and the `pjt` script, both of which live there.
+
+**How to fix**: Run `npm init -y` (or your PM equivalent) first, then re-run `pjt init`. Or pass `--yes` (v0.1) to let pjt bootstrap package.json for you.

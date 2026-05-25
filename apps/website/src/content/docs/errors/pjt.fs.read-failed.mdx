@@ -1,0 +1,11 @@
+---
+title: pjt.fs.read-failed
+slug: errors/pjt.fs.read-failed
+description: An OS-level read failed (typically ENOENT or EACCES).
+sidebar:
+  label: pjt.fs.read-failed
+---
+
+**What**: The blueprint asked to read a file, the permission gate passed, but the underlying `fs.readFile` call failed. The cause is included in the error message.
+
+**How to fix**: If ENOENT, check the path the blueprint is reading. If EACCES, check file permissions. The cause string in the error is usually enough.

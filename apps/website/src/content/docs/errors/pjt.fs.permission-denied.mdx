@@ -1,0 +1,11 @@
+---
+title: pjt.fs.permission-denied
+slug: errors/pjt.fs.permission-denied
+description: A blueprint attempted an operation outside its declared permissions.
+sidebar:
+  label: pjt.fs.permission-denied
+---
+
+**What**: A blueprint called `readFile`, `writeFile`, etc. on a path that isn't covered by its declared `permissions` array, or the path escapes the project root.
+
+**How to fix**: Add the missing glob to the blueprint's `permissions` array. Globs use `*` (no slash) and `**` (any). If you're a project maintainer and don't want this blueprint to have this access, find a different blueprint.

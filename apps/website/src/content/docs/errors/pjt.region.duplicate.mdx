@@ -1,0 +1,11 @@
+---
+title: pjt.region.duplicate
+slug: errors/pjt.region.duplicate
+description: Multiple start markers for the same region in one file.
+sidebar:
+  label: pjt.region.duplicate
+---
+
+**What**: A region start marker for the same `ownerId` appears more than once in the file. Usually a copy-paste error during hand-editing.
+
+**How to fix**: Delete the duplicate start marker (and its content, and its end marker if it has one). `pjt inspect` will tell you what should be there.

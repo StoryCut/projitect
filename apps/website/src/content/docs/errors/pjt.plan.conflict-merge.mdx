@@ -1,0 +1,11 @@
+---
+title: pjt.plan.conflict-merge
+slug: errors/pjt.plan.conflict-merge
+description: Two blueprints both claim the same JSON key.
+sidebar:
+  label: pjt.plan.conflict-merge
+---
+
+**What**: Merge-mode blueprints declare which dotted-path keys they own. When two blueprints claim the same key (e.g. both want `scripts.dev`), the planner refuses to silently pick a winner.
+
+**How to fix**: Decide which blueprint owns the key. Remove the claim from the other, or coordinate via a wrapper blueprint that takes precedence.

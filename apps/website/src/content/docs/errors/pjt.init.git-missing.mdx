@@ -1,0 +1,11 @@
+---
+title: pjt.init.git-missing
+slug: errors/pjt.init.git-missing
+description: pjt init requires a git repository.
+sidebar:
+  label: pjt.init.git-missing
+---
+
+**What**: There's no `.git` directory at the project root. projitect needs version control so destructive operations have a recoverable state.
+
+**How to fix**: Run `git init` first, then re-run `pjt init`. Or pass `--yes` (v0.1) to let pjt bootstrap git for you.

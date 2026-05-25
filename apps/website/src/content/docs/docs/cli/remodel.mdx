@@ -1,0 +1,46 @@
+---
+title: pjt remodel
+description: Apply the blueprint plan to disk.
+---
+
+```bash
+pjt remodel
+```
+
+Loads `.pjt.ts`, builds the project plan, and writes the resulting files. **Non-destructive**:
+only touches files declared by blueprints.
+
+## What it does
+
+1. Loads the user's `.pjt.ts`.
+2. Runs each blueprint's `plan` Effect to collect `ChangeSet`s.
+3. Reduces operations per file, detecting conflicts.
+4. Compares against current disk state; writes only paths that differ.
+
+## Output
+
+```text
+Wrote 2 files:
+  .gitignore
+  README.md
+```
+
+Or, when already in sync:
+
+```text
+Project already in sync. No changes written.
+```
+
+## Common errors
+
+- `pjt.plan.conflict-region` — two blueprints share the same `ownerId` in one file.
+- `pjt.plan.conflict-merge` — two blueprints claim the same JSON key.
+- `pjt.region.missing-end` — a managed region's end marker was deleted.
+
+Run `pjt explain <id>` for each.
+
+## Differences from `pjt build`
+
+`pjt remodel` is **incremental** and **non-destructive**. `pjt build` (v0.1) wipes the project
+tree before applying the plan — useful only for greenfield scaffolds and migrations off another
+generator. Day-to-day, `remodel` is what you want.

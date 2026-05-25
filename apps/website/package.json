@@ -1,0 +1,28 @@
+{
+  "name": "website",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_OPTIONS=--no-experimental-strip-types astro dev",
+    "build": "NODE_OPTIONS=--no-experimental-strip-types astro build",
+    "preview": "NODE_OPTIONS=--no-experimental-strip-types astro preview",
+    "check:errors": "node ./scripts/check-errors.mjs",
+    "check:examples": "tsc --noEmit -p tsconfig.examples.json"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^5.0.6",
+    "@astrojs/starlight": "^0.36.0",
+    "astro": "^5.16.0",
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "@projitect/blueprint": "workspace:*",
+    "@projitect/blueprint-gitignore": "workspace:*",
+    "@projitect/core": "workspace:*",
+    "@types/node": "^22.10.0",
+    "effect": "^4.0.0-beta.70",
+    "projitect": "workspace:*",
+    "typescript": "^5.7.0"
+  }
+}

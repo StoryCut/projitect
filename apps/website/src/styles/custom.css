@@ -1,0 +1,56 @@
+:root {
+  --sl-color-accent-low: #e8f0ff;
+  --sl-color-accent: #2c5cdb;
+  --sl-color-accent-high: #1a3a99;
+}
+
+[data-theme="dark"] {
+  --sl-color-accent-low: #0d1a3f;
+  --sl-color-accent: #6a8bff;
+  --sl-color-accent-high: #aac0ff;
+}
+
+.hero {
+  margin-bottom: 2rem;
+}
+
+.value-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.value-card {
+  padding: 1.5rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+}
+
+.value-card h3 {
+  margin-top: 0;
+  color: var(--sl-color-accent);
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 0.75rem;
+  border: 1px solid var(--sl-color-gray-5);
+  text-align: center;
+}
+
+.compare-table th {
+  background: var(--sl-color-gray-6);
+  font-weight: 600;
+}
+
+.compare-table td:first-child,
+.compare-table th:first-child {
+  text-align: left;
+}

@@ -1,0 +1,28 @@
+---
+title: pjt build
+description: Scratch-build the project from blueprints. Destructive.
+---
+
+```bash
+pjt build --force
+```
+
+**v0: not yet implemented.** Use `pjt remodel` for day-to-day work.
+
+## Planned behavior (v0.1)
+
+Wipes the project tree (everything except `.git/`, `node_modules/`, and `.pjt.ts`) and rebuilds
+from the blueprint plan. Useful for:
+
+- Fresh greenfield scaffolds
+- Migrating off another scaffolder (delete everything, rebuild from spec)
+- Recovering from a corrupted project state
+
+## Why `--force`?
+
+This is the most destructive command in projitect. `--force` is required so it can't fire
+accidentally. The command also requires a **clean git working tree** — uncommitted changes
+trigger `pjt.apply.dirty-git`.
+
+In CI, never run `pjt build`. Use `pjt inspect` to detect drift and `pjt remodel` to apply
+non-destructive fixes.

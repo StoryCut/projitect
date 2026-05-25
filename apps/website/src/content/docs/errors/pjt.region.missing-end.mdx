@@ -1,0 +1,11 @@
+---
+title: pjt.region.missing-end
+slug: errors/pjt.region.missing-end
+description: A region start marker was found without a matching end marker.
+sidebar:
+  label: pjt.region.missing-end
+---
+
+**What**: The file has been hand-edited and the closing marker (`# pjt:<id> end`) was removed, or the file was created by an older blueprint version with a different marker format.
+
+**How to fix**: Restore the missing end marker by hand, or delete the entire managed region (start marker, content, and what's left of the end) and run `pjt remodel` to reinsert it cleanly.

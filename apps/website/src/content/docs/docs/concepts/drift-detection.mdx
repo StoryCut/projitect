@@ -1,0 +1,74 @@
+---
+title: Drift detection
+description: How `pjt inspect` decides your repo is or isn't in spec.
+---
+
+Drift detection is what separates projitect from one-shot scaffolders. After your project is
+set up, `pjt inspect` answers one question on every CI run: **is the current state of the repo
+consistent with the blueprints?**
+
+## What it checks, mode by mode
+
+| Mode    | "In spec" means                                                                |
+|---------|--------------------------------------------------------------------------------|
+| `region`| The file exists, every owned region's content matches what the blueprint produces, and no region has a malformed marker pair. |
+| `merge` | The file exists, parses as JSON, and every owned key holds the value the blueprint declares (deep-equal). |
+| `owned` | The file exists and its content matches the blueprint's `content` exactly.     |
+| `seed`  | (Not checked — seed is write-once.)                                            |
+
+For `region` and `merge`, content outside the owned scope is **ignored**. You can hand-edit
+lines between regions in `.gitignore`, or add keys to `package.json` that no blueprint claims —
+both are untouched and uncomplained-about.
+
+## Exit codes
+
+| Status                                 | Exit code |
+|----------------------------------------|-----------|
+| Project is in sync                     | 0         |
+| At least one file drifts               | 1         |
+| Loader / config / plan error           | 1         |
+| Internal CLI error                     | 2         |
+
+Wire `pjt inspect` into CI and you get a binary signal per PR.
+
+## Output shape
+
+Human-readable by default:
+
+```text
+~ modify .gitignore — region pjt:gitignore:macos content drift
++ create src/routes.generated.ts
+  ok package.json
+```
+
+Pass `--json` for machine-readable output (planned for v0.1; currently the same human format).
+
+## What about new files I added by hand?
+
+projitect only checks files the blueprints declare. A file with no blueprint owner is invisible
+to `pjt inspect` — exactly what you want for source files, tests, docs, etc.
+
+## What about renamed files?
+
+The CLI compares by path, not by content. If a blueprint owns `.gitignore` and someone renames
+it to `.git-ignore`, `pjt inspect` reports the original path as missing (drift) and ignores the
+renamed copy (it has no owner). Fix by either renaming back or updating the blueprint's path.
+
+## Common drift sources
+
+- **Manual edits inside a managed region** — fixed by running `pjt remodel`.
+- **A teammate ran `pnpm add foo` and overwrote a `package.json` merge** — fixed by
+  `pjt remodel`. Their direct add is lost; if they really want `foo`, they should add a
+  blueprint that claims that key.
+- **A blueprint package upgrade changed the section content** — fixed by `pjt remodel`. The
+  whole point: your `.gitignore` follows the blueprint, not the other way around.
+- **A blueprint's region markers got deleted or duplicated** — `pjt inspect` reports
+  `pjt.region.missing-end` or `pjt.region.duplicate`; restore the markers or delete the section
+  entirely and let `remodel` reinsert it.
+
+## Why this matters
+
+Without drift detection, scaffolders give you a one-time setup that decays. Six months later
+your `.gitignore` has hand-edits, your `tsconfig.json` has crufted options, and nobody remembers
+which framework added which line. With drift detection, every PR re-verifies the spec, and the
+blueprint is the single source of truth.

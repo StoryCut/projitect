@@ -1,0 +1,30 @@
+---
+title: gitignore-only
+description: Minimum-viable .pjt.ts — three gitignore sections.
+sidebar:
+  label: gitignore-only
+  order: 1
+---
+
+import code from "../../../../examples/gitignore-only/example.ts?raw"
+import { Code } from "@astrojs/starlight/components"
+
+The smallest possible `.pjt.ts`: three gitignore sections, no Effect, no conditional logic.
+
+<Code code={code} lang="ts" title=".pjt.ts" />
+
+Run:
+
+```bash
+pnpm pjt remodel    # writes .gitignore with three region-fenced sections
+pnpm pjt inspect    # exits 0
+```
+
+That's it. Add this to CI as `pnpm pjt inspect` and any hand-edit to the managed regions will
+fail the run.
+
+## Why this is more than a one-off
+
+If `@projitect/blueprint-gitignore` ships a new line in the macOS section in v1.2, you don't
+need to remember which file it lives in. Bump the package, run `pnpm pjt remodel`, the section
+updates. Your `.gitignore` follows the blueprint, not the other way around.

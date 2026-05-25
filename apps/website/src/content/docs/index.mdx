@@ -1,0 +1,157 @@
+---
+title: projitect
+description: Project scaffolding that stays in sync. Like Terraform, for your frontend repo.
+template: splash
+hero:
+  tagline: |
+    Project scaffolding that stays in sync. Like Terraform, for your repo. <br/>
+    <code>projitect</code> keeps your <code>.gitignore</code>, <code>package.json</code>, configs, and folder structure aligned with declarative <strong>blueprints</strong> — and tells you the moment they drift.
+  actions:
+    - text: Get started
+      link: /docs/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/kapilkale/projitect
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, Code, Tabs, TabItem } from "@astrojs/starlight/components"
+
+## Why projitect?
+
+<CardGrid>
+  <Card title="Composable blueprints" icon="puzzle">
+    Drop blueprints into one file. Powered by **Effect**, so you get conditional logic, generator
+    syntax, and typed errors for free — no shell scripts, no DSL.
+  </Card>
+  <Card title="Drift detection on every CI run" icon="approve-check">
+    `pjt inspect` exits nonzero when your repo diverges from spec. No more *"works on my
+    machine"* config rot. Add one line to your workflow and CI guarantees integrity.
+  </Card>
+  <Card title="Swap frameworks cleanly" icon="random">
+    Remove a blueprint, the configuration it added is flagged. No orphaned `tsconfig` settings
+    or stale `package.json` scripts when you migrate. Your repo stays as slim as your stack.
+  </Card>
+</CardGrid>
+
+## What it looks like
+
+Your project's blueprint file is one file at the root, called `.pjt.ts`:
+
+```ts
+import { pjt } from "projitect/cli"
+import { gitignores } from "@projitect/blueprint-gitignore"
+
+export default pjt({
+  blueprints: [
+    gitignores.macOs(),
+    gitignores.node(),
+    gitignores.vscode(),
+    // Add framework blueprints here as your project grows.
+  ],
+})
+```
+
+That's the **whole spec**. Three commands act on it:
+
+```bash
+pjt remodel    # apply the blueprints to disk (non-destructive)
+pjt inspect    # report drift (exit 1 in CI if the repo is out of spec)
+pjt build      # rebuild from scratch (requires clean git; v0.1)
+```
+
+## See drift in action
+
+After `pjt remodel`, your `.gitignore` has comment-fenced regions owned by each blueprint:
+
+```text
+# pjt:gitignore:macos start
+.DS_Store
+.AppleDouble
+# ... rest of the macOS section ...
+# pjt:gitignore:macos end
+# pjt:gitignore:node start
+node_modules/
+.env
+# ... rest of the Node section ...
+# pjt:gitignore:node end
+```
+
+Now suppose a teammate hand-edits the file — say, they delete `.DS_Store`. Running
+`pjt inspect` in CI catches it immediately:
+
+```text
+~ modify .gitignore — region pjt:gitignore:macos content drift
+```
+
+Exit code: `1`. PR fails. Run `pjt remodel` to fix.
+
+## How is this different from...
+
+<table class="compare-table">
+  <thead>
+    <tr>
+      <th>Tool</th>
+      <th>Drift detection</th>
+      <th>Incremental updates</th>
+      <th>Per-file-region ownership</th>
+      <th>Typed errors</th>
+      <th>Pure TS (no jsii)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>projitect</strong></td>
+      <td>✅ first-class</td>
+      <td>✅ via `remodel`</td>
+      <td>✅ four modes</td>
+      <td>✅ Schema-typed</td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td>projen (AWS)</td>
+      <td>✅</td>
+      <td>partial</td>
+      <td>❌ whole-file only</td>
+      <td>❌</td>
+      <td>❌ jsii</td>
+    </tr>
+    <tr>
+      <td>yeoman</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td>plop / hygen</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td>copier (Python)</td>
+      <td>partial</td>
+      <td>✅ 3-way merge</td>
+      <td>❌</td>
+      <td>❌</td>
+      <td>❌ Python</td>
+    </tr>
+  </tbody>
+</table>
+
+## Status
+
+**v0** ships region-mode end-to-end with the gitignore blueprint set, plus `pjt init`,
+`pjt remodel`, `pjt inspect`, and `pjt explain`. Effect v4 (beta) under the hood.
+
+The full execution model — merge mode for `package.json`, owned/seed modes, framework blueprints
+(`react`, `next`, `tsconfig`, `eslint`), the worker-process sandbox, and the interactive
+in-browser demo — is on the [roadmap](/docs/roadmap/).
+
+Ready? **[Get started →](/docs/getting-started/)**

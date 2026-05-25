@@ -1,0 +1,18 @@
+---
+title: monorepo
+description: Use directory() to scope blueprints to subpackages.
+sidebar:
+  label: monorepo
+  order: 3
+---
+
+import code from "../../../../examples/monorepo/example.ts?raw"
+import { Code } from "@astrojs/starlight/components"
+
+`directory("name", [...])` re-roots child blueprints under a subdirectory. Each child's `path`
+is now relative to that subdir, and its write permissions are intersected with the subtree.
+
+<Code code={code} lang="ts" title=".pjt.ts" />
+
+After `pjt remodel`, each `packages/*/.gitignore` has its own `node` section, while the root
+`.gitignore` carries OS-level entries that apply everywhere.

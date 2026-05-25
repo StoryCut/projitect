@@ -1,0 +1,25 @@
+---
+title: pjt add
+description: Install a blueprint package and add it to .pjt.ts.
+---
+
+```bash
+pjt add <package-name>
+```
+
+**v0: not yet implemented.** Install blueprint packages manually for now.
+
+## Planned behavior (v0.1)
+
+1. Detect package manager (pnpm / npm / yarn / bun).
+2. Run the equivalent of `pnpm add -D <package-name>`.
+3. Parse `.pjt.ts` and append a default-style call (e.g. `gitignores.macOs()`) to the
+   `blueprints` array.
+4. Print the next step (`run pjt remodel`).
+
+Until then:
+
+```bash
+pnpm add -D @projitect/blueprint-gitignore
+# then manually edit .pjt.ts to import and call the blueprint
+```

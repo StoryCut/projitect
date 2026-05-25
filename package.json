@@ -1,0 +1,47 @@
+{
+  "name": "projitect-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "tc": "tsc --build",
+    "tc:clean": "tsc --build --clean",
+    "tc:watch": "tsc --build --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:types": "tstyche",
+    "knip": "knip",
+    "build": "pnpm -r --filter './packages/*' build",
+    "check-all": "pnpm tc && pnpm lint && pnpm format:check && pnpm test && pnpm knip",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.10",
+    "@effect/language-service": "^0.27.0",
+    "@eslint/js": "^9.16.0",
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^4.0.0",
+    "effect": "^4.0.0-beta.70",
+    "eslint": "^9.16.0",
+    "eslint-config-prettier": "^9.1.0",
+    "knip": "^6.0.0",
+    "prettier": "^3.4.0",
+    "tstyche": "^4.0.0",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,0 +1,161 @@
+---
+title: Authoring blueprints
+description: Write your own blueprint and publish it as an npm package.
+---
+
+import { Steps, Aside } from "@astrojs/starlight/components"
+
+A blueprint is just a TypeScript module that exports functions returning `Blueprint` values.
+Anyone who can write Effect can write a blueprint.
+
+## Your first blueprint
+
+A region-mode blueprint that adds a section to `README.md`:
+
+```ts
+import { regionFile } from "@projitect/blueprint"
+import type { Blueprint } from "@projitect/core"
+
+export const myReadmeSection = (): Blueprint.Blueprint =>
+  regionFile({
+    id: "my-org:readme:intro",
+    version: "1.0.0",
+    description: "Intro section for org-standard README",
+    path: "README.md",
+    commentPrefix: "<!--", // closing tag handled by the marker convention
+    content: "This project is part of My Org. See https://my-org/handbook.\n",
+  })
+```
+
+Project maintainers consume it via:
+
+```ts
+import { pjt } from "projitect/cli"
+import { myReadmeSection } from "@my-org/readme-blueprints"
+
+export default pjt({ blueprints: [myReadmeSection()] })
+```
+
+That's the whole API for static content blueprints.
+
+## Computed blueprints (using Effect)
+
+When you need to read state, branch on detected configuration, or compose multiple operations,
+write the `plan` Effect yourself:
+
+```ts
+import { BlueprintFileSystem, type Blueprint, type ChangeSet } from "@projitect/core"
+import { computed, readPackageJson } from "@projitect/blueprint"
+import { Effect } from "effect"
+
+export const reactConfig = (opts: { typescript: boolean }): Blueprint.Blueprint =>
+  computed({
+    id: "my-org:react:config",
+    version: "1.0.0",
+    permissions: [
+      { kind: "read", glob: "package.json" },
+      { kind: "write", glob: "src/index.tsx" },
+      { kind: "write", glob: "src/index.jsx" },
+    ],
+    plan: Effect.gen(function* () {
+      const fs = yield* BlueprintFileSystem
+      const pkg = yield* readPackageJson()
+      // ... compute the change set based on package state ...
+      return { operations: [] } satisfies ChangeSet.ChangeSet
+    }),
+  })
+```
+
+You get the full Effect surface area: `Effect.if`, `Effect.when`, `Effect.forEach`, error
+handling via `Effect.catchTag`, custom Layers for shared services, and so on.
+
+## Permissions
+
+Every blueprint declares what it needs:
+
+```ts
+permissions: [
+  { kind: "read", glob: "package.json" },
+  { kind: "write", glob: ".gitignore" },
+  { kind: "write", glob: "src/**/*.ts" },
+]
+```
+
+The `BlueprintFileSystem` rejects operations outside this set with `pjt.fs.permission-denied`.
+**Declare what you need and nothing more** — project maintainers read this list when deciding
+whether to install your blueprint.
+
+Globs support `*` (any non-slash chars) and `**` (any chars including slashes). No brace
+expansion in v0.
+
+## directory() for scoped blueprints
+
+To re-root a tree of blueprints under a subdirectory:
+
+```ts
+import { pjt, directory } from "projitect/cli"
+
+export default pjt({
+  blueprints: [
+    directory("docs", [
+      // Each child blueprint's paths are now relative to docs/, and their write
+      // permissions are restricted to that subtree.
+      myReadmeSection(),
+    ]),
+  ],
+})
+```
+
+This is useful for monorepos where the same blueprint should apply to multiple packages.
+
+## Testing
+
+`@projitect/test-kit` exposes an in-memory `BlueprintFileSystem` Layer:
+
+```ts
+import { makeInMemoryLayer, dumpFs } from "@projitect/test-kit"
+import { Effect } from "effect"
+import { myReadmeSection } from "./blueprint"
+import { it, expect } from "vitest"
+
+it("adds a region to an existing README", async () => {
+  const layer = makeInMemoryLayer({ "README.md": "# Project\n\nExisting content.\n" })
+  const blueprint = myReadmeSection()
+  await Effect.runPromise(blueprint.plan.pipe(Effect.provide(layer)))
+  const fs = await Effect.runPromise(dumpFs(layer))
+  expect(fs["README.md"]).toMatchSnapshot()
+})
+```
+
+## Publishing
+
+A blueprint package's `package.json`:
+
+```json
+{
+  "name": "@my-org/readme-blueprints",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": { ".": "./dist/index.js" },
+  "peerDependencies": {
+    "@projitect/blueprint": "^0.0.0",
+    "@projitect/core": "^0.0.0",
+    "effect": "^4.0.0-beta.70"
+  }
+}
+```
+
+Peer-dep `effect`, `@projitect/blueprint`, and `@projitect/core` — never bundle them. The
+project maintainer's install resolves to a single shared copy.
+
+<Aside type="note" title="Lint rule">
+The `@projitect/blueprint` package ships an ESLint preset that forbids `node:fs` and
+`child_process` imports. Add it to your blueprint package's `eslint.config.js` so the soft
+sandbox boundary is enforced at lint time.
+</Aside>
+
+## See also
+
+- [Blueprints concept](/docs/concepts/blueprints/)
+- [Ownership modes](/docs/concepts/ownership-modes/)
+- [Sandbox](/docs/concepts/sandbox/)

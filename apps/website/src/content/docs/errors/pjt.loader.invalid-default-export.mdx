@@ -1,0 +1,11 @@
+---
+title: pjt.loader.invalid-default-export
+slug: errors/pjt.loader.invalid-default-export
+description: .pjt.ts did not export a pjt({...}) call as its default.
+sidebar:
+  label: pjt.loader.invalid-default-export
+---
+
+**What**: The file imported successfully but its default export isn't a `ProjitectConfig` object — i.e. `export default pjt({...})` is missing or replaced with something else.
+
+**How to fix**: Ensure `.pjt.ts` contains `export default pjt({ blueprints: [...] })`. Other exports are allowed but ignored.

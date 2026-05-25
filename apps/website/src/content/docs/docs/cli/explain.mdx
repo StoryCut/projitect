@@ -1,0 +1,26 @@
+---
+title: pjt explain
+description: Print a description of a projitect error id.
+---
+
+```bash
+pjt explain <error-id>
+```
+
+Looks up the canonical description of an error id and prints a short explanation plus a docs
+URL. No network call — the description ships in the CLI.
+
+## Example
+
+```text
+$ pjt explain pjt.plan.conflict-region
+pjt.plan.conflict-region
+Two blueprints share the same `ownerId` for a region in the same file. Pick distinct ids.
+More at: https://projitect.dev/errors/pjt.plan.conflict-region
+```
+
+## Full registry
+
+Every error id projitect can produce is listed on the [Errors page](/errors/). The CLI
+guarantees a docs URL for every id — `pjt explain` and the website stay in lockstep via the
+`check:errors` CI gate.

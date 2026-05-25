@@ -1,0 +1,55 @@
+---
+title: pjt init
+description: Bootstrap projitect in the current project.
+---
+
+```bash
+pjt init [--yes]
+```
+
+Adds projitect to an existing project: creates `.pjt.ts`, adds the `pjt` script to
+`package.json`, and adds `projitect` + `effect` to `devDependencies`.
+
+## Flags
+
+| Flag      | Description                                                                   |
+|-----------|-------------------------------------------------------------------------------|
+| `--yes`   | Don't prompt for missing prereqs (git, package.json) — bootstrap them silently. (v0.1) |
+
+## Prerequisites
+
+- A `.git` directory (run `git init` first, or pass `--yes`)
+- A `package.json` (run `npm init -y` first, or pass `--yes`)
+
+If either is missing, `pjt init` exits with `pjt.init.git-missing` or
+`pjt.init.package-json-missing`. Run `pjt explain <id>` for the fix.
+
+## What it writes
+
+A starter `.pjt.ts`:
+
+```ts
+import { pjt } from "projitect/cli"
+
+export default pjt({
+  blueprints: [
+    // gitignores.macOs(),
+    // gitignores.node(),
+  ],
+})
+```
+
+Updates to `package.json`:
+
+```json
+{
+  "scripts": { "pjt": "pjt" },
+  "devDependencies": {
+    "projitect": "^0.0.0",
+    "effect": "^4.0.0-beta.70"
+  }
+}
+```
+
+After `pjt init` you still need to run `pnpm install` (or your PM equivalent) to actually
+install the deps.

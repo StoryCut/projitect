@@ -1,0 +1,48 @@
+---
+title: Error registry
+description: Every projitect error id, with what it means and how to fix it.
+---
+
+Every error projitect raises carries a semantic id (e.g. `pjt.fs.permission-denied`). The CLI
+prints the id alongside the message and a docs URL pointing here. Use `pjt explain <id>` for
+the short form, or click through for the long form.
+
+## Filesystem
+
+- [`pjt.fs.permission-denied`](./pjt.fs.permission-denied/)
+- [`pjt.fs.read-failed`](./pjt.fs.read-failed/)
+- [`pjt.fs.write-failed`](./pjt.fs.write-failed/)
+
+## Loader
+
+- [`pjt.loader.import-failed`](./pjt.loader.import-failed/)
+- [`pjt.loader.invalid-default-export`](./pjt.loader.invalid-default-export/)
+
+## Config
+
+- [`pjt.config.invalid`](./pjt.config.invalid/)
+- [`pjt.config.blueprint-file-not-found`](./pjt.config.blueprint-file-not-found/)
+
+## Plan
+
+- [`pjt.plan.conflict-region`](./pjt.plan.conflict-region/)
+- [`pjt.plan.conflict-merge`](./pjt.plan.conflict-merge/)
+- [`pjt.plan.conflict-owned`](./pjt.plan.conflict-owned/)
+
+## Region
+
+- [`pjt.region.missing-end`](./pjt.region.missing-end/)
+- [`pjt.region.duplicate`](./pjt.region.duplicate/)
+
+## Apply
+
+- [`pjt.apply.dirty-git`](./pjt.apply.dirty-git/)
+
+## Init
+
+- [`pjt.init.git-missing`](./pjt.init.git-missing/)
+- [`pjt.init.package-json-missing`](./pjt.init.package-json-missing/)
+
+## Drift
+
+- [`pjt.drift.detected`](./pjt.drift.detected/)

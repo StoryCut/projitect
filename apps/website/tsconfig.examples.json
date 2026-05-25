@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "rootDir": "./examples",
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": ["examples/**/*.ts", "examples/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}
