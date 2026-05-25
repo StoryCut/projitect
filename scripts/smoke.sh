@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Comprehensive end-to-end smoke for projitect v0.1+.
+#
+# What it does:
+#   1. Spins up a throwaway project in /tmp.
+#   2. Installs the workspace packages into it (file: refs).
+#   3. Exercises every CLI command end-to-end: init, remodel, inspect,
+#      explain, build --force, --completions.
+#   4. Validates lockfile-driven orphan removal — the headline value prop.
+#   5. Validates safety nets: init refuses without git, build refuses on dirty git.
+#
+# Run from the monorepo root, after `pnpm build`:
+#
+#   pnpm build && ./scripts/smoke.sh
+#
+# Exits 0 if every check passes, 1 otherwise. Suitable for `gh workflow` integration once
+# we wire it into CI.
+
+set -u  # NOTE: deliberately no `-o pipefail` — inspect returns 1 on drift, which we want to detect via grep rather than have it short-circuit the pipeline.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SMOKE="$(mktemp -d -t pjt-smoke.XXXXXX)"
+PKG="${ROOT}/packages"
+FAILED=0
+
+pass() { echo "  ✓ $1"; }
+fail() { echo "  ✗ $1"; FAILED=1; }
+
+cleanup() { rm -rf "$SMOKE"; }
+trap cleanup EXIT
+
+cd "$SMOKE"
+git init -q
+git config user.email t@t
+git config user.name t
+echo '{"name":"smoke","version":"0.0.0","private":true,"type":"module"}' > package.json
+
+echo "Installing workspace packages into ${SMOKE}..."
+npm install --no-package-lock --silent \
+  "file:${PKG}/core" \
+  "file:${PKG}/blueprint" \
+  "file:${PKG}/cli-internals" \
+  "file:${PKG}/projitect" \
+  "file:${PKG}/blueprint-gitignore" \
+  "effect@beta" "tsx" 2>&1 | tail -1
+
+BIN=node_modules/projitect/bin/pjt.mjs
+
+echo "=== 1. CLI surface ==="
+$BIN --help 2>&1 | grep -q "init"    && pass "--help lists init"    || fail "--help missing init"
+$BIN --help 2>&1 | grep -q "build"   && pass "--help lists build"   || fail "--help missing build"
+$BIN --help 2>&1 | grep -q "add"     && pass "--help lists add"     || fail "--help missing add"
+$BIN --completions bash 2>&1 | grep -q "begin-pjt-completions" && pass "--completions bash emits script" || fail "completions broken"
+
+echo "=== 2. pjt init ==="
+$BIN init > /dev/null 2>&1
+[ -f .pjt.ts ]   && pass ".pjt.ts created"          || fail ".pjt.ts missing"
+[ -f .pjt.lock ] && pass ".pjt.lock created"        || fail ".pjt.lock missing"
+grep -q '"projitect"' package.json && pass "package.json got projitect devDep" || fail "no projitect devDep"
+grep -q '"pjt"'        package.json && pass "package.json got pjt script"      || fail "no pjt script"
+
+echo "=== 3. inspect clean after init ==="
+$BIN inspect > /dev/null 2>&1
+[ $? -eq 0 ] && pass "exit 0 after init" || fail "exit nonzero"
+
+echo "=== 4. drift detection on hand-edit inside a region ==="
+# Splice in two gitignore sections (bypasses npm install, which would need the registry)
+cat > splice.mjs <<'EOF'
+import { Effect } from "effect"
+import { splice } from "@projitect/cli-internals"
+await Effect.runPromise(splice({
+  projectRoot: process.cwd(),
+  blueprintFile: ".pjt.ts",
+  importLine: 'import { gitignores } from "@projitect/blueprint-gitignore"',
+  callLines: ["gitignores.macOs(),", "gitignores.node(),"],
+}))
+EOF
+node --experimental-strip-types splice.mjs > /dev/null 2>&1
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after first remodel" || fail "still dirty after remodel"
+
+sed -i.bak 's/\.DS_Store$/.DS_Store_HAND/' .gitignore && rm .gitignore.bak
+$BIN inspect > /dev/null 2>&1
+[ $? -eq 1 ] && pass "drift detected on region edit (exit 1)" || fail "drift NOT detected"
+
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after remodel re-applies" || fail "still dirty"
+
+echo "=== 5. lockfile-driven removal ==="
+node -e "
+const fs = require('fs');
+let s = fs.readFileSync('.pjt.ts', 'utf8');
+s = s.replace(/^\s*gitignores\.node\(\),\n/m, '');
+fs.writeFileSync('.pjt.ts', s);
+"
+INSPECT_OUT=$($BIN inspect 2>&1)
+echo "$INSPECT_OUT" | grep -q "remove pjt:gitignore:node" && pass "inspect reports orphan removal" || fail "no orphan in inspect"
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after removal applied" || fail "still dirty after removal"
+grep -q "gitignore:node"  .gitignore && fail "node region still present" || pass "node region cleaned up"
+grep -q "gitignore:macos" .gitignore && pass "macos region kept"          || fail "macos region missing"
+
+echo "=== 6. explain ==="
+OUT=$($BIN explain pjt.lock.parse-failed 2>&1)
+echo "$OUT" | grep -q "pjt.lock.parse-failed" && pass "explain renders" || fail "explain broken"
+echo "$OUT" | grep -q "projitect.dev/errors" && pass "explain links docs url" || fail "no docs url"
+
+echo "=== 7. init refuses without git ==="
+NOGIT="$(mktemp -d -t pjt-nogit.XXXXXX)"
+cp -r "${SMOKE}/node_modules" "${NOGIT}/"
+cd "$NOGIT"
+echo '{"name":"x","version":"0","private":true}' > package.json
+node node_modules/projitect/bin/pjt.mjs init 2>&1 | grep -q "pjt.init.git-missing" && pass "init refuses without git" || fail "no git error"
+cd "$SMOKE"
+rm -rf "$NOGIT"
+
+echo "=== 8. build --force refuses on dirty git ==="
+git add -A && git commit -q -m "checkpoint"
+echo "stray" > scratch.txt
+$BIN build --force 2>&1 | grep -q "dirty-git" && pass "build refuses on dirty git" || fail "dirty-git not caught"
+
+echo "=== 9. build --force --force-dirty --yes wipes + rebuilds ==="
+mkdir -p src docs
+echo s > src/foo.txt
+echo s > docs/bar.md
+$BIN build --force --force-dirty --yes 2>&1 | grep -q "Wiped" && pass "build wiped + rebuilt" || fail "build flow broken"
+[ -f .gitignore ] && pass ".gitignore rebuilt"      || fail "gitignore missing post-build"
+[ -d src ]        && fail "src not wiped"           || pass "src wiped"
+[ -d docs ]       && fail "docs not wiped"          || pass "docs wiped"
+[ -f package.json ] && pass "package.json preserved"|| fail "package.json wiped"
+
+echo "=== FINAL ==="
+[ $FAILED -eq 0 ] && { echo "ALL PASS"; exit 0; } || { echo "FAILURES SEEN"; exit 1; }
