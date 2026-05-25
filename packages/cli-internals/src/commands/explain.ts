@@ -52,4 +52,8 @@ const ERROR_BLURBS: Readonly<Record<Errors.ErrorId, string>> = {
     "`pjt init` requires a `package.json`. Run `npm init -y` first, or rerun with --yes.",
   "pjt.drift.detected":
     "`pjt inspect` exits nonzero when the project drifts from its blueprints. Run `pjt remodel` to sync.",
+  "pjt.lock.parse-failed":
+    "`.pjt.lock` is corrupted or doesn't match the expected schema. Delete it and rerun `pjt remodel` to rebuild.",
+  "pjt.lock.version-mismatch":
+    "`.pjt.lock` was written by a newer projitect than the one currently installed. Upgrade the `projitect` devDep.",
 }

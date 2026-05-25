@@ -172,6 +172,27 @@ export class DriftDetected extends Schema.TaggedErrorClass<DriftDetected>()("Dri
 }) {}
 
 // ---------------------------------------------------------------------------
+// Lockfile errors
+// ---------------------------------------------------------------------------
+
+export class LockParseFailed extends Schema.TaggedErrorClass<LockParseFailed>()("LockParseFailed", {
+  id: Schema.Literal("pjt.lock.parse-failed"),
+  path: Schema.String,
+  cause: Schema.String,
+  message: Schema.String,
+}) {}
+
+export class LockVersionMismatch extends Schema.TaggedErrorClass<LockVersionMismatch>()(
+  "LockVersionMismatch",
+  {
+    id: Schema.Literal("pjt.lock.version-mismatch"),
+    found: Schema.Number,
+    expected: Schema.Number,
+    message: Schema.String,
+  },
+) {}
+
+// ---------------------------------------------------------------------------
 // Union of every error a Blueprint's `plan` Effect or the CLI engine can produce
 // ---------------------------------------------------------------------------
 
@@ -192,6 +213,8 @@ export type ApplyError = ApplyDirtyGit
 
 export type InitError = InitGitMissing | InitPackageJsonMissing
 
+export type LockError = LockParseFailed | LockVersionMismatch
+
 export type ProjitectError =
   | BlueprintError
   | LoaderError
@@ -199,6 +222,7 @@ export type ProjitectError =
   | PlanError
   | ApplyError
   | InitError
+  | LockError
   | DriftDetected
 
 /**
@@ -224,6 +248,8 @@ export const ERROR_IDS = [
   "pjt.init.git-missing",
   "pjt.init.package-json-missing",
   "pjt.drift.detected",
+  "pjt.lock.parse-failed",
+  "pjt.lock.version-mismatch",
 ] as const
 
 export type ErrorId = (typeof ERROR_IDS)[number]
