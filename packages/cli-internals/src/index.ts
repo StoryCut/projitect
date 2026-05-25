@@ -6,7 +6,7 @@ export { explain } from "./commands/explain.js"
 export { build } from "./commands/build.js"
 export { add } from "./commands/add.js"
 export { resolveConfig, parseEnv } from "./config-cascade.js"
-export { loadBlueprintFile, pjt, type ProjitectFile } from "./loader.js"
+export { loadBlueprintFile, pjt, isEffectTree, type ProjitectFile, type BlueprintTree } from "./loader.js"
 export {
   buildPlan,
   diffLockfile,

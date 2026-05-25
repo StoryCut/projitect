@@ -59,6 +59,28 @@ export default pjt({
 Both forms produce the same kind of value — a `ProjitectFile` — so every command (`inspect`,
 `remodel`, `build`) treats them identically.
 
+## The projitect blueprint is auto-prepended
+
+`pjt()` from `projitect/cli` silently prepends one extra blueprint — the **projitect
+blueprint** — to whatever you pass in. It owns:
+
+- `package.json` keys: `scripts.pjt`, `devDependencies.projitect`, `devDependencies.effect`
+- `.pjt.ts` region `pjt:projitect:imports` (the `import { pjt } from "projitect/cli"` line)
+
+You'll see it in every `pjt inspect` output once you commit your first remodel:
+
+```text
+  ok package.json
+  ok .pjt.ts
+```
+
+There's nothing structurally special about this blueprint — it's just a regular `Blueprint`
+that the `pjt()` function adds for you. It flows through the same planner, applier, and
+lockfile pipeline as anything else. The reason it exists is that projitect itself is a
+"framework" the project depends on, and `projitect` + `effect` versions need to track the
+installed package — so the package manages its own consumption, just like every other
+blueprint.
+
 ## The plan lifecycle
 
 When you run `pjt inspect` (or `remodel`):

@@ -1,10 +1,41 @@
+import { Effect } from "effect"
+import {
+  pjt as pjtRaw,
+  isEffectTree,
+  type ProjitectFile,
+  type BlueprintTree,
+} from "@projitect/cli-internals"
+import { directory } from "@projitect/blueprint"
+import { createRequire } from "node:module"
+import { projitectBlueprint } from "./projitect-blueprint.js"
+
+const require = createRequire(import.meta.url)
+const pkg = require("../package.json") as {
+  readonly version: string
+  readonly peerDependencies: { readonly effect: string }
+}
+
+const our = projitectBlueprint({
+  projitect: pkg.version,
+  effect: pkg.peerDependencies.effect,
+})
+
 /**
- * Re-exports the `pjt` config function used in `.pjt.ts`. Users import from here:
+ * Configure projitect from your `.pjt.ts`. Same shape as `pjt` from `@projitect/cli-internals`,
+ * but auto-prepends the projitect blueprint so projitect itself stays in sync inside the host
+ * project (package.json `pjt` script + `projitect`/`effect` devDeps + `.pjt.ts` import region).
  *
- *   import { pjt, directory } from "projitect/cli"
- *
- * Authoring helpers live in `@projitect/blueprint`; this module is intentionally tiny so the
- * dependency from a user's `.pjt.ts` to the projitect codebase stays minimal.
+ * Users import this version, **not** the raw one. The prepended blueprint flows through the
+ * standard planner / applier / lockfile pipeline like any other.
  */
-export { pjt } from "@projitect/cli-internals"
-export { directory } from "@projitect/blueprint"
+export const pjt = (input: {
+  readonly blueprints: ProjitectFile["blueprints"]
+  readonly config?: Record<string, unknown>
+}): ProjitectFile => {
+  const prepended: ProjitectFile["blueprints"] = isEffectTree(input.blueprints)
+    ? input.blueprints.pipe(Effect.map((arr): BlueprintTree => [our, ...arr]))
+    : [our, ...input.blueprints]
+  return pjtRaw({ ...input, blueprints: prepended })
+}
+
+export { directory }

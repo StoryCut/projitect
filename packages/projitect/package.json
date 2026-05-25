@@ -16,9 +16,9 @@
       "types": "./dist/cli.d.ts",
       "import": "./dist/cli.js"
     },
-    "./implicit-blueprint": {
-      "types": "./dist/implicit-blueprint.d.ts",
-      "import": "./dist/implicit-blueprint.js"
+    "./projitect-blueprint": {
+      "types": "./dist/projitect-blueprint.d.ts",
+      "import": "./dist/projitect-blueprint.js"
     }
   },
   "files": ["dist", "src", "bin", "!**/*.tsbuildinfo"],
