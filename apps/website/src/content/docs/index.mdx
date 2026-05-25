@@ -57,9 +57,12 @@ export default pjt({
 That's the **whole spec**. Three commands act on it:
 
 ```bash
-pjt remodel    # apply the blueprints to disk (non-destructive)
-pjt inspect    # report drift (exit 1 in CI if the repo is out of spec)
-pjt build      # rebuild from scratch (requires clean git; v0.1)
+pjt init               # bootstrap projitect in this project
+pjt remodel            # apply the blueprints to disk (non-destructive)
+pjt inspect            # report drift (exit 1 in CI if the repo is out of spec)
+pjt add <package>      # install a blueprint package and splice it into .pjt.ts
+pjt build --force      # wipe and rebuild from scratch (requires clean git)
+pjt explain <id>       # explain an error id
 ```
 
 ## See drift in action

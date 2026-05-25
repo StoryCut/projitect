@@ -141,12 +141,67 @@ A blueprint package's `package.json`:
     "@projitect/blueprint": "^0.0.0",
     "@projitect/core": "^0.0.0",
     "effect": "^4.0.0-beta.70"
+  },
+  "projitect": {
+    "type": "blueprint",
+    "import": "import { myReadmeSection } from \"@my-org/readme-blueprints\"",
+    "call": "myReadmeSection()"
   }
 }
 ```
 
 Peer-dep `effect`, `@projitect/blueprint`, and `@projitect/core` — never bundle them. The
 project maintainer's install resolves to a single shared copy.
+
+### The `"projitect"` metadata field
+
+Adding this field to your `package.json` lets `pjt add <your-package>` auto-splice your
+blueprint into the user's `.pjt.ts`. Without it, `pjt add` still installs the package but
+prints a "no metadata, edit `.pjt.ts` by hand" message.
+
+Two shapes are supported:
+
+**Single-blueprint** (one export, one call):
+
+```json
+"projitect": {
+  "type": "blueprint",
+  "import": "import { myBlueprint } from \"@my-org/my-blueprint\"",
+  "call": "myBlueprint()"
+}
+```
+
+**Blueprint-set** (multiple sections the user picks among, e.g. one per OS):
+
+```json
+"projitect": {
+  "type": "blueprint-set",
+  "import": "import { gitignores } from \"@projitect/blueprint-gitignore\"",
+  "callTemplate": "gitignores.{section}()",
+  "sections": ["macOs", "windows", "linux", "node", "next", "vscode", "jetbrains", "tsbuildinfo"]
+}
+```
+
+`{section}` is substituted with each chosen section name. When the user runs
+`pjt add @projitect/blueprint-gitignore --section macOs,node`, the splice inserts
+`gitignores.macOs(),` and `gitignores.node(),` into the blueprints array.
+
+If `--section` is omitted, **all** declared sections are added — useful for "starter kits"
+where the user wants the whole bundle.
+
+### The two marker conventions
+
+`pjt add` splices into the user's `.pjt.ts` between two **convention markers**:
+
+- `// pjt:imports start` / `// pjt:imports end` — for the import statement
+- `// pjt:blueprints start` / `// pjt:blueprints end` — for the call lines
+
+These are NOT lockfile-managed regions and NOT drift-checked. They're just splice anchors.
+Don't confuse them with `// pjt:projitect:imports start/end`, which IS a managed region (owned
+by the projitect blueprint) and IS drift-checked.
+
+If a user has hand-edited `.pjt.ts` and removed the convention markers, `pjt add` fails with
+[`pjt.add.markers-missing`](/errors/pjt.add.markers-missing/) and tells them how to restore them.
 
 <Aside type="note" title="Lint rule">
 The `@projitect/blueprint` package ships an ESLint preset that forbids `node:fs` and
