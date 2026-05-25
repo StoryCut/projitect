@@ -4,52 +4,48 @@ description: Bootstrap projitect in the current project.
 ---
 
 ```bash
-pjt init [--yes]
+pjt init
 ```
 
-Adds projitect to an existing project: creates `.pjt.ts`, adds the `pjt` script to
-`package.json`, and adds `projitect` + `effect` to `devDependencies`.
+Bootstraps projitect in the current project. Internally:
 
-## Flags
+1. Verifies `.git/` exists. If not, fails with `pjt.init.git-missing`.
+2. Verifies `package.json` exists. If not, fails with `pjt.init.package-json-missing`.
+3. Seeds `.pjt.ts` with the marker structure if absent.
+4. Runs the standard plan/apply/lockfile pipeline. The **projitect blueprint** (auto-prepended by `projitect/cli`'s `pjt()`) writes `package.json` keys (`scripts.pjt`, `devDependencies.projitect`, `devDependencies.effect`) and the projitect import inside `.pjt.ts`'s `pjt:projitect:imports` region.
+5. Writes `.pjt.lock` with the projitect blueprint's claims.
 
-| Flag      | Description                                                                   |
-|-----------|-------------------------------------------------------------------------------|
-| `--yes`   | Don't prompt for missing prereqs (git, package.json) — bootstrap them silently. (v0.1) |
+After init you still need `pnpm install` (or your PM equivalent) to actually fetch the deps that were added.
 
 ## Prerequisites
 
-- A `.git` directory (run `git init` first, or pass `--yes`)
-- A `package.json` (run `npm init -y` first, or pass `--yes`)
+- A `.git` directory (run `git init` first)
+- A `package.json` (run `npm init -y` first)
 
-If either is missing, `pjt init` exits with `pjt.init.git-missing` or
-`pjt.init.package-json-missing`. Run `pjt explain <id>` for the fix.
+Both are hard requirements — `pjt init` exits with a clear error id if either is missing.
 
-## What it writes
-
-A starter `.pjt.ts`:
+## What `.pjt.ts` looks like after init
 
 ```ts
+// pjt:projitect:imports start
 import { pjt } from "projitect/cli"
+// pjt:projitect:imports end
+
+// pjt:imports start
+// pjt:imports end
 
 export default pjt({
   blueprints: [
-    // gitignores.macOs(),
-    // gitignores.node(),
+    // pjt:blueprints start
+    // pjt:blueprints end
   ],
 })
 ```
 
-Updates to `package.json`:
+The two `pjt:projitect:imports` lines are a **managed region** — the projitect blueprint owns this region in the lockfile, so `pjt inspect` catches hand-edits that break the import.
 
-```json
-{
-  "scripts": { "pjt": "pjt" },
-  "devDependencies": {
-    "projitect": "^0.0.0",
-    "effect": "^4.0.0-beta.70"
-  }
-}
-```
+The `pjt:imports` and `pjt:blueprints` markers are **convention anchors** — not in the lockfile, not drift-checked. They're the splice points `pjt add` uses to insert new blueprints. You can edit between them freely.
 
-After `pjt init` you still need to run `pnpm install` (or your PM equivalent) to actually
-install the deps.
+## Why there's no `--yes` flag (yet)
+
+Auto-bootstrapping git or package.json from `pjt init` is on the roadmap but not in v0.1. For now the prerequisites are explicit.

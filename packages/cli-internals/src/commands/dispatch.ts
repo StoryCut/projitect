@@ -98,16 +98,22 @@ export const dispatch = (input: DispatchInput): Effect.Effect<DispatchResult> =>
       }
       case "init":
         return yield* runWithErrorHandling(
-          init({
-            projectRoot: config.projectRoot,
-            projitectVersion: input.projitectVersion,
-            effectRange: input.effectRange,
-          }).pipe(
-            Effect.map(() => ({
-              output:
+          init({ config }).pipe(
+            Effect.map((r) => {
+              const lines: Array<string> = []
+              if (r.seededBlueprintFile) lines.push(`Created ${config.blueprintFile}`)
+              if (r.remodel.written.length > 0) {
+                lines.push(
+                  `Wrote ${r.remodel.written.length} file${r.remodel.written.length === 1 ? "" : "s"}:`,
+                  ...r.remodel.written.map((p) => `  ${p}`),
+                )
+              }
+              lines.push(
+                "",
                 "projitect initialized. Edit `.pjt.ts` to add blueprints, then run `pnpm pjt remodel`.",
-              exitCode: 0,
-            })),
+              )
+              return { output: lines.join("\n"), exitCode: 0 }
+            }),
           ),
         )
       case "add": {

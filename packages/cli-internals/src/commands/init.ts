@@ -1,137 +1,127 @@
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Effect } from "effect"
-import { Errors } from "@projitect/core"
+import { Errors, type ProjitectConfig } from "@projitect/core"
+import { remodel, type RemodelResult } from "./remodel.js"
 
 export interface InitResult {
-  readonly createdBlueprintFile: boolean
-  readonly addedScript: boolean
-  readonly addedDevDep: boolean
+  readonly seededBlueprintFile: boolean
+  readonly remodel: RemodelResult
 }
 
 /**
- * `pjt init` — bootstrap a project. Writes the starter `.pjt.ts`, adds the `pjt` script and
- * `projitect` + `effect` devDeps to `package.json`. Subsequent runs go through the implicit
- * projitect blueprint instead.
+ * `pjt init` — bootstrap projitect in the current project.
  *
- * Detects missing prereqs (no `package.json`, no `.git/`) and surfaces explicit errors. The bin
- * shim handles the interactive prompts; this Effect just does the writes.
+ * Verifies the prerequisites (`.git/` and `package.json` both present), seeds an empty
+ * `.pjt.ts` with the marker structure if absent, then delegates to `remodel` which runs the
+ * standard plan/apply/lockfile-write pipeline. The projitect blueprint (prepended automatically
+ * by `projitect/cli`'s `pjt()`) writes the package.json entries and the `.pjt.ts` import region
+ * on its first apply.
+ *
+ * No special-case code for "the projitect bootstrap" lives here — the projitect blueprint owns
+ * those concerns and runs through the same pipeline as every other blueprint.
  */
 export const init = (params: {
-  readonly projectRoot: string
-  readonly projitectVersion: string
-  readonly effectRange: string
-}): Effect.Effect<InitResult, Errors.InitGitMissing | Errors.InitPackageJsonMissing | Errors.FsWriteFailed> =>
+  readonly config: ProjitectConfig.ProjitectConfig
+}): Effect.Effect<InitResult, Errors.ProjitectError> =>
   Effect.gen(function* () {
-    const gitOk = yield* Effect.promise(() =>
-      fs.access(path.join(params.projectRoot, ".git")).then(
+    yield* requireGit(params.config.projectRoot)
+    yield* requirePackageJson(params.config.projectRoot)
+
+    const seededBlueprintFile = yield* seedBlueprintFileIfAbsent(
+      params.config.projectRoot,
+      params.config.blueprintFile,
+    )
+
+    const remodelResult = yield* remodel({ config: params.config })
+
+    return { seededBlueprintFile, remodel: remodelResult }
+  })
+
+const requireGit = (projectRoot: string): Effect.Effect<void, Errors.InitGitMissing> =>
+  Effect.gen(function* () {
+    const ok = yield* Effect.promise(() =>
+      fs.access(path.join(projectRoot, ".git")).then(
         () => true,
         () => false,
       ),
     )
-    if (!gitOk) {
+    if (!ok) {
       return yield* Effect.fail(
         new Errors.InitGitMissing({
           id: "pjt.init.git-missing",
-          message: "No .git directory found. Run `git init` first, or rerun with --yes to let pjt bootstrap it.",
+          message:
+            "No `.git` directory found. Run `git init` first, then re-run `pjt init`.",
         }),
       )
     }
-    const pkgPath = path.join(params.projectRoot, "package.json")
-    const pkgRaw = yield* Effect.promise(() =>
-      fs.readFile(pkgPath, "utf8").then(
-        (s) => s as string | null,
-        () => null,
-      ),
-    )
-    if (pkgRaw === null) {
-      return yield* Effect.fail(
-        new Errors.InitPackageJsonMissing({
-          id: "pjt.init.package-json-missing",
-          message: "No package.json found. Run `npm init -y` first, or rerun with --yes to let pjt bootstrap it.",
-        }),
-      )
-    }
+  })
 
-    const pkg = safeParse(pkgRaw)
-    const updated = injectScriptAndDeps(pkg, params.projitectVersion, params.effectRange)
-
-    yield* Effect.tryPromise({
-      try: () => fs.writeFile(pkgPath, `${JSON.stringify(updated, null, 2)}\n`, "utf8"),
-      catch: (e) =>
-        new Errors.FsWriteFailed({
-          id: "pjt.fs.write-failed",
-          path: "package.json",
-          cause: e instanceof Error ? e.message : String(e),
-          message: "Failed to update package.json during init",
-        }),
-    })
-
-    const bpPath = path.join(params.projectRoot, ".pjt.ts")
-    const bpExists = yield* Effect.promise(() =>
-      fs.access(bpPath).then(
+const requirePackageJson = (
+  projectRoot: string,
+): Effect.Effect<void, Errors.InitPackageJsonMissing> =>
+  Effect.gen(function* () {
+    const ok = yield* Effect.promise(() =>
+      fs.access(path.join(projectRoot, "package.json")).then(
         () => true,
         () => false,
       ),
     )
-    if (!bpExists) {
-      yield* Effect.tryPromise({
-        try: () => fs.writeFile(bpPath, STARTER_PJT, "utf8"),
-        catch: (e) =>
-          new Errors.FsWriteFailed({
-            id: "pjt.fs.write-failed",
-            path: ".pjt.ts",
-            cause: e instanceof Error ? e.message : String(e),
-            message: "Failed to create .pjt.ts during init",
-          }),
-      })
-    }
-
-    return {
-      createdBlueprintFile: !bpExists,
-      addedScript: true,
-      addedDevDep: true,
+    if (!ok) {
+      return yield* Effect.fail(
+        new Errors.InitPackageJsonMissing({
+          id: "pjt.init.package-json-missing",
+          message:
+            "No `package.json` found. Run `npm init -y` (or your PM equivalent) first, then re-run `pjt init`.",
+        }),
+      )
     }
   })
 
-const safeParse = (s: string): Record<string, unknown> => {
-  try {
-    const v = JSON.parse(s) as unknown
-    return typeof v === "object" && v !== null ? (v as Record<string, unknown>) : {}
-  } catch {
-    return {}
-  }
-}
+const seedBlueprintFileIfAbsent = (
+  projectRoot: string,
+  blueprintFile: string,
+): Effect.Effect<boolean, Errors.FsWriteFailed> =>
+  Effect.gen(function* () {
+    const full = path.join(projectRoot, blueprintFile)
+    const exists = yield* Effect.promise(() =>
+      fs.access(full).then(
+        () => true,
+        () => false,
+      ),
+    )
+    if (exists) return false
 
-const injectScriptAndDeps = (
-  pkg: Record<string, unknown>,
-  projitectVersion: string,
-  effectRange: string,
-): Record<string, unknown> => {
-  const scripts =
-    pkg["scripts"] && typeof pkg["scripts"] === "object" && !Array.isArray(pkg["scripts"])
-      ? { ...(pkg["scripts"] as Record<string, unknown>) }
-      : {}
-  if (typeof scripts["pjt"] !== "string") scripts["pjt"] = "pjt"
+    yield* Effect.tryPromise({
+      try: () => fs.writeFile(full, STARTER_PJT_TS, "utf8"),
+      catch: (e) =>
+        new Errors.FsWriteFailed({
+          id: "pjt.fs.write-failed",
+          path: blueprintFile,
+          cause: e instanceof Error ? e.message : String(e),
+          message: `Failed to seed ${blueprintFile}`,
+        }),
+    })
+    return true
+  })
 
-  const dev =
-    pkg["devDependencies"] && typeof pkg["devDependencies"] === "object" && !Array.isArray(pkg["devDependencies"])
-      ? { ...(pkg["devDependencies"] as Record<string, unknown>) }
-      : {}
-  if (typeof dev["projitect"] !== "string") dev["projitect"] = `^${projitectVersion}`
-  if (typeof dev["effect"] !== "string") dev["effect"] = effectRange
+/**
+ * Starter `.pjt.ts` template. Three marker regions: the projitect blueprint owns
+ * `pjt:projitect:imports` (it writes the `import { pjt } from "projitect/cli"` line on first
+ * remodel). The other two — `pjt:imports` and `pjt:blueprints` — are **convention anchors**
+ * that `pjt add` splices into; they are not managed regions and don't appear in `.pjt.lock`.
+ */
+const STARTER_PJT_TS = `// pjt:projitect:imports start
+import { pjt } from "projitect/cli"
+// pjt:projitect:imports end
 
-  return { ...pkg, scripts, devDependencies: dev }
-}
+// pjt:imports start
+// pjt:imports end
 
-const STARTER_PJT = `import { pjt } from "projitect/cli"
-
-// Add blueprints to scaffold and verify your project. Run \`pjt remodel\` to apply, \`pjt inspect\` in CI.
-// See https://projitect.dev/docs/getting-started for the full guide.
 export default pjt({
   blueprints: [
-    // gitignores.macOs(),
-    // gitignores.node(),
+    // pjt:blueprints start
+    // pjt:blueprints end
   ],
 })
 `
