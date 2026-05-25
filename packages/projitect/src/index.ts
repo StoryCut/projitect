@@ -11,4 +11,4 @@
  * for embedders.
  */
 export { projitectBlueprint } from "./projitect-blueprint.js"
-export { dispatch, type DispatchInput, type DispatchResult } from "@projitect/cli-internals"
+export { rootCommand, type RootCommand } from "@projitect/cli-internals"

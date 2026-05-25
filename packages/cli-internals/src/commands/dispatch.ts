@@ -1,188 +1,226 @@
-import { Effect } from "effect"
-import type { Errors } from "@projitect/core"
-import { resolveConfig, parseEnv, type WritablePartialConfig } from "../config-cascade.js"
+import { Effect, Terminal } from "effect"
+import { Argument, Command, Flag } from "effect/unstable/cli"
+import type { Errors, ProjitectConfig } from "@projitect/core"
 import { inspect } from "./inspect.js"
 import { remodel } from "./remodel.js"
 import { build } from "./build.js"
 import { init } from "./init.js"
 import { explain } from "./explain.js"
 import { add } from "./add.js"
-
-export interface DispatchInput {
-  readonly argv: ReadonlyArray<string>
-  readonly env: Readonly<Record<string, string | undefined>>
-  readonly cwd: string
-  readonly projitectVersion: string
-  readonly effectRange: string
-}
-
-export interface DispatchResult {
-  readonly output: string
-  readonly exitCode: number
-}
+import { parseEnv, resolveConfig } from "../config-cascade.js"
 
 /**
- * Top-level dispatcher. Parses `argv`, resolves config, and runs the matching command.
- * Returns `{ output, exitCode }`; the bin shim is responsible for writing to stdout and exiting.
+ * Per-handler error renderer. Catches our typed `ProjitectError` union and writes a
+ * consistent `Error [id]: message` line plus the docs URL / explain hint. Sets
+ * `process.exitCode = 1` so the CLI exits non-zero. Returns void so the handler chain stays
+ * happy.
  */
-export const dispatch = (input: DispatchInput): Effect.Effect<DispatchResult> =>
+const reportError = (err: Errors.ProjitectError): Effect.Effect<void, never, Terminal.Terminal> =>
   Effect.gen(function* () {
-    const [command, ...rest] = input.argv
-
-    if (command === undefined || command === "--help" || command === "-h" || command === "help") {
-      return { output: HELP_TEXT, exitCode: 0 }
-    }
-
-    if (command === "--version" || command === "-v") {
-      return { output: `pjt v${input.projitectVersion}`, exitCode: 0 }
-    }
-
-    if (command === "explain") {
-      const id = rest[0]
-      if (id === undefined) return { output: "usage: pjt explain <error-id>", exitCode: 1 }
-      const out = yield* explain({ errorId: id })
-      return { output: out, exitCode: 0 }
-    }
-
-    const env = parseEnv(input.env)
-    const cliArgs = parseCliArgs(rest)
-    const config = resolveConfig({
-      env,
-      cliArgs: { ...cliArgs, projectRoot: cliArgs.projectRoot ?? input.cwd },
-    })
-
-    switch (command) {
-      case "inspect":
-        return yield* runWithErrorHandling(
-          inspect({ config }).pipe(
-            Effect.map((r) => ({ output: r.output, exitCode: r.hasDrift ? 1 : 0 })),
-          ),
-        )
-      case "remodel":
-        return yield* runWithErrorHandling(
-          remodel({ config }).pipe(
-            Effect.map((r) => {
-              const parts: Array<string> = []
-              if (r.written.length > 0) {
-                parts.push(
-                  `Wrote ${r.written.length} file${r.written.length === 1 ? "" : "s"}:\n` +
-                    r.written.map((p) => `  ${p}`).join("\n"),
-                )
-              }
-              if (r.removed.length > 0) {
-                parts.push(
-                  `Cleaned up ${r.removed.length} orphan${r.removed.length === 1 ? "" : "s"}:\n` +
-                    r.removed.map((p) => `  ${p}`).join("\n"),
-                )
-              }
-              return {
-                output:
-                  parts.length === 0
-                    ? "Project already in sync. No changes written."
-                    : parts.join("\n"),
-                exitCode: 0,
-              }
-            }),
-          ),
-        )
-      case "build": {
-        const force = rest.includes("--force")
-        return yield* runWithErrorHandling(
-          build({ config, force }).pipe(
-            Effect.map(() => ({
-              output: "`pjt build` is not yet implemented. Use `pjt remodel` to apply blueprints.",
-              exitCode: 0,
-            })),
-          ),
-        )
-      }
-      case "init":
-        return yield* runWithErrorHandling(
-          init({ config }).pipe(
-            Effect.map((r) => {
-              const lines: Array<string> = []
-              if (r.seededBlueprintFile) lines.push(`Created ${config.blueprintFile}`)
-              if (r.remodel.written.length > 0) {
-                lines.push(
-                  `Wrote ${r.remodel.written.length} file${r.remodel.written.length === 1 ? "" : "s"}:`,
-                  ...r.remodel.written.map((p) => `  ${p}`),
-                )
-              }
-              lines.push(
-                "",
-                "projitect initialized. Edit `.pjt.ts` to add blueprints, then run `pnpm pjt remodel`.",
-              )
-              return { output: lines.join("\n"), exitCode: 0 }
-            }),
-          ),
-        )
-      case "add": {
-        const out = yield* add({ blueprint: rest[0] ?? "" })
-        return { output: out, exitCode: 0 }
-      }
-      default:
-        return {
-          output: `Unknown command: ${command}\n\n${HELP_TEXT}`,
-          exitCode: 1,
-        }
-    }
+    const id = (err as { id?: string }).id ?? "unknown"
+    const message = (err as { message?: string }).message ?? String(err)
+    yield* display(`Error [${id}]: ${message}\n`)
+    yield* display(`  See https://projitect.dev/errors/${id} or run \`pjt explain ${id}\`\n`)
+    process.exitCode = 1
   })
 
-const parseCliArgs = (args: ReadonlyArray<string>): WritablePartialConfig => {
-  const out: WritablePartialConfig = {}
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i]
-    if (a === "--project-root" && args[i + 1] !== undefined) {
-      out.projectRoot = args[i + 1]!
-      i++
-    } else if (a === "--blueprint-file" && args[i + 1] !== undefined) {
-      out.blueprintFile = args[i + 1]!
-      i++
-    } else if (a === "--json") {
-      out.jsonOutput = true
-    } else if (a === "--verbose") {
-      out.verbosity = 2
-    } else if (a === "--quiet") {
-      out.verbosity = 0
+const display = (text: string): Effect.Effect<void, never, Terminal.Terminal> =>
+  Effect.gen(function* () {
+    const terminal = yield* Terminal.Terminal
+    // best-effort write; PlatformError on display is non-actionable from a handler
+    yield* Effect.ignore(terminal.display(text))
+  })
+
+const configFromEnv = (): ProjitectConfig.ProjitectConfig =>
+  resolveConfig({
+    env: parseEnv(process.env),
+    cliArgs: { projectRoot: process.cwd() },
+  })
+
+// ---------------------------------------------------------------------------
+// pjt init
+// ---------------------------------------------------------------------------
+
+const initCmd = Command.make("init", {}, () =>
+  Effect.gen(function* () {
+    const config = configFromEnv()
+    const result = yield* init({ config }).pipe(
+      Effect.matchEffect({
+        onSuccess: (r) => Effect.succeed(r),
+        onFailure: (err: Errors.ProjitectError) =>
+          reportError(err).pipe(Effect.as(null)),
+      }),
+    )
+    if (result === null) return
+    const lines: Array<string> = []
+    if (result.seededBlueprintFile) lines.push(`Created ${config.blueprintFile}`)
+    if (result.remodel.written.length > 0) {
+      lines.push(
+        `Wrote ${result.remodel.written.length} file${result.remodel.written.length === 1 ? "" : "s"}:`,
+        ...result.remodel.written.map((p) => `  ${p}`),
+      )
     }
-  }
-  return out
-}
+    lines.push(
+      "",
+      "projitect initialized. Edit `.pjt.ts` to add blueprints, then run `pnpm pjt remodel`.",
+    )
+    yield* display(`${lines.join("\n")}\n`)
+  }),
+).pipe(Command.withDescription("Bootstrap projitect in the current project."))
 
-const runWithErrorHandling = (
-  eff: Effect.Effect<DispatchResult, Errors.ProjitectError>,
-): Effect.Effect<DispatchResult> =>
-  eff.pipe(
-    Effect.match({
-      onSuccess: (r) => r,
-      onFailure: (err): DispatchResult => ({ output: formatError(err), exitCode: 1 }),
+// ---------------------------------------------------------------------------
+// pjt remodel
+// ---------------------------------------------------------------------------
+
+const remodelCmd = Command.make("remodel", {}, () =>
+  Effect.gen(function* () {
+    const config = configFromEnv()
+    const result = yield* remodel({ config }).pipe(
+      Effect.matchEffect({
+        onSuccess: (r) => Effect.succeed(r),
+        onFailure: (err: Errors.ProjitectError) =>
+          reportError(err).pipe(Effect.as(null)),
+      }),
+    )
+    if (result === null) return
+    const parts: Array<string> = []
+    if (result.written.length > 0) {
+      parts.push(
+        `Wrote ${result.written.length} file${result.written.length === 1 ? "" : "s"}:`,
+        ...result.written.map((p) => `  ${p}`),
+      )
+    }
+    if (result.removed.length > 0) {
+      parts.push(
+        `Cleaned up ${result.removed.length} orphan${result.removed.length === 1 ? "" : "s"}:`,
+        ...result.removed.map((p) => `  ${p}`),
+      )
+    }
+    if (parts.length === 0) parts.push("Project already in sync. No changes written.")
+    yield* display(`${parts.join("\n")}\n`)
+  }),
+).pipe(
+  Command.withDescription(
+    "Apply the blueprint plan to disk (non-destructive). Adds + updates + removes orphan claims.",
+  ),
+)
+
+// ---------------------------------------------------------------------------
+// pjt inspect
+// ---------------------------------------------------------------------------
+
+const inspectCmd = Command.make(
+  "inspect",
+  {
+    json: Flag.boolean("json").pipe(
+      Flag.withDescription("Emit machine-readable JSON output (v0.1.1, currently same as text)"),
+    ),
+  },
+  () =>
+    Effect.gen(function* () {
+      const config = configFromEnv()
+      const result = yield* inspect({ config }).pipe(
+        Effect.matchEffect({
+        onSuccess: (r) => Effect.succeed(r),
+        onFailure: (err: Errors.ProjitectError) =>
+          reportError(err).pipe(Effect.as(null)),
+      }),
+      )
+      if (result === null) return
+      yield* display(`${result.output}\n`)
+      if (result.hasDrift) process.exitCode = 1
     }),
-  )
+).pipe(
+  Command.withDescription(
+    "Report drift between project and blueprints (exit 1 on drift; built for CI).",
+  ),
+)
 
-const formatError = (err: Errors.ProjitectError): string => {
-  const id = (err as { id?: string }).id ?? "unknown"
-  const msg = (err as { message?: string }).message ?? String(err)
-  return `Error [${id}]: ${msg}\n  See https://projitect.dev/errors/${id} or run \`pjt explain ${id}\``
-}
+// ---------------------------------------------------------------------------
+// pjt build --force
+// ---------------------------------------------------------------------------
 
-const HELP_TEXT = `pjt — project scaffolding that stays in sync
+const buildCmd = Command.make(
+  "build",
+  {
+    force: Flag.boolean("force").pipe(
+      Flag.withDescription("Required. Wipe the project tree and rebuild from scratch."),
+    ),
+    forceDirty: Flag.boolean("force-dirty").pipe(
+      Flag.withDescription("Allow wiping even when git has uncommitted changes."),
+    ),
+    yes: Flag.boolean("yes").pipe(
+      Flag.withDescription("Skip the interactive confirmation prompt."),
+    ),
+  },
+  (input) =>
+    Effect.gen(function* () {
+      const config = configFromEnv()
+      const result = yield* build({ config, force: input.force }).pipe(
+        Effect.matchEffect({
+        onSuccess: (r) => Effect.succeed(r),
+        onFailure: (err: Errors.ProjitectError) =>
+          reportError(err).pipe(Effect.as(null)),
+      }),
+      )
+      if (result === null) return
+      yield* display(
+        "`pjt build --force` is not yet fully implemented in v0.1. Use `pjt remodel` to apply blueprints.\n",
+      )
+    }),
+).pipe(
+  Command.withDescription(
+    "Scratch-build the project from blueprints. Destructive — requires --force and clean git.",
+  ),
+)
 
-Usage:
-  pjt <command> [options]
+// ---------------------------------------------------------------------------
+// pjt explain <error-id>
+// ---------------------------------------------------------------------------
 
-Commands:
-  init                Bootstrap projitect in the current project (creates .pjt.ts, adds pjt script)
-  remodel             Apply the blueprint plan to disk (non-destructive)
-  inspect             Report drift between project and blueprints (exit 1 if drift, exit 0 if clean)
-  build --force       Wipe the project and rebuild from scratch (not yet implemented)
-  add <blueprint>     Install a blueprint package and add it to .pjt.ts (not yet implemented)
-  explain <error-id>  Print a description of an error id
+const explainCmd = Command.make(
+  "explain",
+  { errorId: Argument.string("error-id") },
+  (input) =>
+    Effect.gen(function* () {
+      const out = yield* explain({ errorId: input.errorId })
+      yield* display(`${out}\n`)
+    }),
+).pipe(Command.withDescription("Print a description of a projitect error id."))
 
-Options:
-  --project-root <path>     Override the project root (default: cwd)
-  --blueprint-file <path>   Override the blueprint file path (default: .pjt.ts)
-  --json                    Machine-readable output
-  --verbose, --quiet        Verbosity controls
+// ---------------------------------------------------------------------------
+// pjt add <package>
+// ---------------------------------------------------------------------------
 
-Docs: https://projitect.dev
-`
+const addCmd = Command.make(
+  "add",
+  {
+    pkg: Argument.string("package"),
+    section: Flag.string("section").pipe(
+      Flag.optional,
+      Flag.withDescription(
+        "Comma-separated section names for blueprint-set packages (e.g. `--section macOs,node`).",
+      ),
+    ),
+  },
+  (input) =>
+    Effect.gen(function* () {
+      const out = yield* add({ blueprint: input.pkg })
+      yield* display(`${out}\n`)
+    }),
+).pipe(
+  Command.withDescription(
+    "Install a blueprint package and add it to .pjt.ts (full impl in v0.1.x).",
+  ),
+)
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
+
+export const rootCommand = Command.make("pjt").pipe(
+  Command.withDescription("Project scaffolding that stays in sync — drift-aware blueprints."),
+  Command.withSubcommands([initCmd, remodelCmd, inspectCmd, buildCmd, explainCmd, addCmd]),
+)
+
+export type RootCommand = typeof rootCommand

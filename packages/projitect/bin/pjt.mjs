@@ -4,14 +4,15 @@
  *
  * 1. Registers `tsx` as a TypeScript loader so the user's `.pjt.ts` can be imported on Node
  *    versions older than 23.6 (when native type-stripping became stable).
- * 2. Calls the dispatcher from `@projitect/cli-internals` with the parsed argv/env/cwd.
- * 3. Writes the result to stdout/stderr and exits with the matching code.
- *
- * Native type-stripping on Node 23.6+ would let us skip step 1 entirely, but the tsx register
- * is cheap and lets the same bin shim work on every supported Node version.
+ * 2. Calls `Command.run(rootCommand, ...)` from `effect/unstable/cli`, providing
+ *    `NodePlatformLive` (FileSystem + Terminal + Stdio + Path) so the parsed argv flows into
+ *    our handlers and `--help` / `--completions` / `Prompt` work out of the box.
+ * 3. Exits with `process.exitCode` (set to non-zero by handlers when needed, e.g. drift
+ *    detection).
  */
 
 import { Effect } from "effect"
+import { Command } from "effect/unstable/cli"
 import { register } from "tsx/esm/api"
 import { createRequire } from "node:module"
 
@@ -20,19 +21,12 @@ const pkg = require("../package.json")
 
 const unregister = register()
 try {
-  const { dispatch } = await import("@projitect/cli-internals")
-  const result = await Effect.runPromise(
-    dispatch({
-      argv: process.argv.slice(2),
-      env: process.env,
-      cwd: process.cwd(),
-      projitectVersion: pkg.version,
-      effectRange: pkg.peerDependencies?.effect ?? "^4.0.0-beta.70",
-    }),
+  const { rootCommand, NodePlatformLive } = await import("@projitect/cli-internals")
+  await Effect.runPromise(
+    Command.run(rootCommand, { version: pkg.version }).pipe(Effect.provide(NodePlatformLive)),
   )
-  process.stdout.write(`${result.output}\n`)
   await unregister()
-  process.exit(result.exitCode)
+  process.exit(process.exitCode ?? 0)
 } catch (err) {
   await unregister()
   process.stderr.write(`pjt: fatal: ${err instanceof Error ? err.message : String(err)}\n`)

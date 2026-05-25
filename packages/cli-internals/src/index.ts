@@ -1,4 +1,4 @@
-export { dispatch, type DispatchInput, type DispatchResult } from "./commands/dispatch.js"
+export { rootCommand, type RootCommand } from "./commands/dispatch.js"
 export { inspect, type InspectResult } from "./commands/inspect.js"
 export { remodel, type RemodelResult } from "./commands/remodel.js"
 export { init, type InitResult } from "./commands/init.js"
