@@ -15,7 +15,10 @@ only touches files declared by blueprints.
 1. Loads the user's `.pjt.ts`.
 2. Runs each blueprint's `plan` Effect to collect `ChangeSet`s.
 3. Reduces operations per file, detecting conflicts.
-4. Compares against current disk state; writes only paths that differ.
+4. Reads `.pjt.lock`; computes which blueprints left the tree since the last apply.
+5. Writes the current blueprints' changes to disk.
+6. Removes orphaned regions / JSON keys / files for blueprints that left.
+7. Rewrites `.pjt.lock` to record the new state.
 
 ## Output
 
@@ -23,9 +26,11 @@ only touches files declared by blueprints.
 Wrote 2 files:
   .gitignore
   README.md
+Cleaned up 1 orphan:
+  .gitignore
 ```
 
-Or, when already in sync:
+When everything's already in sync:
 
 ```text
 Project already in sync. No changes written.

@@ -61,14 +61,28 @@ export const dispatch = (input: DispatchInput): Effect.Effect<DispatchResult> =>
       case "remodel":
         return yield* runWithErrorHandling(
           remodel({ config }).pipe(
-            Effect.map((r) => ({
-              output:
-                r.written.length === 0
-                  ? "Project already in sync. No changes written."
-                  : `Wrote ${r.written.length} file${r.written.length === 1 ? "" : "s"}:\n` +
+            Effect.map((r) => {
+              const parts: Array<string> = []
+              if (r.written.length > 0) {
+                parts.push(
+                  `Wrote ${r.written.length} file${r.written.length === 1 ? "" : "s"}:\n` +
                     r.written.map((p) => `  ${p}`).join("\n"),
-              exitCode: 0,
-            })),
+                )
+              }
+              if (r.removed.length > 0) {
+                parts.push(
+                  `Cleaned up ${r.removed.length} orphan${r.removed.length === 1 ? "" : "s"}:\n` +
+                    r.removed.map((p) => `  ${p}`).join("\n"),
+                )
+              }
+              return {
+                output:
+                  parts.length === 0
+                    ? "Project already in sync. No changes written."
+                    : parts.join("\n"),
+                exitCode: 0,
+              }
+            }),
           ),
         )
       case "build": {

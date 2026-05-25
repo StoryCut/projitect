@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import type { ChangeSet, Blueprint } from "@projitect/core"
+import type { ChangeSet, Blueprint, PjtLock } from "@projitect/core"
 import { Errors } from "@projitect/core"
 import { makeRealLayer } from "./filesystem-impl.js"
 import type { DirectoryBlueprint } from "@projitect/blueprint"
@@ -44,6 +44,30 @@ export interface ProjectPlan {
   readonly files: ReadonlyArray<FilePlan>
 }
 
+/**
+ * Per-blueprint lockfile entries, derived from the same ops that fed the plan. Written to
+ * `.pjt.lock` after every successful apply.
+ */
+export type ByBlueprint = Readonly<Record<string, PjtLock.BlueprintLockEntry>>
+
+/**
+ * Removal computed by diffing the previous lockfile against the current `byBlueprint` map.
+ * A blueprint that appears in the previous lockfile but not in the current map is "left the
+ * tree"; each of its prior operations becomes a removal target.
+ */
+export interface UpgradeRecord {
+  readonly blueprintId: string
+  readonly from: string
+  readonly to: string
+}
+
+export interface ProjectAnalysis {
+  readonly plan: ProjectPlan
+  readonly byBlueprint: ByBlueprint
+  readonly removals: ReadonlyArray<PjtLock.LockOperation>
+  readonly upgrades: ReadonlyArray<UpgradeRecord>
+}
+
 // ---------------------------------------------------------------------------
 // Flatten the tree (directory wrapping, sequence implicit via array order)
 // ---------------------------------------------------------------------------
@@ -72,7 +96,7 @@ const flattenTree = (
 
 // ---------------------------------------------------------------------------
 // Run each blueprint's plan Effect with its own permission-gated FS layer,
-// collect operations, and reduce them into a ProjectPlan
+// collect operations, and reduce them into a ProjectPlan + per-blueprint lockfile entries
 // ---------------------------------------------------------------------------
 
 const rebasePath = (prefix: string, p: string): string => (prefix ? `${prefix}/${p}` : p)
@@ -82,19 +106,28 @@ const rebaseOp = (prefix: string, op: ChangeSet.Operation): ChangeSet.Operation 
   return { ...op, path: rebasePath(prefix, op.path) }
 }
 
+interface AttributedOp {
+  readonly blueprintId: string
+  readonly blueprintVersion: string
+  readonly op: ChangeSet.Operation
+}
+
 /**
- * Build the project plan by running every blueprint, collecting their ops, and reducing them
- * with conflict detection.
+ * Build the project plan by running every blueprint, collecting their ops, reducing them with
+ * conflict detection, and producing the per-blueprint lockfile entries.
  */
 export const buildPlan = (params: {
   readonly tree: RawTree
   readonly projectRoot: string
-}): Effect.Effect<ProjectPlan, Errors.ProjitectError> => {
+}): Effect.Effect<
+  { readonly plan: ProjectPlan; readonly byBlueprint: ByBlueprint },
+  Errors.ProjitectError
+> => {
   const { tree, projectRoot } = params
   const flat = flattenTree(tree, "", [])
 
   return Effect.gen(function* () {
-    const allOps: Array<ChangeSet.Operation> = []
+    const attributed: Array<AttributedOp> = []
 
     for (const { blueprint, directoryPrefix } of flat) {
       const layer = makeRealLayer({
@@ -104,12 +137,74 @@ export const buildPlan = (params: {
       })
       const changeSet = yield* blueprint.plan.pipe(Effect.provide(layer))
       for (const op of changeSet.operations) {
-        allOps.push(rebaseOp(directoryPrefix, op))
+        attributed.push({
+          blueprintId: blueprint.id,
+          blueprintVersion: blueprint.version,
+          op: rebaseOp(directoryPrefix, op),
+        })
       }
     }
 
-    return yield* reduceOps(allOps)
+    const plan = yield* reduceOps(attributed.map((a) => a.op))
+    const byBlueprint = groupByBlueprint(attributed)
+    return { plan, byBlueprint }
   })
+}
+
+/**
+ * Diff the previous lockfile against the current blueprint set. Returns:
+ * - `removals`: ops from blueprints present in the lockfile but absent from the current tree.
+ *   The applier deletes the matching regions / merge keys / owned files in a follow-up step.
+ * - `upgrades`: blueprints present in both, with different versions. Informational only — the
+ *   actual content is regenerated from the current blueprint, so applying handles upgrade
+ *   content automatically; this list is for `inspect`'s human output.
+ */
+export const diffLockfile = (params: {
+  readonly previous: PjtLock.PjtLock | null
+  readonly current: ByBlueprint
+}): {
+  readonly removals: ReadonlyArray<PjtLock.LockOperation>
+  readonly upgrades: ReadonlyArray<UpgradeRecord>
+} => {
+  const { previous, current } = params
+  if (previous === null) return { removals: [], upgrades: [] }
+
+  const removals: Array<PjtLock.LockOperation> = []
+  const upgrades: Array<UpgradeRecord> = []
+  for (const [id, prev] of Object.entries(previous.blueprints)) {
+    const live = current[id]
+    if (live === undefined) {
+      removals.push(...prev.operations)
+    } else if (live.version !== prev.version) {
+      upgrades.push({ blueprintId: id, from: prev.version, to: live.version })
+    }
+  }
+  return { removals, upgrades }
+}
+
+const groupByBlueprint = (attributed: ReadonlyArray<AttributedOp>): ByBlueprint => {
+  const out: Record<string, PjtLock.BlueprintLockEntry> = {}
+  for (const { blueprintId, blueprintVersion, op } of attributed) {
+    const entry = out[blueprintId] ?? { version: blueprintVersion, operations: [] }
+    out[blueprintId] = {
+      version: blueprintVersion,
+      operations: [...entry.operations, toLockOp(op)],
+    }
+  }
+  return out
+}
+
+const toLockOp = (op: ChangeSet.Operation): PjtLock.LockOperation => {
+  switch (op.mode) {
+    case "region":
+      return { mode: "region", path: op.path, ownerId: op.ownerId, commentPrefix: op.commentPrefix }
+    case "merge":
+      return { mode: "merge", path: op.path, ownedKeys: op.ownedKeys }
+    case "owned":
+      return { mode: "owned", path: op.path, ownerId: op.ownerId }
+    case "seed":
+      return { mode: "seed", path: op.path, ownerId: op.ownerId }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +227,6 @@ const reduceOps = (
       const first = opsForPath[0]!
       const mode = first.mode
 
-      // All ops on a single file must share the same mode
       for (const op of opsForPath) {
         if (op.mode !== mode) {
           return yield* Effect.fail(
@@ -150,7 +244,7 @@ const reduceOps = (
       switch (mode) {
         case "region": {
           const regionOps = opsForPath as ReadonlyArray<ChangeSet.RegionOp>
-          const seen = new Map<string, string>() // ownerId → ownerId (sentinel)
+          const seen = new Set<string>()
           const regions: Array<{ ownerId: string; content: string }> = []
           let commentPrefix = regionOps[0]!.commentPrefix
           for (const op of regionOps) {
@@ -165,10 +259,8 @@ const reduceOps = (
                 }),
               )
             }
-            seen.set(op.ownerId, op.ownerId)
-            if (op.commentPrefix !== commentPrefix) {
-              commentPrefix = op.commentPrefix
-            }
+            seen.add(op.ownerId)
+            if (op.commentPrefix !== commentPrefix) commentPrefix = op.commentPrefix
             regions.push({ ownerId: op.ownerId, content: op.content })
           }
           files.push({ kind: "region", path: filePath, commentPrefix, regions })
@@ -213,12 +305,7 @@ const reduceOps = (
             )
           }
           const op = first
-          files.push({
-            kind: "owned",
-            path: filePath,
-            ownerId: op.ownerId,
-            content: op.content,
-          })
+          files.push({ kind: "owned", path: filePath, ownerId: op.ownerId, content: op.content })
           break
         }
         case "seed": {
@@ -258,4 +345,3 @@ const deepMerge = (a: unknown, b: unknown): unknown => {
   }
   return out
 }
-

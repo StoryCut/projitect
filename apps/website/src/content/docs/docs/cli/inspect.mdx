@@ -13,18 +13,22 @@ Built for CI.
 ## Output
 
 ```text
+↑ upgrade pjt:gitignore:macos 0.0.0 → 0.1.0
+- remove pjt:gitignore:windows region from .gitignore   (blueprint left .pjt.ts)
 ~ modify .gitignore — region pjt:gitignore:macos content drift
 + create src/routes.generated.ts
   ok package.json
 ```
 
-Three statuses per file:
+Four kinds of lines:
 
-| Symbol  | Meaning                                                                     |
-|---------|-----------------------------------------------------------------------------|
-| `+`     | File missing; will be created by `pjt remodel`.                             |
-| `~`     | File exists but content drifts; will be updated by `pjt remodel`.           |
-| (blank) | In sync.                                                                    |
+| Symbol  | Meaning                                                                                       |
+|---------|-----------------------------------------------------------------------------------------------|
+| `↑`     | Blueprint version changed since the lockfile was written. `pjt remodel` rewrites with the new version's content. |
+| `+`     | File missing or new region/key claim. `pjt remodel` will create it.                           |
+| `~`     | File exists but managed content drifts. `pjt remodel` will rewrite to match.                  |
+| `-`     | Lockfile records this region/key/file but no current blueprint claims it. `pjt remodel` will delete the orphan. |
+| (blank) | In sync.                                                                                      |
 
 ## Flags
 

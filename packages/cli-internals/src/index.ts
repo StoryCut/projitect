@@ -7,8 +7,23 @@ export { build } from "./commands/build.js"
 export { add } from "./commands/add.js"
 export { resolveConfig, parseEnv } from "./config-cascade.js"
 export { loadBlueprintFile, pjt, type ProjitectFile } from "./loader.js"
-export { buildPlan, type ProjectPlan, type FilePlan } from "./plan.js"
-export { diffPlan, renderPlanDiff, type PlanDiff, type FileDiff } from "./differ.js"
+export {
+  buildPlan,
+  diffLockfile,
+  type ProjectPlan,
+  type FilePlan,
+  type ByBlueprint,
+  type UpgradeRecord,
+} from "./plan.js"
+export {
+  diffPlan,
+  renderPlanDiff,
+  renderInspectReport,
+  type PlanDiff,
+  type FileDiff,
+} from "./differ.js"
 export { applyPlan } from "./applier.js"
+export { applyRemovals } from "./remover.js"
+export { readLockfile, writeLockfile, blueprintIds } from "./lockfile.js"
 export { makeRealLayer } from "./filesystem-impl.js"
 export { NodePlatformLive, FileSystemLive, StdioLive, TerminalLive } from "./platform/index.js"

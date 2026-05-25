@@ -8,7 +8,9 @@ import type {
   MergePlanFile,
   OwnedPlanFile,
   SeedPlanFile,
+  UpgradeRecord,
 } from "./plan.js"
+import type { PjtLock } from "@projitect/core"
 import { findRegion, renderRegion } from "./region.js"
 import type { Errors } from "@projitect/core"
 
@@ -194,6 +196,45 @@ export const renderPlanDiff = (diff: PlanDiff): string => {
   if (!diff.hasDrift) return "Project is in sync with blueprints. No changes needed."
   const lines = diff.files.map((f) => f.summary)
   return lines.join("\n")
+}
+
+/**
+ * Render the full inspect output: file-diff lines + lockfile-driven removals + version upgrades.
+ * Used by `pjt inspect` and `pjt remodel --dry-run` (future) to give a complete picture.
+ */
+export const renderInspectReport = (params: {
+  readonly diff: PlanDiff
+  readonly removals: ReadonlyArray<PjtLock.LockOperation>
+  readonly upgrades: ReadonlyArray<UpgradeRecord>
+}): string => {
+  const { diff, removals, upgrades } = params
+  const lines: Array<string> = []
+
+  for (const u of upgrades) {
+    lines.push(`↑ upgrade ${u.blueprintId} ${u.from} → ${u.to}`)
+  }
+  for (const r of removals) {
+    lines.push(removalSummary(r))
+  }
+  for (const f of diff.files) {
+    lines.push(f.summary)
+  }
+
+  if (lines.length === 0) return "Project is in sync with blueprints. No changes needed."
+  return lines.join("\n")
+}
+
+const removalSummary = (op: PjtLock.LockOperation): string => {
+  switch (op.mode) {
+    case "region":
+      return `- remove ${op.ownerId} region from ${op.path}   (blueprint left .pjt.ts)`
+    case "merge":
+      return `- remove merge keys ${op.ownedKeys.join(", ")} from ${op.path}   (blueprint left .pjt.ts)`
+    case "owned":
+      return `- delete ${op.path}   (blueprint left .pjt.ts)`
+    case "seed":
+      return `  (seed ${op.ownerId} for ${op.path} retained; blueprint left but seed mode is write-once)`
+  }
 }
 
 // suppress unused renderRegion import — applier consumes it via re-export
