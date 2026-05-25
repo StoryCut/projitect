@@ -47,8 +47,7 @@ const initCmd = Command.make("init", {}, () =>
     const result = yield* init({ config }).pipe(
       Effect.matchEffect({
         onSuccess: (r) => Effect.succeed(r),
-        onFailure: (err: Errors.ProjitectError) =>
-          reportError(err).pipe(Effect.as(null)),
+        onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
       }),
     )
     if (result === null) return
@@ -78,8 +77,7 @@ const remodelCmd = Command.make("remodel", {}, () =>
     const result = yield* remodel({ config }).pipe(
       Effect.matchEffect({
         onSuccess: (r) => Effect.succeed(r),
-        onFailure: (err: Errors.ProjitectError) =>
-          reportError(err).pipe(Effect.as(null)),
+        onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
       }),
     )
     if (result === null) return
@@ -121,10 +119,9 @@ const inspectCmd = Command.make(
       const config = configFromEnv()
       const result = yield* inspect({ config }).pipe(
         Effect.matchEffect({
-        onSuccess: (r) => Effect.succeed(r),
-        onFailure: (err: Errors.ProjitectError) =>
-          reportError(err).pipe(Effect.as(null)),
-      }),
+          onSuccess: (r) => Effect.succeed(r),
+          onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
+        }),
       )
       if (result === null) return
       yield* display(`${result.output}\n`)
@@ -205,14 +202,11 @@ const buildCmd = Command.make(
 // pjt explain <error-id>
 // ---------------------------------------------------------------------------
 
-const explainCmd = Command.make(
-  "explain",
-  { errorId: Argument.string("error-id") },
-  (input) =>
-    Effect.gen(function* () {
-      const out = yield* explain({ errorId: input.errorId })
-      yield* display(`${out}\n`)
-    }),
+const explainCmd = Command.make("explain", { errorId: Argument.string("error-id") }, (input) =>
+  Effect.gen(function* () {
+    const out = yield* explain({ errorId: input.errorId })
+    yield* display(`${out}\n`)
+  }),
 ).pipe(Command.withDescription("Print a description of a projitect error id."))
 
 // ---------------------------------------------------------------------------
@@ -244,17 +238,14 @@ const addCmd = Command.make(
       const result = yield* add({ config, pkg: input.pkg, sections }).pipe(
         Effect.matchEffect({
           onSuccess: (r) => Effect.succeed(r),
-          onFailure: (err: Errors.ProjitectError) =>
-            reportError(err).pipe(Effect.as(null)),
+          onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
         }),
       )
       if (result === null) return
       const lines = [`Installed ${result.pkg} via ${result.pm}.`]
       if (result.splicedIntoBlueprintFile) {
         if (result.sectionsAdded.length > 0) {
-          lines.push(
-            `Added to ${config.blueprintFile}: ${result.sectionsAdded.join(", ")}.`,
-          )
+          lines.push(`Added to ${config.blueprintFile}: ${result.sectionsAdded.join(", ")}.`)
         } else {
           lines.push(`Added to ${config.blueprintFile}.`)
         }

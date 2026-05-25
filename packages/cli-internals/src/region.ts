@@ -4,14 +4,14 @@ import { Errors } from "@projitect/core"
 const START = (prefix: string, owner: string): string => `${prefix} ${owner} start`
 const END = (prefix: string, owner: string): string => `${prefix} ${owner} end`
 
-export interface RegionFound {
+interface RegionFound {
   readonly kind: "found"
   readonly startLine: number
   readonly endLine: number
   readonly content: string
 }
 
-export interface RegionAbsent {
+interface RegionAbsent {
   readonly kind: "absent"
 }
 
@@ -91,9 +91,7 @@ export const renderRegion = (params: {
   readonly commentPrefix: string
   readonly content: string
 }): string => {
-  const body = params.content.endsWith("\n")
-    ? params.content.slice(0, -1)
-    : params.content
+  const body = params.content.endsWith("\n") ? params.content.slice(0, -1) : params.content
   return [
     START(params.commentPrefix, params.ownerId),
     body,
@@ -112,7 +110,9 @@ export const upsertRegion = (params: {
   const { fileContent, existing, rendered } = params
   if (existing.kind === "absent") {
     if (fileContent.length === 0) return `${rendered}\n`
-    return fileContent.endsWith("\n") ? `${fileContent}${rendered}\n` : `${fileContent}\n${rendered}\n`
+    return fileContent.endsWith("\n")
+      ? `${fileContent}${rendered}\n`
+      : `${fileContent}\n${rendered}\n`
   }
   const lines = fileContent.split("\n")
   const before = lines.slice(0, existing.startLine)

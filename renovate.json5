@@ -26,12 +26,7 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  extends: [
-    "config:recommended",
-    "config:js-lib",
-    ":dependencyDashboard",
-    ":semanticCommits",
-  ],
+  extends: ["config:recommended", "config:js-lib", ":dependencyDashboard", ":semanticCommits"],
 
   rebaseWhen: "behind-base-branch",
   branchConcurrentLimit: 5,

@@ -38,11 +38,7 @@ export const projitectBlueprint = (versions: {
         mode: "merge",
         ownerId: "pjt:projitect:bootstrap",
         path: "package.json",
-        ownedKeys: [
-          "scripts.pjt",
-          "devDependencies.projitect",
-          "devDependencies.effect",
-        ],
+        ownedKeys: ["scripts.pjt", "devDependencies.projitect", "devDependencies.effect"],
         value: {
           scripts: { pjt: "pjt" },
           devDependencies: {

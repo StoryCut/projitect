@@ -6,9 +6,7 @@ import { Errors } from "@projitect/core"
  * The full content lives on the marketing site at `/errors/<id>`; this CLI gives the basics
  * without a network call.
  */
-export const explain = (params: {
-  readonly errorId: string
-}): Effect.Effect<string> =>
+export const explain = (params: { readonly errorId: string }): Effect.Effect<string> =>
   Effect.sync(() => {
     const known = Errors.ERROR_IDS.includes(params.errorId as Errors.ErrorId)
     if (!known) {
@@ -42,8 +40,7 @@ const ERROR_BLURBS: Readonly<Record<Errors.ErrorId, string>> = {
     "Two blueprints both claim full ownership of one file. Only one `ownFile` per path is allowed.",
   "pjt.region.missing-end":
     "A region start marker was found without a matching end marker. The file has been hand-edited and the closing marker removed.",
-  "pjt.region.duplicate":
-    "Multiple start markers for the same region in one file. Hand-edited?",
+  "pjt.region.duplicate": "Multiple start markers for the same region in one file. Hand-edited?",
   "pjt.apply.dirty-git":
     "`build` requires a clean git working tree. Commit or stash first, then retry.",
   "pjt.init.git-missing":
@@ -56,8 +53,7 @@ const ERROR_BLURBS: Readonly<Record<Errors.ErrorId, string>> = {
     "`.pjt.lock` is corrupted or doesn't match the expected schema. Delete it and rerun `pjt remodel` to rebuild.",
   "pjt.lock.version-mismatch":
     "`.pjt.lock` was written by a newer projitect than the one currently installed. Upgrade the `projitect` devDep.",
-  "pjt.git.not-a-repo":
-    "Required a git repository, but `.git/` was missing. Run `git init` first.",
+  "pjt.git.not-a-repo": "Required a git repository, but `.git/` was missing. Run `git init` first.",
   "pjt.git.command-failed":
     "A `git` command exited non-zero or git isn't installed. The underlying error is included in the message.",
   "pjt.pm.not-detected":

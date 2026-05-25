@@ -44,11 +44,11 @@ ls .changeset/*.md | grep -v README | grep -v config
 Read the diff and suggest a bump per the table in
 [AGENTS.md → Versioning (lockstep)](../../AGENTS.md):
 
-| Change                                                                                              | Bump |
-|-----------------------------------------------------------------------------------------------------|------|
-| Breaking change in any public API                                                                   | major |
-| New public feature                                                                                  | minor |
-| Bug fix, doc-only, internal refactor, dep bump without consumer impact                              | patch |
+| Change                                                                 | Bump  |
+| ---------------------------------------------------------------------- | ----- |
+| Breaking change in any public API                                      | major |
+| New public feature                                                     | minor |
+| Bug fix, doc-only, internal refactor, dep bump without consumer impact | patch |
 
 Tell the user the suggestion + the highest-severity reason. They confirm or override.
 

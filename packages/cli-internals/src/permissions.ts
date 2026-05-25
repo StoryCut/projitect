@@ -24,7 +24,7 @@ const globToRegex = (glob: string): RegExp => {
   return new RegExp(`^${pattern}$`)
 }
 
-export const matchesGlob = (path: string, glob: string): boolean => globToRegex(glob).test(path)
+const matchesGlob = (path: string, glob: string): boolean => globToRegex(glob).test(path)
 
 export type FsOp = "read" | "write" | "exists" | "remove" | "mkdir" | "listDir"
 

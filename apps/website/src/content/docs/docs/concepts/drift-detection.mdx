@@ -9,12 +9,12 @@ consistent with the blueprints?**
 
 ## What it checks, mode by mode
 
-| Mode    | "In spec" means                                                                |
-|---------|--------------------------------------------------------------------------------|
-| `region`| The file exists, every owned region's content matches what the blueprint produces, and no region has a malformed marker pair. |
-| `merge` | The file exists, parses as JSON, and every owned key holds the value the blueprint declares (deep-equal). |
-| `owned` | The file exists and its content matches the blueprint's `content` exactly.     |
-| `seed`  | (Not checked — seed is write-once.)                                            |
+| Mode     | "In spec" means                                                                                                               |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `region` | The file exists, every owned region's content matches what the blueprint produces, and no region has a malformed marker pair. |
+| `merge`  | The file exists, parses as JSON, and every owned key holds the value the blueprint declares (deep-equal).                     |
+| `owned`  | The file exists and its content matches the blueprint's `content` exactly.                                                    |
+| `seed`   | (Not checked — seed is write-once.)                                                                                           |
 
 For `region` and `merge`, content outside the owned scope is **ignored**. You can hand-edit
 lines between regions in `.gitignore`, or add keys to `package.json` that no blueprint claims —
@@ -22,12 +22,12 @@ both are untouched and uncomplained-about.
 
 ## Exit codes
 
-| Status                                 | Exit code |
-|----------------------------------------|-----------|
-| Project is in sync                     | 0         |
-| At least one file drifts               | 1         |
-| Loader / config / plan error           | 1         |
-| Internal CLI error                     | 2         |
+| Status                       | Exit code |
+| ---------------------------- | --------- |
+| Project is in sync           | 0         |
+| At least one file drifts     | 1         |
+| Loader / config / plan error | 1         |
+| Internal CLI error           | 2         |
 
 Wire `pjt inspect` into CI and you get a binary signal per PR.
 
@@ -60,7 +60,7 @@ The lockfile is what makes the "swap frameworks cleanly" promise work:
 
 The lockfile schema is versioned. If projitect ever introduces a breaking change to the format, projects running an older CLI will get `pjt.lock.version-mismatch` with instructions to upgrade.
 
-You should **never hand-edit `.pjt.lock`**. If it gets corrupted, delete it — the next `remodel` rebuilds it from the current blueprint state. The only thing you lose is orphan-cleanup for blueprints that were removed *between* the previous good state and the corruption.
+You should **never hand-edit `.pjt.lock`**. If it gets corrupted, delete it — the next `remodel` rebuilds it from the current blueprint state. The only thing you lose is orphan-cleanup for blueprints that were removed _between_ the previous good state and the corruption.
 
 ## What about new files I added by hand?
 

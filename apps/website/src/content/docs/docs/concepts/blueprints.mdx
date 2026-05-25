@@ -23,10 +23,7 @@ import { pjt } from "projitect/cli"
 import { gitignores } from "@projitect/blueprint-gitignore"
 
 export default pjt({
-  blueprints: [
-    gitignores.macOs(),
-    gitignores.node(),
-  ],
+  blueprints: [gitignores.macOs(), gitignores.node()],
 })
 ```
 
@@ -43,15 +40,14 @@ export default pjt({
   blueprints: Effect.gen(function* () {
     const pkg = yield* readPackageJson()
     const hasNext =
-      typeof pkg === "object" && pkg !== null &&
-      "dependencies" in pkg && pkg.dependencies !== null &&
-      typeof pkg.dependencies === "object" && "next" in pkg.dependencies
+      typeof pkg === "object" &&
+      pkg !== null &&
+      "dependencies" in pkg &&
+      pkg.dependencies !== null &&
+      typeof pkg.dependencies === "object" &&
+      "next" in pkg.dependencies
 
-    return [
-      gitignores.macOs(),
-      gitignores.node(),
-      ...(hasNext ? [gitignores.next()] : []),
-    ]
+    return [gitignores.macOs(), gitignores.node(), ...(hasNext ? [gitignores.next()] : [])]
   }),
 })
 ```
@@ -107,7 +103,7 @@ authors:
 - **Layered dependencies**: blueprints can require helper services beyond `BlueprintFileSystem`
   (e.g. a network fetcher for templates), and the CLI provides them at runtime.
 
-You don't have to *use* Effect heavily as a project maintainer — the array form has zero Effect
+You don't have to _use_ Effect heavily as a project maintainer — the array form has zero Effect
 boilerplate. But blueprint authors do.
 
 ## Next

@@ -8,4 +8,4 @@ sidebar:
 
 **What**: The CLI tried to read `.pjt.lock` but the file is not valid JSON, or its shape doesn't match the schema (`packages/core/src/lockfile.ts`). Usually means hand-editing went wrong or the file is mid-merge from a git conflict.
 
-**How to fix**: Delete `.pjt.lock` and rerun `pjt remodel`. The lockfile rebuilds itself from the current blueprint state on every successful apply, so deleting it loses nothing except the record of blueprints that have *left* the tree (those won't get cleaned up on the next `remodel`). If you suspect a recently-removed blueprint left orphan state, restore the lockfile from git history first.
+**How to fix**: Delete `.pjt.lock` and rerun `pjt remodel`. The lockfile rebuilds itself from the current blueprint state on every successful apply, so deleting it loses nothing except the record of blueprints that have _left_ the tree (those won't get cleaned up on the next `remodel`). If you suspect a recently-removed blueprint left orphan state, restore the lockfile from git history first.

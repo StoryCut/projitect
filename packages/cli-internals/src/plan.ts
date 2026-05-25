@@ -61,13 +61,6 @@ export interface UpgradeRecord {
   readonly to: string
 }
 
-export interface ProjectAnalysis {
-  readonly plan: ProjectPlan
-  readonly byBlueprint: ByBlueprint
-  readonly removals: ReadonlyArray<PjtLock.LockOperation>
-  readonly upgrades: ReadonlyArray<UpgradeRecord>
-}
-
 // ---------------------------------------------------------------------------
 // Flatten the tree (directory wrapping, sequence implicit via array order)
 // ---------------------------------------------------------------------------

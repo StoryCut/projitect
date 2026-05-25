@@ -80,7 +80,8 @@ const computeSplice = (params: {
 } => {
   const { metadata, requestedSections } = params
   if (metadata.type === "blueprint") {
-    const call = metadata.call ?? "/* TODO: replace with the blueprint call from the package's README */"
+    const call =
+      metadata.call ?? "/* TODO: replace with the blueprint call from the package's README */"
     return {
       importLine: metadata.import,
       callLines: [`${call},`],

@@ -20,9 +20,9 @@ export const resolveConfig = (layers: {
   readonly cliArgs?: WritablePartialConfig
 }): ProjitectConfig.ProjitectConfig =>
   ProjitectConfig.resolve(
-    ...([layers.env, layers.blueprintFile, layers.cliArgs].filter(
+    ...[layers.env, layers.blueprintFile, layers.cliArgs].filter(
       (l): l is WritablePartialConfig => l !== undefined,
-    )),
+    ),
   )
 
 /**

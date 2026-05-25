@@ -116,5 +116,5 @@ const describe = (v: unknown): string =>
       : Array.isArray(v)
         ? "Array"
         : typeof v === "object"
-          ? "object without `_tag: \"ProjitectConfig\"`"
+          ? 'object without `_tag: "ProjitectConfig"`'
           : typeof v

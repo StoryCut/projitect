@@ -37,11 +37,7 @@ to a CI-protected `.gitignore` in about five minutes.
    import { gitignores } from "@projitect/blueprint-gitignore"
 
    export default pjt({
-     blueprints: [
-       gitignores.macOs(),
-       gitignores.node(),
-       gitignores.vscode(),
-     ],
+     blueprints: [gitignores.macOs(), gitignores.node(), gitignores.vscode()],
    })
    ```
 
@@ -108,9 +104,9 @@ Each blueprint owns a comment-fenced region of the file. The CLI uses those mark
 You can still hand-edit lines **outside** the markers — they belong to you, not projitect.
 
 <Aside type="tip" title="Want more than .gitignore?">
-This guide uses gitignores because they're the first blueprint set we ship. Framework blueprints
-(`react`, `next`, `tsconfig`, `eslint`) are on the [roadmap](/docs/roadmap/). When they land,
-adopting them is one import + one array entry.
+  This guide uses gitignores because they're the first blueprint set we ship. Framework blueprints
+  (`react`, `next`, `tsconfig`, `eslint`) are on the [roadmap](/docs/roadmap/). When they land,
+  adopting them is one import + one array entry.
 </Aside>
 
 ## Next steps

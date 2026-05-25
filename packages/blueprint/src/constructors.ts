@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import type { Blueprint, Permission, Errors, BlueprintFileSystem } from "@projitect/core";
+import type { Blueprint, Permission, Errors, BlueprintFileSystem } from "@projitect/core"
 import { ChangeSet } from "@projitect/core"
 
 /**

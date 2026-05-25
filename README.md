@@ -16,14 +16,14 @@ pnpm pjt inspect              # report drift, exit 1 in CI when out of spec
 This is the monorepo. The website (`apps/website`) has the docs, the marketing pitch, and
 the per-error code lookup pages. The published packages are:
 
-| Package                            | What it does                                                 |
-|------------------------------------|--------------------------------------------------------------|
-| `projitect`                        | Main package. Ships the `pjt` binary and `projitect/cli` re-export. |
-| `@projitect/core`                  | Shared contracts: `Blueprint`, `ChangeSet`, `Permission`, errors. |
-| `@projitect/blueprint`             | Authoring SDK. `regionFile`, `jsonMerge`, `ownFile`, `seedFile`, `directory`. |
-| `@projitect/cli-internals`         | The engine — loader, planner, differ, applier, commands.     |
-| `@projitect/test-kit`              | In-memory `BlueprintFileSystem` for unit tests.              |
-| `@projitect/blueprint-gitignore`   | Eight composable `.gitignore` sections (macOS, Windows, Linux, Node, Next, VS Code, JetBrains, tsbuildinfo). |
+| Package                          | What it does                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `projitect`                      | Main package. Ships the `pjt` binary and `projitect/cli` re-export.                                          |
+| `@projitect/core`                | Shared contracts: `Blueprint`, `ChangeSet`, `Permission`, errors.                                            |
+| `@projitect/blueprint`           | Authoring SDK. `regionFile`, `jsonMerge`, `ownFile`, `seedFile`, `directory`.                                |
+| `@projitect/cli-internals`       | The engine — loader, planner, differ, applier, commands.                                                     |
+| `@projitect/test-kit`            | In-memory `BlueprintFileSystem` for unit tests.                                                              |
+| `@projitect/blueprint-gitignore` | Eight composable `.gitignore` sections (macOS, Windows, Linux, Node, Next, VS Code, JetBrains, tsbuildinfo). |
 
 Plus `apps/website` (Astro Starlight; not published).
 

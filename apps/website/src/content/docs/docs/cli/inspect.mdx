@@ -22,18 +22,18 @@ Built for CI.
 
 Four kinds of lines:
 
-| Symbol  | Meaning                                                                                       |
-|---------|-----------------------------------------------------------------------------------------------|
+| Symbol  | Meaning                                                                                                          |
+| ------- | ---------------------------------------------------------------------------------------------------------------- |
 | `↑`     | Blueprint version changed since the lockfile was written. `pjt remodel` rewrites with the new version's content. |
-| `+`     | File missing or new region/key claim. `pjt remodel` will create it.                           |
-| `~`     | File exists but managed content drifts. `pjt remodel` will rewrite to match.                  |
-| `-`     | Lockfile records this region/key/file but no current blueprint claims it. `pjt remodel` will delete the orphan. |
-| (blank) | In sync.                                                                                      |
+| `+`     | File missing or new region/key claim. `pjt remodel` will create it.                                              |
+| `~`     | File exists but managed content drifts. `pjt remodel` will rewrite to match.                                     |
+| `-`     | Lockfile records this region/key/file but no current blueprint claims it. `pjt remodel` will delete the orphan.  |
+| (blank) | In sync.                                                                                                         |
 
 ## Flags
 
-| Flag     | Description                                            |
-|----------|--------------------------------------------------------|
+| Flag     | Description                                                                                   |
+| -------- | --------------------------------------------------------------------------------------------- |
 | `--json` | Emit machine-readable JSON output. Currently same as text; structured JSON is on the roadmap. |
 
 ## Use in CI

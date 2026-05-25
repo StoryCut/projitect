@@ -1,7 +1,13 @@
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 import { Effect } from "effect"
-import type { ProjectPlan, RegionPlanFile, MergePlanFile, OwnedPlanFile, SeedPlanFile } from "./plan.js"
+import type {
+  ProjectPlan,
+  RegionPlanFile,
+  MergePlanFile,
+  OwnedPlanFile,
+  SeedPlanFile,
+} from "./plan.js"
 import { findRegion, renderRegion, upsertRegion } from "./region.js"
 import { mergeIntoExisting } from "./differ.js"
 import type { Errors } from "@projitect/core"
@@ -22,10 +28,7 @@ const writeFile = (full: string, content: string): Promise<void> =>
 export const applyPlan = (params: {
   readonly plan: ProjectPlan
   readonly projectRoot: string
-}): Effect.Effect<
-  ReadonlyArray<string>,
-  Errors.RegionMissingEnd | Errors.RegionDuplicate
-> => {
+}): Effect.Effect<ReadonlyArray<string>, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { plan, projectRoot } = params
   return Effect.gen(function* () {
     const written: Array<string> = []

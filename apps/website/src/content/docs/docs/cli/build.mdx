@@ -11,11 +11,11 @@ pjt build --force [--force-dirty] [--yes]
 
 ## Required + optional flags
 
-| Flag             | Description                                                                                                       |
-|------------------|-------------------------------------------------------------------------------------------------------------------|
-| `--force`        | **Required.** Without it, `pjt build` refuses to run. The wipe is too destructive to fire by accident.            |
-| `--force-dirty`  | Allow wiping even when `git status --porcelain` shows uncommitted changes. Default is to refuse on a dirty tree.  |
-| `--yes`          | Skip the interactive confirmation prompt. Use this in scripts; otherwise the human at the keyboard confirms.      |
+| Flag            | Description                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `--force`       | **Required.** Without it, `pjt build` refuses to run. The wipe is too destructive to fire by accident.           |
+| `--force-dirty` | Allow wiping even when `git status --porcelain` shows uncommitted changes. Default is to refuse on a dirty tree. |
+| `--yes`         | Skip the interactive confirmation prompt. Use this in scripts; otherwise the human at the keyboard confirms.     |
 
 ## What gets preserved
 
@@ -32,11 +32,11 @@ The rationale: keep the manifest, the blueprint spec, the lockfile, the dependen
 
 ## Prerequisites
 
-| Check                                | Failure code                  |
-|--------------------------------------|-------------------------------|
-| Project root has `.git/`             | `pjt.git.not-a-repo`          |
-| `git status --porcelain` is empty    | `pjt.apply.dirty-git` (override with `--force-dirty`) |
-| `--force` flag is present            | `pjt.apply.dirty-git` (with a clarifying message)     |
+| Check                             | Failure code                                          |
+| --------------------------------- | ----------------------------------------------------- |
+| Project root has `.git/`          | `pjt.git.not-a-repo`                                  |
+| `git status --porcelain` is empty | `pjt.apply.dirty-git` (override with `--force-dirty`) |
+| `--force` flag is present         | `pjt.apply.dirty-git` (with a clarifying message)     |
 
 ## Output
 

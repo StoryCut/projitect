@@ -21,7 +21,12 @@
       "import": "./dist/projitect-blueprint.js"
     }
   },
-  "files": ["dist", "src", "bin", "!**/*.tsbuildinfo"],
+  "files": [
+    "dist",
+    "src",
+    "bin",
+    "!**/*.tsbuildinfo"
+  ],
   "scripts": {
     "build": "tsc --build",
     "build:clean": "tsc --build --clean",

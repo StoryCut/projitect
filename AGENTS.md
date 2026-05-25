@@ -68,18 +68,18 @@ Three additional checks run in CI but are also runnable locally:
 run in parallel on every PR and every push to `main`. Concurrency group cancels in-progress
 runs on new pushes to the same ref. Node version is sourced from `.nvmrc`.
 
-| Job              | What it runs                                                 |
-|------------------|--------------------------------------------------------------|
-| `typecheck`      | `pnpm tc`                                                    |
-| `lint`           | `pnpm lint`                                                  |
-| `format-check`   | `pnpm format:check`                                          |
-| `test`           | `pnpm test --passWithNoTests` (until v0.2 lands tests)       |
-| `knip`           | `pnpm knip`                                                  |
-| `build-packages` | `pnpm build`                                                 |
-| `build-website`  | `pnpm build && pnpm --filter website build`                  |
-| `check-errors`   | `pnpm build && pnpm --filter website check:errors`           |
-| `check-examples` | `pnpm --filter website check:examples`                       |
-| `smoke`          | `pnpm build && ./scripts/smoke.sh`                           |
+| Job              | What it runs                                           |
+| ---------------- | ------------------------------------------------------ |
+| `typecheck`      | `pnpm tc`                                              |
+| `lint`           | `pnpm lint`                                            |
+| `format-check`   | `pnpm format:check`                                    |
+| `test`           | `pnpm test --passWithNoTests` (until v0.2 lands tests) |
+| `knip`           | `pnpm knip`                                            |
+| `build-packages` | `pnpm build`                                           |
+| `build-website`  | `pnpm build && pnpm --filter website build`            |
+| `check-errors`   | `pnpm build && pnpm --filter website check:errors`     |
+| `check-examples` | `pnpm --filter website check:examples`                 |
+| `smoke`          | `pnpm build && ./scripts/smoke.sh`                     |
 
 Total wall-clock ≈ 60-90s (bounded by `smoke`). If a check passes locally but fails in CI,
 prefer "fix the workflow's pnpm-store cache" or "fix the underlying determinism" — never `if:`
@@ -92,7 +92,7 @@ A Node version matrix (22 + 24) and snapshot npm publishes on PR branches are tr
 This codebase is **Effect-native**. We use `effect@beta` (currently `4.0.0-beta.70`).
 
 - **Services** use `ServiceMap.Service<...>` base class + a static `make` and `Layer.effect(this,
-  this.make)`. Do not use the v3 `Effect.Tag` proxy accessor pattern.
+this.make)`. Do not use the v3 `Effect.Tag` proxy accessor pattern.
 - **Errors** use `Schema.TaggedError` (not `Data.TaggedError`) so they serialize cleanly to JSON
   for `pjt inspect --json`. Every error declares a semantic `id` field
   (`pjt.<subsystem>.<kebab-case>`) and has a matching MDX page in `apps/website`.
@@ -138,6 +138,7 @@ Region-owned file operations use comment-fenced markers. The format is:
 ```
 
 The comment prefix varies by file:
+
 - `#` for `.gitignore`, `.editorconfig`, YAML, shell
 - `//` for JS/TS/JSON5 (when the file is JSON5; standard JSON uses `merge` mode instead)
 - `<!--` `-->` for HTML/MDX/XML
@@ -149,12 +150,12 @@ blueprints attempting to own the same region in the same file is a `pjt.plan.con
 
 Every blueprint operation declares one of four modes:
 
-| Mode    | When to use                                                        |
-|---------|--------------------------------------------------------------------|
-| `region`| Text file, multiple blueprints can coexist (e.g., `.gitignore`)    |
-| `merge` | Structured JSON, blueprint owns specific keys (e.g., `package.json`)|
-| `owned` | Generated file, single blueprint owns whole content (e.g., generated TypeScript types) |
-| `seed`  | Write-once, never enforced after (e.g., initial `.pjt.ts` content) |
+| Mode     | When to use                                                                            |
+| -------- | -------------------------------------------------------------------------------------- |
+| `region` | Text file, multiple blueprints can coexist (e.g., `.gitignore`)                        |
+| `merge`  | Structured JSON, blueprint owns specific keys (e.g., `package.json`)                   |
+| `owned`  | Generated file, single blueprint owns whole content (e.g., generated TypeScript types) |
+| `seed`   | Write-once, never enforced after (e.g., initial `.pjt.ts` content)                     |
 
 See `docs/concepts/ownership-modes` on the marketing site for examples.
 
@@ -212,15 +213,15 @@ which marketing pages it will touch. "Add `--json` flag to `pjt inspect`" withou
 
 Triggers — if your change does any of the following, plan a docs edit:
 
-| Change                                                                         | Docs to touch                                            |
-|--------------------------------------------------------------------------------|----------------------------------------------------------|
-| Add / rename / remove a CLI command, flag, or argument                         | `docs/cli/<cmd>.mdx`                                     |
-| Add / rename / remove an SDK export, blueprint constructor, or permission shape | `docs/authoring.mdx` (+ maybe `docs/concepts/*.mdx`)     |
-| Change an ownership mode's behavior or add a new mode                          | `docs/concepts/ownership-modes.mdx`                      |
-| Add / rename a `pjt.*` error id                                                | `errors/<id>.mdx` (gated by `check:errors`)              |
-| Change marketing copy that's now untrue                                        | `index.mdx` + relevant pages                             |
-| Add or change a worked example                                                 | `apps/website/examples/<name>/example.ts` + `docs/examples/<name>.mdx` (gated by `check:examples`) |
-| Change the lockfile schema, projitect blueprint, or pipeline shape             | `docs/concepts/drift-detection.mdx` + `docs/concepts/blueprints.mdx` |
+| Change                                                                          | Docs to touch                                                                                      |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Add / rename / remove a CLI command, flag, or argument                          | `docs/cli/<cmd>.mdx`                                                                               |
+| Add / rename / remove an SDK export, blueprint constructor, or permission shape | `docs/authoring.mdx` (+ maybe `docs/concepts/*.mdx`)                                               |
+| Change an ownership mode's behavior or add a new mode                           | `docs/concepts/ownership-modes.mdx`                                                                |
+| Add / rename a `pjt.*` error id                                                 | `errors/<id>.mdx` (gated by `check:errors`)                                                        |
+| Change marketing copy that's now untrue                                         | `index.mdx` + relevant pages                                                                       |
+| Add or change a worked example                                                  | `apps/website/examples/<name>/example.ts` + `docs/examples/<name>.mdx` (gated by `check:examples`) |
+| Change the lockfile schema, projitect blueprint, or pipeline shape              | `docs/concepts/drift-detection.mdx` + `docs/concepts/blueprints.mdx`                               |
 
 ### Implementation-time
 
@@ -243,11 +244,11 @@ version bump, publish) are handled by the `release-bump` skill at `.claude/skill
 All published packages (`projitect` and every `@projitect/*`) share one version, bumped together
 via changesets. Pick the bump type per this table — cite the rule when running `pnpm changeset`:
 
-| Change                                                                                              | Bump |
-|-----------------------------------------------------------------------------------------------------|------|
+| Change                                                                                                                                                         | Bump      |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Breaking change in any public API (Blueprint shape, ChangeSet shape, Permission shape, CLI flag rename/removal, error id rename/removal, lockfile schema bump) | **major** |
-| New public feature (new ownership mode, new CLI command, new error class with new id, new SDK helper, new blueprint package) | **minor** |
-| Bug fix, doc-only change, internal refactor, dep bump that doesn't change consumer-visible behavior | **patch** |
+| New public feature (new ownership mode, new CLI command, new error class with new id, new SDK helper, new blueprint package)                                   | **minor** |
+| Bug fix, doc-only change, internal refactor, dep bump that doesn't change consumer-visible behavior                                                            | **patch** |
 
 When in doubt about bump severity, pick the higher one. Cost of an unnecessary major is low (no
 consumer breakage); cost of an unannounced major is high.

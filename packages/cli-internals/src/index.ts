@@ -6,7 +6,13 @@ export { explain } from "./commands/explain.js"
 export { build } from "./commands/build.js"
 export { add } from "./commands/add.js"
 export { resolveConfig, parseEnv } from "./config-cascade.js"
-export { loadBlueprintFile, pjt, isEffectTree, type ProjitectFile, type BlueprintTree } from "./loader.js"
+export {
+  loadBlueprintFile,
+  pjt,
+  isEffectTree,
+  type ProjitectFile,
+  type BlueprintTree,
+} from "./loader.js"
 export {
   buildPlan,
   diffLockfile,
@@ -28,5 +34,11 @@ export { readLockfile, writeLockfile, blueprintIds } from "./lockfile.js"
 export { makeRealLayer } from "./filesystem-impl.js"
 export { NodePlatformLive, FileSystemLive, StdioLive, TerminalLive } from "./platform/index.js"
 export { splice } from "./edit-pjt.js"
-export { detect as detectPackageManager, installDev, readProjitectMetadata, type PackageManager, type ProjitectPackageMetadata } from "./pm.js"
+export {
+  detect as detectPackageManager,
+  installDev,
+  readProjitectMetadata,
+  type PackageManager,
+  type ProjitectPackageMetadata,
+} from "./pm.js"
 export { isGitRepo, gitStatus, ensureGitRepo } from "./git.js"

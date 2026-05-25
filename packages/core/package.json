@@ -14,7 +14,11 @@
       "import": "./dist/errors/index.js"
     }
   },
-  "files": ["dist", "src", "!**/*.tsbuildinfo"],
+  "files": [
+    "dist",
+    "src",
+    "!**/*.tsbuildinfo"
+  ],
   "scripts": {
     "build": "tsc --build",
     "build:clean": "tsc --build --clean",

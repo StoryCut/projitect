@@ -16,9 +16,7 @@ const errorsDir = path.resolve(__dirname, "../src/content/docs/errors")
 const ids = new Set(ERROR_IDS)
 const files = await fs.readdir(errorsDir).catch(() => [])
 const fileIds = new Set(
-  files
-    .filter((f) => f.endsWith(".mdx") && f !== "index.mdx")
-    .map((f) => f.replace(/\.mdx$/, "")),
+  files.filter((f) => f.endsWith(".mdx") && f !== "index.mdx").map((f) => f.replace(/\.mdx$/, "")),
 )
 
 const missing = [...ids].filter((id) => !fileIds.has(id))

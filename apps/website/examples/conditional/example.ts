@@ -21,10 +21,6 @@ export default pjt({
       typeof pkg.dependencies === "object" &&
       "next" in (pkg.dependencies as Record<string, unknown>)
 
-    return [
-      gitignores.macOs(),
-      gitignores.node(),
-      ...(hasNext ? [gitignores.next()] : []),
-    ]
+    return [gitignores.macOs(), gitignores.node(), ...(hasNext ? [gitignores.next()] : [])]
   }),
 })

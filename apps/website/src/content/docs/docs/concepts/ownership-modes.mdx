@@ -101,12 +101,12 @@ but never own it."
 
 ## Comparison
 
-| Mode    | Multi-blueprint per file? | Drift detected? | Best for                          |
-|---------|---------------------------|-----------------|-----------------------------------|
-| `region`| Yes (different `ownerId`) | Yes             | `.gitignore`, README sections     |
-| `merge` | Yes (different `ownedKeys`)| Yes            | `package.json`, `tsconfig.json`   |
-| `owned` | No                        | Yes             | Generated files                   |
-| `seed`  | No                        | No (write-once) | Initial templates the user owns   |
+| Mode     | Multi-blueprint per file?   | Drift detected? | Best for                        |
+| -------- | --------------------------- | --------------- | ------------------------------- |
+| `region` | Yes (different `ownerId`)   | Yes             | `.gitignore`, README sections   |
+| `merge`  | Yes (different `ownedKeys`) | Yes             | `package.json`, `tsconfig.json` |
+| `owned`  | No                          | Yes             | Generated files                 |
+| `seed`   | No                          | No (write-once) | Initial templates the user owns |
 
 ## What about binary files?
 

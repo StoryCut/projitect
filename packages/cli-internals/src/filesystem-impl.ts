@@ -23,10 +23,7 @@ export const makeRealLayer = (config: {
   const { blueprintId, permissions, projectRoot } = config
   const resolved = path.resolve(projectRoot)
 
-  const resolvePath = (
-    p: string,
-    op: FsOp,
-  ): Effect.Effect<string, Errors.FsPermissionDenied> => {
+  const resolvePath = (p: string, op: FsOp): Effect.Effect<string, Errors.FsPermissionDenied> => {
     if (path.isAbsolute(p)) {
       return Effect.fail(
         new Errors.FsPermissionDenied({

@@ -14,10 +14,7 @@ import { findRegion } from "./region.js"
 export const applyRemovals = (params: {
   readonly removals: ReadonlyArray<PjtLock.LockOperation>
   readonly projectRoot: string
-}): Effect.Effect<
-  ReadonlyArray<string>,
-  Errors.RegionMissingEnd | Errors.RegionDuplicate
-> => {
+}): Effect.Effect<ReadonlyArray<string>, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { removals, projectRoot } = params
   return Effect.gen(function* () {
     const touched: Array<string> = []

@@ -35,6 +35,5 @@ export const defaults: ProjitectConfig = {
  * Reduce a list of partial overrides into a single resolved config, applying them left-to-right.
  * Later overrides win.
  */
-export const resolve = (
-  ...overrides: ReadonlyArray<Partial<ProjitectConfig>>
-): ProjitectConfig => overrides.reduce<ProjitectConfig>((acc, o) => ({ ...acc, ...o }), defaults)
+export const resolve = (...overrides: ReadonlyArray<Partial<ProjitectConfig>>): ProjitectConfig =>
+  overrides.reduce<ProjitectConfig>((acc, o) => ({ ...acc, ...o }), defaults)

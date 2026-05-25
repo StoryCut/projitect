@@ -6,4 +6,4 @@ export default {
   printWidth: 100,
   arrowParens: "always",
   endOfLine: "lf",
-};
+}

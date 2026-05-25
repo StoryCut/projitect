@@ -54,7 +54,8 @@ export const build = (params: {
         new Errors.ApplyDirtyGit({
           id: "pjt.apply.dirty-git",
           command: "build",
-          message: "`pjt build` requires the `--force` flag. This command is destructive — it wipes the project tree before re-applying.",
+          message:
+            "`pjt build` requires the `--force` flag. This command is destructive — it wipes the project tree before re-applying.",
         }),
       )
     }
@@ -78,8 +79,7 @@ export const build = (params: {
 
     if (!params.yes) {
       const confirmed = yield* Prompt.confirm({
-        message:
-          `This will delete everything under ${params.config.projectRoot} except .git, node_modules, .pjt.ts, .pjt.lock, package.json, and the PM lockfile. Continue?`,
+        message: `This will delete everything under ${params.config.projectRoot} except .git, node_modules, .pjt.ts, .pjt.lock, package.json, and the PM lockfile. Continue?`,
         initial: false,
       })
       if (!confirmed) {

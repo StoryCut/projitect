@@ -50,8 +50,7 @@ const requireGit = (projectRoot: string): Effect.Effect<void, Errors.InitGitMiss
       return yield* Effect.fail(
         new Errors.InitGitMissing({
           id: "pjt.init.git-missing",
-          message:
-            "No `.git` directory found. Run `git init` first, then re-run `pjt init`.",
+          message: "No `.git` directory found. Run `git init` first, then re-run `pjt init`.",
         }),
       )
     }

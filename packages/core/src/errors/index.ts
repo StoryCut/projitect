@@ -123,13 +123,16 @@ export class PlanConflictOwned extends Schema.TaggedErrorClass<PlanConflictOwned
 // Region marker errors — encountered when reading existing file content
 // ---------------------------------------------------------------------------
 
-export class RegionMissingEnd extends Schema.TaggedErrorClass<RegionMissingEnd>()("RegionMissingEnd", {
-  id: Schema.Literal("pjt.region.missing-end"),
-  path: Schema.String,
-  ownerId: Schema.String,
-  startLine: Schema.Number,
-  message: Schema.String,
-}) {}
+export class RegionMissingEnd extends Schema.TaggedErrorClass<RegionMissingEnd>()(
+  "RegionMissingEnd",
+  {
+    id: Schema.Literal("pjt.region.missing-end"),
+    path: Schema.String,
+    ownerId: Schema.String,
+    startLine: Schema.Number,
+    message: Schema.String,
+  },
+) {}
 
 export class RegionDuplicate extends Schema.TaggedErrorClass<RegionDuplicate>()("RegionDuplicate", {
   id: Schema.Literal("pjt.region.duplicate"),
@@ -181,16 +184,13 @@ export class PmNotDetected extends Schema.TaggedErrorClass<PmNotDetected>()("PmN
   message: Schema.String,
 }) {}
 
-export class PmInstallFailed extends Schema.TaggedErrorClass<PmInstallFailed>()(
-  "PmInstallFailed",
-  {
-    id: Schema.Literal("pjt.pm.install-failed"),
-    packageManager: Schema.String,
-    pkg: Schema.String,
-    cause: Schema.String,
-    message: Schema.String,
-  },
-) {}
+export class PmInstallFailed extends Schema.TaggedErrorClass<PmInstallFailed>()("PmInstallFailed", {
+  id: Schema.Literal("pjt.pm.install-failed"),
+  packageManager: Schema.String,
+  pkg: Schema.String,
+  cause: Schema.String,
+  message: Schema.String,
+}) {}
 
 // ---------------------------------------------------------------------------
 // `pjt add` errors

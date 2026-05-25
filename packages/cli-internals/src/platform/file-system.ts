@@ -30,7 +30,10 @@ const sysErr = (method: string, cause: unknown): PlatformError.PlatformError => 
   })
 }
 
-const tryEffect = <A>(method: string, p: () => Promise<A>): Effect.Effect<A, PlatformError.PlatformError> =>
+const tryEffect = <A>(
+  method: string,
+  p: () => Promise<A>,
+): Effect.Effect<A, PlatformError.PlatformError> =>
   Effect.tryPromise({ try: p, catch: (e) => sysErr(method, e) })
 
 const NOT_IMPL = (method: string): never => {
@@ -44,7 +47,9 @@ const dieNotImpl = <A>(method: string): Effect.Effect<A, PlatformError.PlatformE
 
 const make = FileSystem.make({
   access: (path, options) =>
-    tryEffect("access", () => nodeFs.access(path, options?.readable ? nodeFs.constants.R_OK : undefined)),
+    tryEffect("access", () =>
+      nodeFs.access(path, options?.readable ? nodeFs.constants.R_OK : undefined),
+    ),
   copy: (fromPath, toPath, _options) =>
     tryEffect("copy", () => nodeFs.cp(fromPath, toPath, { recursive: true })),
   copyFile: (fromPath, toPath) => tryEffect("copyFile", () => nodeFs.copyFile(fromPath, toPath)),
@@ -52,7 +57,9 @@ const make = FileSystem.make({
   chown: (path, uid, gid) => tryEffect("chown", () => nodeFs.chown(path, uid, gid)),
   link: (fromPath, toPath) => tryEffect("link", () => nodeFs.link(fromPath, toPath)),
   makeDirectory: (path, options) =>
-    tryEffect("makeDirectory", () => nodeFs.mkdir(path, { recursive: options?.recursive ?? false }).then(() => undefined)),
+    tryEffect("makeDirectory", () =>
+      nodeFs.mkdir(path, { recursive: options?.recursive ?? false }).then(() => undefined),
+    ),
   makeTempDirectory: (options) =>
     tryEffect("makeTempDirectory", () =>
       nodeFs.mkdtemp(nodePath.join(options?.directory ?? os.tmpdir(), options?.prefix ?? "pjt-")),
@@ -69,8 +76,7 @@ const make = FileSystem.make({
     }),
   makeTempFileScoped: () => dieNotImpl("makeTempFileScoped"),
   open: () => dieNotImpl("open"),
-  readDirectory: (path, _options) =>
-    tryEffect("readDirectory", () => nodeFs.readdir(path)),
+  readDirectory: (path, _options) => tryEffect("readDirectory", () => nodeFs.readdir(path)),
   readFile: (path) =>
     tryEffect("readFile", async () => {
       const buf = await nodeFs.readFile(path)
@@ -120,8 +126,10 @@ const make = FileSystem.make({
         "FileSystem.watch is not implemented in projitect's Node Layer (v0.1). File an issue if you need it.",
       ),
     ),
-  writeFile: (path, data, _options) =>
-    tryEffect("writeFile", () => nodeFs.writeFile(path, data)),
+  writeFile: (path, data, _options) => tryEffect("writeFile", () => nodeFs.writeFile(path, data)),
 })
 
-export const FileSystemLive: Layer.Layer<FileSystem.FileSystem> = Layer.succeed(FileSystem.FileSystem, make)
+export const FileSystemLive: Layer.Layer<FileSystem.FileSystem> = Layer.succeed(
+  FileSystem.FileSystem,
+  make,
+)

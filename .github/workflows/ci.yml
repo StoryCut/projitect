@@ -134,6 +134,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The examples import from `projitect/cli` and `@projitect/blueprint*` via the workspace's
+      # `exports` map, which points at `dist/`. Build first so those targets exist.
+      - run: pnpm build
       - run: pnpm --filter website check:examples
 
   smoke:
