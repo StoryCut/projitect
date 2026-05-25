@@ -52,12 +52,40 @@ Before claiming a task done, run **`pnpm check-all`** from the repo root. It run
 If you only changed one package, you can run the same checks scoped: `pnpm --filter <pkg> tc`,
 etc. — but `check-all` is the gate before merging.
 
-Two additional checks run in CI but are also runnable locally:
+Three additional checks run in CI but are also runnable locally:
 
 - `pnpm --filter website check:examples` — every code snippet under `apps/website/examples/`
   typechecks. Marketing copy is not allowed to lie.
 - `pnpm --filter website check:errors` — every error id exported by `@projitect/core` has a
   matching MDX page under `apps/website/src/content/docs/errors/`.
+- `./scripts/smoke.sh` — end-to-end smoke covering init → add → remodel → inspect → lockfile
+  orphan removal → build --force in a throwaway `/tmp` project. Heaviest gate; run when you've
+  touched the CLI pipeline.
+
+## CI (GitHub Actions)
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines one job per check. All ten jobs
+run in parallel on every PR and every push to `main`. Concurrency group cancels in-progress
+runs on new pushes to the same ref. Node version is sourced from `.nvmrc`.
+
+| Job              | What it runs                                                 |
+|------------------|--------------------------------------------------------------|
+| `typecheck`      | `pnpm tc`                                                    |
+| `lint`           | `pnpm lint`                                                  |
+| `format-check`   | `pnpm format:check`                                          |
+| `test`           | `pnpm test --passWithNoTests` (until v0.2 lands tests)       |
+| `knip`           | `pnpm knip`                                                  |
+| `build-packages` | `pnpm build`                                                 |
+| `build-website`  | `pnpm build && pnpm --filter website build`                  |
+| `check-errors`   | `pnpm build && pnpm --filter website check:errors`           |
+| `check-examples` | `pnpm --filter website check:examples`                       |
+| `smoke`          | `pnpm build && ./scripts/smoke.sh`                           |
+
+Total wall-clock ≈ 60-90s (bounded by `smoke`). If a check passes locally but fails in CI,
+prefer "fix the workflow's pnpm-store cache" or "fix the underlying determinism" — never `if:`
+the check off.
+
+A Node version matrix (22 + 24) and snapshot npm publishes on PR branches are tracked for v0.2.
 
 ## Effect v4 conventions
 
