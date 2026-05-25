@@ -160,6 +160,70 @@ When a check fails, fix the root cause. **Do not**:
 
 If you can't fix the underlying issue in this PR, leave it failing and flag it.
 
+## Marketing site is latest-only
+
+The Astro Starlight site under `apps/website` is written in **present tense as if the latest
+version is the only one that ever existed**. Historical docs are out of scope for v0.x.
+
+- Renaming a flag means updating every reference on the site, not adding a "previously named X" note.
+- Removing a feature means deleting its docs, not marking them deprecated.
+- Adding a feature means adding its docs in the same PR.
+- Versioned URLs are not in scope.
+
+This is a stylistic standard. Reviewers reject docs that read like a changelog.
+
+## Marketing site coordination at every phase
+
+The site is not a release-time chore — it's a **continuous obligation**. Three sequential gates:
+
+### Plan-time
+
+Every plan in `~/.claude/plans/` that introduces a user-facing change must explicitly list
+which marketing pages it will touch. "Add `--json` flag to `pjt inspect`" without naming
+`apps/website/src/content/docs/docs/cli/inspect.mdx` is an incomplete plan.
+
+Triggers — if your change does any of the following, plan a docs edit:
+
+| Change                                                                         | Docs to touch                                            |
+|--------------------------------------------------------------------------------|----------------------------------------------------------|
+| Add / rename / remove a CLI command, flag, or argument                         | `docs/cli/<cmd>.mdx`                                     |
+| Add / rename / remove an SDK export, blueprint constructor, or permission shape | `docs/authoring.mdx` (+ maybe `docs/concepts/*.mdx`)     |
+| Change an ownership mode's behavior or add a new mode                          | `docs/concepts/ownership-modes.mdx`                      |
+| Add / rename a `pjt.*` error id                                                | `errors/<id>.mdx` (gated by `check:errors`)              |
+| Change marketing copy that's now untrue                                        | `index.mdx` + relevant pages                             |
+| Add or change a worked example                                                 | `apps/website/examples/<name>/example.ts` + `docs/examples/<name>.mdx` (gated by `check:examples`) |
+| Change the lockfile schema, projitect blueprint, or pipeline shape             | `docs/concepts/drift-detection.mdx` + `docs/concepts/blueprints.mdx` |
+
+### Implementation-time
+
+**The PR that lands the code change must also land the marketing edits.** No "docs follow-up"
+PRs. CI gates:
+
+- `pnpm --filter website check:errors` — every error id has an MDX page.
+- `pnpm --filter website check:examples` — every example file under `apps/website/examples/` typechecks.
+- `pnpm --filter website build` — the Astro site builds end-to-end.
+
+The human reviewer additionally checks the prose on touched pages for freshness.
+
+### Release-time
+
+At release time the docs are already correct by construction. The procedural parts (changeset,
+version bump, publish) are handled by the `release-bump` skill at `.claude/skills/release-bump/`.
+
+## Versioning (lockstep)
+
+All published packages (`projitect` and every `@projitect/*`) share one version, bumped together
+via changesets. Pick the bump type per this table — cite the rule when running `pnpm changeset`:
+
+| Change                                                                                              | Bump |
+|-----------------------------------------------------------------------------------------------------|------|
+| Breaking change in any public API (Blueprint shape, ChangeSet shape, Permission shape, CLI flag rename/removal, error id rename/removal, lockfile schema bump) | **major** |
+| New public feature (new ownership mode, new CLI command, new error class with new id, new SDK helper, new blueprint package) | **minor** |
+| Bug fix, doc-only change, internal refactor, dep bump that doesn't change consumer-visible behavior | **patch** |
+
+When in doubt about bump severity, pick the higher one. Cost of an unnecessary major is low (no
+consumer breakage); cost of an unannounced major is high.
+
 ## CLAUDE.md ↔ AGENTS.md
 
 `CLAUDE.md` is a symbolic link to this file. If you find yourself editing both, you've broken
