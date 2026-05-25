@@ -172,6 +172,41 @@ export class DriftDetected extends Schema.TaggedErrorClass<DriftDetected>()("Dri
 }) {}
 
 // ---------------------------------------------------------------------------
+// Package-manager errors (used by `pjt add`)
+// ---------------------------------------------------------------------------
+
+export class PmNotDetected extends Schema.TaggedErrorClass<PmNotDetected>()("PmNotDetected", {
+  id: Schema.Literal("pjt.pm.not-detected"),
+  projectRoot: Schema.String,
+  message: Schema.String,
+}) {}
+
+export class PmInstallFailed extends Schema.TaggedErrorClass<PmInstallFailed>()(
+  "PmInstallFailed",
+  {
+    id: Schema.Literal("pjt.pm.install-failed"),
+    packageManager: Schema.String,
+    pkg: Schema.String,
+    cause: Schema.String,
+    message: Schema.String,
+  },
+) {}
+
+// ---------------------------------------------------------------------------
+// `pjt add` errors
+// ---------------------------------------------------------------------------
+
+export class AddMarkersMissing extends Schema.TaggedErrorClass<AddMarkersMissing>()(
+  "AddMarkersMissing",
+  {
+    id: Schema.Literal("pjt.add.markers-missing"),
+    blueprintFile: Schema.String,
+    missingMarker: Schema.String,
+    message: Schema.String,
+  },
+) {}
+
+// ---------------------------------------------------------------------------
 // Git errors
 // ---------------------------------------------------------------------------
 
@@ -237,6 +272,10 @@ export type LockError = LockParseFailed | LockVersionMismatch
 
 export type GitError = GitNotARepo | GitCommandFailed
 
+export type PmError = PmNotDetected | PmInstallFailed
+
+export type AddError = AddMarkersMissing
+
 export type ProjitectError =
   | BlueprintError
   | LoaderError
@@ -246,6 +285,8 @@ export type ProjitectError =
   | InitError
   | LockError
   | GitError
+  | PmError
+  | AddError
   | DriftDetected
 
 /**
@@ -275,6 +316,9 @@ export const ERROR_IDS = [
   "pjt.lock.version-mismatch",
   "pjt.git.not-a-repo",
   "pjt.git.command-failed",
+  "pjt.pm.not-detected",
+  "pjt.pm.install-failed",
+  "pjt.add.markers-missing",
 ] as const
 
 export type ErrorId = (typeof ERROR_IDS)[number]

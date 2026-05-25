@@ -1,25 +1,50 @@
 ---
 title: pjt add
-description: Install a blueprint package and add it to .pjt.ts.
+description: Install a blueprint package and splice it into .pjt.ts.
 ---
 
 ```bash
-pjt add <package-name>
+pjt add <package> [--section macOs,node,...]
 ```
 
-**v0: not yet implemented.** Install blueprint packages manually for now.
+Installs a blueprint package via your detected package manager and splices the corresponding import + call lines into `.pjt.ts` using the convention markers `// pjt:imports` and `// pjt:blueprints`.
 
-## Planned behavior (v0.1)
+## What happens
 
-1. Detect package manager (pnpm / npm / yarn / bun).
-2. Run the equivalent of `pnpm add -D <package-name>`.
-3. Parse `.pjt.ts` and append a default-style call (e.g. `gitignores.macOs()`) to the
-   `blueprints` array.
-4. Print the next step (`run pjt remodel`).
+1. **Detect PM.** Walks for `pnpm-lock.yaml` → pnpm, `bun.lockb` → bun, `yarn.lock` → yarn, `package-lock.json` → npm. Falls back to npm.
+2. **Install.** Shells out the PM's equivalent of `add -D <package>`. The output is forwarded to your terminal.
+3. **Read package metadata.** Looks for a `"projitect"` field in the installed package's `package.json` (see [Authoring](/docs/authoring/) for the convention).
+4. **Splice.** Inserts the import line between `// pjt:imports start/end` (deduped). For blueprint-set packages, inserts one call per section between `// pjt:blueprints start/end`. For single blueprints, inserts one call.
+5. **Done.** Prints a summary. Run `pjt remodel` to actually apply the new blueprint to disk.
 
-Until then:
+## Sections (for blueprint sets)
+
+When the package declares `"type": "blueprint-set"`, you pick which sections to add:
 
 ```bash
-pnpm add -D @projitect/blueprint-gitignore
-# then manually edit .pjt.ts to import and call the blueprint
+# Add just two sections
+pjt add @projitect/blueprint-gitignore --section macOs,node
+
+# No --section → add ALL sections the package declares
+pjt add @projitect/blueprint-gitignore
 ```
+
+The blueprint-set's `"callTemplate"` (e.g. `gitignores.{section}()`) is filled in per section.
+
+## When the package doesn't have `"projitect"` metadata
+
+`pjt add` still runs the install — but skips the splice. You'll see:
+
+```text
+Installed some-package via pnpm.
+some-package has no `"projitect"` metadata in its package.json, so we can't auto-splice into .pjt.ts.
+Edit it by hand, then run `pjt remodel`.
+```
+
+Edit `.pjt.ts` manually, then run `pjt remodel`. To enable auto-splice for your own blueprint package, see [Authoring → Publishing](/docs/authoring/#publishing).
+
+## Markers
+
+`pjt add` writes between the **convention markers** (`pjt:imports`, `pjt:blueprints`). These are **not** managed regions in the lockfile sense — `pjt inspect` does not check them for drift. They're just splice anchors. If you delete them, `pjt add` fails with [`pjt.add.markers-missing`](/errors/pjt.add.markers-missing/) and tells you how to restore them.
+
+The projitect blueprint's import (`import { pjt } from "projitect/cli"`) lives in a **different** marker pair — `pjt:projitect:imports` — which IS a managed region and IS drift-checked. Don't confuse them.

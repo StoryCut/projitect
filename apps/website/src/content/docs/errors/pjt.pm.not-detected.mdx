@@ -1,0 +1,11 @@
+---
+title: pjt.pm.not-detected
+slug: errors/pjt.pm.not-detected
+description: pjt add could not figure out which package manager to use.
+sidebar:
+  label: pjt.pm.not-detected
+---
+
+**What**: `pjt add <pkg>` walks the project root looking for a lockfile to decide which package manager to invoke. None was found.
+
+**How to fix**: Pick a package manager and create its lockfile by running its install once. For pnpm: `pnpm install`. For npm: `npm install`. For yarn: `yarn`. For bun: `bun install`. Then retry `pjt add`.

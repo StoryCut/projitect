@@ -1,4 +1,4 @@
-import { Effect, Terminal } from "effect"
+import { Effect, Option, Terminal } from "effect"
 import { Argument, Command, Flag } from "effect/unstable/cli"
 import type { Errors, ProjitectConfig } from "@projitect/core"
 import { inspect } from "./inspect.js"
@@ -232,12 +232,44 @@ const addCmd = Command.make(
   },
   (input) =>
     Effect.gen(function* () {
-      const out = yield* add({ blueprint: input.pkg })
-      yield* display(`${out}\n`)
+      const config = configFromEnv()
+      const sections = Option.match(input.section, {
+        onNone: () => [] as ReadonlyArray<string>,
+        onSome: (raw) =>
+          raw
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+      })
+      const result = yield* add({ config, pkg: input.pkg, sections }).pipe(
+        Effect.matchEffect({
+          onSuccess: (r) => Effect.succeed(r),
+          onFailure: (err: Errors.ProjitectError) =>
+            reportError(err).pipe(Effect.as(null)),
+        }),
+      )
+      if (result === null) return
+      const lines = [`Installed ${result.pkg} via ${result.pm}.`]
+      if (result.splicedIntoBlueprintFile) {
+        if (result.sectionsAdded.length > 0) {
+          lines.push(
+            `Added to ${config.blueprintFile}: ${result.sectionsAdded.join(", ")}.`,
+          )
+        } else {
+          lines.push(`Added to ${config.blueprintFile}.`)
+        }
+        lines.push("Run `pjt remodel` to apply.")
+      } else {
+        lines.push(
+          `${result.pkg} has no \`"projitect"\` metadata in its package.json, so we can't auto-splice into ${config.blueprintFile}.`,
+          "Edit it by hand, then run `pjt remodel`.",
+        )
+      }
+      yield* display(`${lines.join("\n")}\n`)
     }),
 ).pipe(
   Command.withDescription(
-    "Install a blueprint package and add it to .pjt.ts (full impl in v0.1.x).",
+    "Install a blueprint package and splice it into .pjt.ts via the marker anchors.",
   ),
 )
 

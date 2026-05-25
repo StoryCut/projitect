@@ -11,6 +11,12 @@
     }
   },
   "files": ["dist", "src", "!**/*.tsbuildinfo"],
+  "projitect": {
+    "type": "blueprint-set",
+    "import": "import { gitignores } from \"@projitect/blueprint-gitignore\"",
+    "callTemplate": "gitignores.{section}()",
+    "sections": ["macOs", "windows", "linux", "node", "next", "vscode", "jetbrains", "tsbuildinfo"]
+  },
   "scripts": {
     "build": "tsc --build",
     "build:clean": "tsc --build --clean",

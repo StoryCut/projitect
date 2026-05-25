@@ -60,4 +60,10 @@ const ERROR_BLURBS: Readonly<Record<Errors.ErrorId, string>> = {
     "Required a git repository, but `.git/` was missing. Run `git init` first.",
   "pjt.git.command-failed":
     "A `git` command exited non-zero or git isn't installed. The underlying error is included in the message.",
+  "pjt.pm.not-detected":
+    "Could not figure out which package manager you're using. Add a lockfile (`pnpm-lock.yaml`, `package-lock.json`, etc.) at your project root.",
+  "pjt.pm.install-failed":
+    "The package manager install command exited non-zero. The underlying error is included in the message.",
+  "pjt.add.markers-missing":
+    "Your `.pjt.ts` is missing the marker comment pairs `pjt:imports` and `pjt:blueprints`. `pjt add` uses those as splice anchors. Restore them and re-run.",
 }
