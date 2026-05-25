@@ -224,6 +224,16 @@ via changesets. Pick the bump type per this table — cite the rule when running
 When in doubt about bump severity, pick the higher one. Cost of an unnecessary major is low (no
 consumer breakage); cost of an unannounced major is high.
 
+## Dependency upgrades (Renovate)
+
+Renovate runs on this repo and opens PRs for dep upgrades. Configured at
+[renovate.json5](./renovate.json5). Two things to know:
+
+- Most packages are published libraries, so the default `rangeStrategy` is `update` (caret/tilde ranges preserved — consumers dedupe). The workspace root `package.json` and `apps/website/package.json` are private, so they pin exact versions via `matchFileNames` overrides.
+- Non-major bumps, devDep majors, and lockfile maintenance auto-merge. Runtime-dep majors (Effect v3 → v4, etc.) wait for human approval. PRs queue for `minimumReleaseAge` (3-8 days depending on dep type) to dodge the npm 72-hour unpublish window.
+
+When adding a new published `@projitect/*` package: nothing to do — it inherits the default js-lib semantics. When adding a new `apps/*` private package: extend the `matchFileNames` rule to include it.
+
 ## CLAUDE.md ↔ AGENTS.md
 
 `CLAUDE.md` is a symbolic link to this file. If you find yourself editing both, you've broken
