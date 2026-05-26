@@ -1,7 +1,7 @@
 import { Effect, FileSystem, Layer, Option, Stream } from "effect"
 import * as PlatformError from "effect/PlatformError"
 import * as nodeFs from "node:fs/promises"
-import * as nodePath from "node:path"
+import nodePath from "node:path"
 import * as os from "node:os"
 
 /**
@@ -19,7 +19,7 @@ import * as os from "node:os"
  * if a future consumer needs them we'll fill them in.
  */
 
-const sysErr = (method: string, cause: unknown): PlatformError.PlatformError => {
+const sysError = (method: string, cause: unknown): PlatformError.PlatformError => {
   const message = cause instanceof Error ? cause.message : String(cause)
   const code = (cause as { code?: string }).code
   return PlatformError.systemError({
@@ -34,7 +34,7 @@ const tryEffect = <A>(
   method: string,
   p: () => Promise<A>,
 ): Effect.Effect<A, PlatformError.PlatformError> =>
-  Effect.tryPromise({ try: p, catch: (e) => sysErr(method, e) })
+  Effect.tryPromise({ try: p, catch: (e) => sysError(method, e) })
 
 const NOT_IMPL = (method: string): never => {
   throw new Error(
@@ -67,10 +67,10 @@ const make = FileSystem.make({
   makeTempDirectoryScoped: () => dieNotImpl("makeTempDirectoryScoped"),
   makeTempFile: (options) =>
     tryEffect("makeTempFile", async () => {
-      const dir = await nodeFs.mkdtemp(
+      const direction = await nodeFs.mkdtemp(
         nodePath.join(options?.directory ?? os.tmpdir(), options?.prefix ?? "pjt-"),
       )
-      const file = nodePath.join(dir, "tmp")
+      const file = nodePath.join(direction, "tmp")
       await nodeFs.writeFile(file, "")
       return file
     }),

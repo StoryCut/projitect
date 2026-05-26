@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { spawn } from "node:child_process"
 import { Effect } from "effect"
 import { Errors } from "@projitect/core"
@@ -70,14 +70,18 @@ export const installDev = (params: {
 
 const installArgs = (pm: PackageManager, pkg: string): ReadonlyArray<string> => {
   switch (pm) {
-    case "pnpm":
+    case "pnpm": {
       return ["add", "-D", pkg]
-    case "yarn":
+    }
+    case "yarn": {
       return ["add", "-D", pkg]
-    case "bun":
+    }
+    case "bun": {
       return ["add", "-d", pkg]
-    case "npm":
+    }
+    case "npm": {
       return ["install", "-D", pkg]
+    }
   }
 }
 

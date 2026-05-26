@@ -1,4 +1,4 @@
-import * as path from "node:path"
+import path from "node:path"
 import { promises as fs } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { Effect } from "effect"
@@ -80,7 +80,7 @@ export const loadBlueprintFile = (params: {
         }),
       )
     }
-    const mod = yield* Effect.tryPromise({
+    const module_ = yield* Effect.tryPromise({
       try: () => import(pathToFileURL(full).href) as Promise<{ default?: unknown }>,
       catch: (e) =>
         new Errors.LoaderImportFailed({
@@ -90,7 +90,7 @@ export const loadBlueprintFile = (params: {
           message: `Failed to import ${blueprintFile}: ${e instanceof Error ? e.message : String(e)}`,
         }),
     })
-    const value = mod.default
+    const value = module_.default
     if (!isProjitectFile(value)) {
       return yield* Effect.fail(
         new Errors.LoaderInvalidDefaultExport({

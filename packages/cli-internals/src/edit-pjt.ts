@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect } from "effect"
 import { Errors } from "@projitect/core"
 
@@ -73,9 +73,9 @@ const spliceImport = (params: {
   const { content, blueprintFile, importLine } = params
   return Effect.gen(function* () {
     const lines = content.split("\n")
-    const startIdx = lines.findIndex((l) => l.trim() === IMPORTS_START)
-    const endIdx = lines.findIndex((l) => l.trim() === IMPORTS_END)
-    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+    const startIndex = lines.findIndex((l) => l.trim() === IMPORTS_START)
+    const endIndex = lines.findIndex((l) => l.trim() === IMPORTS_END)
+    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
       return yield* Effect.fail(
         new Errors.AddMarkersMissing({
           id: "pjt.add.markers-missing",
@@ -88,10 +88,10 @@ const spliceImport = (params: {
       )
     }
     // Dedupe: skip if any line between the markers already equals the import
-    const between = lines.slice(startIdx + 1, endIdx).map((l) => l.trim())
+    const between = lines.slice(startIndex + 1, endIndex).map((l) => l.trim())
     if (between.includes(importLine.trim())) return content
-    const before = lines.slice(0, endIdx)
-    const after = lines.slice(endIdx)
+    const before = lines.slice(0, endIndex)
+    const after = lines.slice(endIndex)
     return [...before, importLine, ...after].join("\n")
   })
 }
@@ -105,9 +105,9 @@ const spliceCalls = (params: {
   return Effect.gen(function* () {
     if (callLines.length === 0) return content
     const lines = content.split("\n")
-    const startIdx = lines.findIndex((l) => l.trim() === BLUEPRINTS_START)
-    const endIdx = lines.findIndex((l) => l.trim() === BLUEPRINTS_END)
-    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+    const startIndex = lines.findIndex((l) => l.trim() === BLUEPRINTS_START)
+    const endIndex = lines.findIndex((l) => l.trim() === BLUEPRINTS_END)
+    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
       return yield* Effect.fail(
         new Errors.AddMarkersMissing({
           id: "pjt.add.markers-missing",
@@ -121,8 +121,8 @@ const spliceCalls = (params: {
     }
     const indent = "    " // 4-space, matching the starter template
     const newCalls = callLines.map((c) => `${indent}${c.replace(/^\s+/, "")}`)
-    const before = lines.slice(0, endIdx)
-    const after = lines.slice(endIdx)
+    const before = lines.slice(0, endIndex)
+    const after = lines.slice(endIndex)
     return [...before, ...newCalls, ...after].join("\n")
   })
 }

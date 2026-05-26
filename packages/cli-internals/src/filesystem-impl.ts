@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect, Layer } from "effect"
 import { BlueprintFileSystem, Errors, type Permission } from "@projitect/core"
 import type { BlueprintFileSystemShape } from "@projitect/core"

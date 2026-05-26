@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect, type Terminal } from "effect"
 import { Prompt } from "effect/unstable/cli"
 import { Errors, type ProjitectConfig } from "@projitect/core"

@@ -75,16 +75,16 @@ interface FlatBlueprint {
 const flattenTree = (
   tree: RawTree,
   prefix: string,
-  acc: Array<FlatBlueprint>,
+  accumulator: Array<FlatBlueprint>,
 ): Array<FlatBlueprint> => {
   for (const node of tree) {
     if (isDirectoryBlueprint(node)) {
-      flattenTree(node.children, prefix ? `${prefix}/${node.name}` : node.name, acc)
+      flattenTree(node.children, prefix ? `${prefix}/${node.name}` : node.name, accumulator)
     } else {
-      acc.push({ blueprint: node, directoryPrefix: prefix })
+      accumulator.push({ blueprint: node, directoryPrefix: prefix })
     }
   }
-  return acc
+  return accumulator
 }
 
 // ---------------------------------------------------------------------------
@@ -164,12 +164,12 @@ export const diffLockfile = (params: {
 
   const removals: Array<PjtLock.LockOperation> = []
   const upgrades: Array<UpgradeRecord> = []
-  for (const [id, prev] of Object.entries(previous.blueprints)) {
+  for (const [id, previous_] of Object.entries(previous.blueprints)) {
     const live = current[id]
     if (live === undefined) {
-      removals.push(...prev.operations)
-    } else if (live.version !== prev.version) {
-      upgrades.push({ blueprintId: id, from: prev.version, to: live.version })
+      removals.push(...previous_.operations)
+    } else if (live.version !== previous_.version) {
+      upgrades.push({ blueprintId: id, from: previous_.version, to: live.version })
     }
   }
   return { removals, upgrades }
@@ -189,14 +189,18 @@ const groupByBlueprint = (attributed: ReadonlyArray<AttributedOp>): ByBlueprint 
 
 const toLockOp = (op: ChangeSet.Operation): PjtLock.LockOperation => {
   switch (op.mode) {
-    case "region":
+    case "region": {
       return { mode: "region", path: op.path, ownerId: op.ownerId, commentPrefix: op.commentPrefix }
-    case "merge":
+    }
+    case "merge": {
       return { mode: "merge", path: op.path, ownedKeys: op.ownedKeys }
-    case "owned":
+    }
+    case "owned": {
       return { mode: "owned", path: op.path, ownerId: op.ownerId }
-    case "seed":
+    }
+    case "seed": {
       return { mode: "seed", path: op.path, ownerId: op.ownerId }
+    }
   }
 }
 
@@ -210,9 +214,9 @@ const reduceOps = (
   Effect.gen(function* () {
     const byPath = new Map<string, Array<ChangeSet.Operation>>()
     for (const op of ops) {
-      const arr = byPath.get(op.path) ?? []
-      arr.push(op)
-      byPath.set(op.path, arr)
+      const array = byPath.get(op.path) ?? []
+      array.push(op)
+      byPath.set(op.path, array)
     }
 
     const files: Array<FilePlan> = []

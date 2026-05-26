@@ -5,7 +5,7 @@ import {
   type ProjitectFile,
   type BlueprintTree,
 } from "@projitect/cli-internals"
-import { directory } from "@projitect/blueprint"
+
 import { createRequire } from "node:module"
 import { projitectBlueprint } from "./projitect-blueprint.js"
 
@@ -33,9 +33,9 @@ export const pjt = (input: {
   readonly config?: Record<string, unknown>
 }): ProjitectFile => {
   const prepended: ProjitectFile["blueprints"] = isEffectTree(input.blueprints)
-    ? input.blueprints.pipe(Effect.map((arr): BlueprintTree => [our, ...arr]))
+    ? input.blueprints.pipe(Effect.map((array): BlueprintTree => [our, ...array]))
     : [our, ...input.blueprints]
   return pjtRaw({ ...input, blueprints: prepended })
 }
 
-export { directory }
+export { directory } from "@projitect/blueprint"

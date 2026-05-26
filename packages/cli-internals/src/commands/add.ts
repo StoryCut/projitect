@@ -1,6 +1,11 @@
 import { Effect } from "effect"
 import type { Errors, ProjitectConfig } from "@projitect/core"
-import { detect, installDev, readProjitectMetadata, type ProjitectPackageMetadata } from "../pm.js"
+import {
+  detect,
+  installDev as installDevelopment,
+  readProjitectMetadata,
+  type ProjitectPackageMetadata,
+} from "../pm.js"
 import { splice } from "../edit-pjt.js"
 
 export interface AddResult {
@@ -33,7 +38,7 @@ export const add = (params: {
 }): Effect.Effect<AddResult, Errors.ProjitectError> =>
   Effect.gen(function* () {
     const pm = yield* detect({ projectRoot: params.config.projectRoot })
-    yield* installDev({ projectRoot: params.config.projectRoot, pm, pkg: params.pkg })
+    yield* installDevelopment({ projectRoot: params.config.projectRoot, pm, pkg: params.pkg })
     const metadata = yield* readProjitectMetadata({
       projectRoot: params.config.projectRoot,
       pkg: params.pkg,

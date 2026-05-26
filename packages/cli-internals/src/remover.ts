@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect } from "effect"
 import type { Errors, PjtLock } from "@projitect/core"
 import { findRegion } from "./region.js"
@@ -39,15 +39,19 @@ const applyOne = (params: {
 }): Effect.Effect<boolean, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { op, full } = params
   switch (op.mode) {
-    case "region":
+    case "region": {
       return removeRegion(full, op)
-    case "merge":
+    }
+    case "merge": {
       return Effect.promise(() => removeMergeKeys(full, op.ownedKeys))
-    case "owned":
+    }
+    case "owned": {
       return Effect.promise(() => removeFile(full))
-    case "seed":
+    }
+    case "seed": {
       // seed is write-once; we never delete the file when a seed blueprint leaves
       return Effect.succeed(false)
+    }
   }
 }
 
@@ -101,23 +105,23 @@ const removeFile = async (full: string): Promise<boolean> => {
   }
 }
 
-const deleteDotted = (obj: Record<string, unknown>, parts: ReadonlyArray<string>): boolean => {
+const deleteDotted = (object: Record<string, unknown>, parts: ReadonlyArray<string>): boolean => {
   if (parts.length === 0) return false
   const [head, ...rest] = parts
   if (head === undefined) return false
   if (rest.length === 0) {
-    if (head in obj) {
-      delete obj[head]
+    if (head in object) {
+      delete object[head]
       return true
     }
     return false
   }
-  const child = obj[head]
+  const child = object[head]
   if (typeof child !== "object" || child === null || Array.isArray(child)) return false
   const deleted = deleteDotted(child as Record<string, unknown>, rest)
   // Prune empty parents
   if (deleted && Object.keys(child).length === 0) {
-    delete obj[head]
+    delete object[head]
   }
   return deleted
 }

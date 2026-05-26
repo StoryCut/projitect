@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect } from "effect"
 import type {
   FilePlan,
@@ -64,14 +64,18 @@ const diffFile = (params: {
   const { file, current } = params
 
   switch (file.kind) {
-    case "region":
+    case "region": {
       return diffRegion(file, current)
-    case "merge":
+    }
+    case "merge": {
       return Effect.succeed(diffMerge(file, current))
-    case "owned":
+    }
+    case "owned": {
       return Effect.succeed(diffOwned(file, current))
-    case "seed":
+    }
+    case "seed": {
       return Effect.succeed(diffSeed(file, current))
+    }
   }
 }
 
@@ -162,8 +166,8 @@ const diffSeed = (file: SeedPlanFile, current: string | null): FileDiff => {
 // ---------------------------------------------------------------------------
 
 export const mergeIntoExisting = (existing: unknown, intent: unknown): unknown => {
-  if (!isObj(existing)) return intent
-  if (!isObj(intent)) return intent
+  if (!isObject(existing)) return intent
+  if (!isObject(intent)) return intent
   const out: Record<string, unknown> = { ...existing }
   for (const [k, v] of Object.entries(intent)) {
     out[k] = k in existing ? mergeIntoExisting(existing[k], v) : v
@@ -171,14 +175,14 @@ export const mergeIntoExisting = (existing: unknown, intent: unknown): unknown =
   return out
 }
 
-const isObj = (v: unknown): v is Record<string, unknown> =>
+const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v)
 
 const canonicalJson = (v: unknown): string => JSON.stringify(sortKeys(v))
 
 const sortKeys = (v: unknown): unknown => {
   if (Array.isArray(v)) return v.map(sortKeys)
-  if (isObj(v)) {
+  if (isObject(v)) {
     const out: Record<string, unknown> = {}
     for (const k of Object.keys(v).sort()) {
       out[k] = sortKeys(v[k])
@@ -226,14 +230,18 @@ export const renderInspectReport = (params: {
 
 const removalSummary = (op: PjtLock.LockOperation): string => {
   switch (op.mode) {
-    case "region":
+    case "region": {
       return `- remove ${op.ownerId} region from ${op.path}   (blueprint left .pjt.ts)`
-    case "merge":
+    }
+    case "merge": {
       return `- remove merge keys ${op.ownedKeys.join(", ")} from ${op.path}   (blueprint left .pjt.ts)`
-    case "owned":
+    }
+    case "owned": {
       return `- delete ${op.path}   (blueprint left .pjt.ts)`
-    case "seed":
+    }
+    case "seed": {
       return `  (seed ${op.ownerId} for ${op.path} retained; blueprint left but seed mode is write-once)`
+    }
   }
 }
 

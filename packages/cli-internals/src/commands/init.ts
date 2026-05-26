@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect } from "effect"
 import { Errors, type ProjitectConfig } from "@projitect/core"
 import { remodel, type RemodelResult } from "./remodel.js"

@@ -44,10 +44,9 @@ Pinned in `.nvmrc` to **22.12.0**. The published `engines.node` is `>=22.12.0`. 
 Before claiming a task done, run **`pnpm check-all`** from the repo root. It runs, in order:
 
 1. `pnpm tc` — `tsc --build` across all project references
-2. `pnpm lint` — ESLint flat config
-3. `pnpm format:check` — Prettier
-4. `pnpm test` — Vitest (unit + integration with the in-memory `BlueprintFileSystem`)
-5. `pnpm knip` — unused exports
+2. `pnpm lint` — ESLint flat config (covers code style + Prettier formatting via `eslint-plugin-prettier`; no separate `format:check` step)
+3. `pnpm test` — Vitest (unit + integration with the in-memory `BlueprintFileSystem`)
+4. `pnpm knip` — unused exports
 
 If you only changed one package, you can run the same checks scoped: `pnpm --filter <pkg> tc`,
 etc. — but `check-all` is the gate before merging.
@@ -62,24 +61,46 @@ Three additional checks run in CI but are also runnable locally:
   orphan removal → build --force in a throwaway `/tmp` project. Heaviest gate; run when you've
   touched the CLI pipeline.
 
+## ESLint absorbs Prettier
+
+One tool, one config, one command. Adapted from StoryCut's and effect-clue's flat configs:
+
+- `eslint-plugin-prettier/recommended` runs Prettier as an ESLint rule. Formatting drift surfaces as a `prettier/prettier` lint error — no separate `prettier --check` step.
+- For files ESLint doesn't parse (MDX, YAML, JSON5, CSS) the `pnpm format` script invokes Prettier directly. `lint-staged` covers them automatically on commit.
+- The Unicorn recommended preset is enabled with a small list of overrides for rules that clash with Effect-heavy code (`no-null`, `custom-error-definition`, `no-array-reduce`, etc.). See [eslint.config.js](./eslint.config.js) for the canonical list with rationale.
+
+`pnpm lint` is the single command. `pnpm lint:fix` applies autofixes. CI runs `pnpm lint`; no `format-check` job.
+
+## Pre-commit hooks (husky + lint-staged)
+
+Configured via the root [`package.json`](./package.json)'s `lint-staged` field and
+[`.husky/pre-commit`](./.husky/pre-commit).
+
+- JS / TS files: `eslint --fix --max-warnings=0` — runs ESLint with the prettier integration, fixes what it can, fails the commit on any remaining issue.
+- MDX / YAML / JSON5 / CSS files: `prettier --write`.
+
+Husky is bootstrapped via the `prepare` script — `pnpm install` triggers `husky` which creates `.husky/_/` for the runner shims. The actual hook (`pre-commit`) is committed.
+
+When a commit is blocked: read the lint-staged output, fix the surfaced errors, and re-stage. Don't `git commit --no-verify` to bypass — `--no-verify` is forbidden by the "no destructive shortcuts" rule below.
+
 ## CI (GitHub Actions)
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines one job per check. All ten jobs
 run in parallel on every PR and every push to `main`. Concurrency group cancels in-progress
 runs on new pushes to the same ref. Node version is sourced from `.nvmrc`.
 
-| Job              | What it runs                                           |
-| ---------------- | ------------------------------------------------------ |
-| `typecheck`      | `pnpm tc`                                              |
-| `lint`           | `pnpm lint`                                            |
-| `format-check`   | `pnpm format:check`                                    |
-| `test`           | `pnpm test --passWithNoTests` (until v0.2 lands tests) |
-| `knip`           | `pnpm knip`                                            |
-| `build-packages` | `pnpm build`                                           |
-| `build-website`  | `pnpm build && pnpm --filter website build`            |
-| `check-errors`   | `pnpm build && pnpm --filter website check:errors`     |
-| `check-examples` | `pnpm --filter website check:examples`                 |
-| `smoke`          | `pnpm build && ./scripts/smoke.sh`                     |
+| Job               | What it runs                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| `typecheck`       | `pnpm tc`                                                                           |
+| `lint`            | `pnpm lint` (code style + Prettier formatting via `eslint-plugin-prettier`)         |
+| `test`            | `pnpm test` (passWithNoTests until v0.2)                                            |
+| `knip`            | `pnpm knip`                                                                         |
+| `build-packages`  | `pnpm build` — uploads `packages/*/dist/` as a build artifact                       |
+| `build-website`   | downloads the build artifact, then `pnpm --filter website build`                    |
+| `check-errors`    | downloads the build artifact, then `pnpm --filter website check:errors`             |
+| `check-examples`  | downloads the build artifact, then `pnpm --filter website check:examples`           |
+| `smoke`           | downloads the build artifact, then `./scripts/smoke.sh`                             |
+| `publish-dry-run` | `pnpm -r --filter './packages/*' publish --dry-run --no-git-checks --access public` |
 
 Total wall-clock ≈ 60-90s (bounded by `smoke`). If a check passes locally but fails in CI,
 prefer "fix the workflow's pnpm-store cache" or "fix the underlying determinism" — never `if:`

@@ -15,10 +15,10 @@ import { parseEnv, resolveConfig } from "../config-cascade.js"
  * `process.exitCode = 1` so the CLI exits non-zero. Returns void so the handler chain stays
  * happy.
  */
-const reportError = (err: Errors.ProjitectError): Effect.Effect<void, never, Terminal.Terminal> =>
+const reportError = (error: Errors.ProjitectError): Effect.Effect<void, never, Terminal.Terminal> =>
   Effect.gen(function* () {
-    const id = (err as { id?: string }).id ?? "unknown"
-    const message = (err as { message?: string }).message ?? String(err)
+    const id = (error as { id?: string }).id ?? "unknown"
+    const message = (error as { message?: string }).message ?? String(error)
     yield* display(`Error [${id}]: ${message}\n`)
     yield* display(`  See https://projitect.dev/errors/${id} or run \`pjt explain ${id}\`\n`)
     process.exitCode = 1
@@ -47,7 +47,7 @@ const initCmd = Command.make("init", {}, () =>
     const result = yield* init({ config }).pipe(
       Effect.matchEffect({
         onSuccess: (r) => Effect.succeed(r),
-        onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
+        onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
       }),
     )
     if (result === null) return
@@ -77,7 +77,7 @@ const remodelCmd = Command.make("remodel", {}, () =>
     const result = yield* remodel({ config }).pipe(
       Effect.matchEffect({
         onSuccess: (r) => Effect.succeed(r),
-        onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
+        onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
       }),
     )
     if (result === null) return
@@ -120,7 +120,7 @@ const inspectCmd = Command.make(
       const result = yield* inspect({ config }).pipe(
         Effect.matchEffect({
           onSuccess: (r) => Effect.succeed(r),
-          onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
+          onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
         }),
       )
       if (result === null) return
@@ -161,14 +161,14 @@ const buildCmd = Command.make(
       }).pipe(
         Effect.matchEffect({
           onSuccess: (r) => Effect.succeed(r),
-          onFailure: (err) => {
+          onFailure: (error) => {
             // QuitError from Prompt = user pressed Ctrl-C; treat as graceful cancel.
-            const known = (err as { id?: string }).id
+            const known = (error as { id?: string }).id
             if (!known) {
               process.exitCode = 130
               return display("Cancelled.\n").pipe(Effect.as(null))
             }
-            return reportError(err as Errors.ProjitectError).pipe(Effect.as(null))
+            return reportError(error as Errors.ProjitectError).pipe(Effect.as(null))
           },
         }),
       )
@@ -238,7 +238,7 @@ const addCmd = Command.make(
       const result = yield* add({ config, pkg: input.pkg, sections }).pipe(
         Effect.matchEffect({
           onSuccess: (r) => Effect.succeed(r),
-          onFailure: (err: Errors.ProjitectError) => reportError(err).pipe(Effect.as(null)),
+          onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
         }),
       )
       if (result === null) return

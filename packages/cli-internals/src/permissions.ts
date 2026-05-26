@@ -8,11 +8,11 @@ import type { Permission } from "@projitect/core"
  */
 const globToRegex = (glob: string): RegExp => {
   let pattern = ""
-  for (let i = 0; i < glob.length; i++) {
-    const ch = glob[i]!
-    if (ch === "*" && glob[i + 1] === "*") {
+  for (let index = 0; index < glob.length; index++) {
+    const ch = glob[index]!
+    if (ch === "*" && glob[index + 1] === "*") {
       pattern += ".*"
-      i++
+      index++
     } else if (ch === "*") {
       pattern += "[^/]*"
     } else if (".+^${}()|[]\\".includes(ch)) {

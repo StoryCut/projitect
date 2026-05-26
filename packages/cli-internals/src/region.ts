@@ -39,13 +39,16 @@ export const findRegion = (params: {
     let endLine = -1
     let duplicateStart = false
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]?.trimEnd()
+    for (const [index, line_] of lines.entries()) {
+      const line = line_?.trimEnd()
       if (line === startMarker) {
-        if (startLine !== -1) duplicateStart = true
-        else startLine = i
+        if (startLine === -1) {
+          startLine = index
+        } else {
+          duplicateStart = true
+        }
       } else if (line === endMarker) {
-        endLine = i
+        endLine = index
       }
     }
 

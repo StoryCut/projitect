@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs"
-import * as path from "node:path"
+import path from "node:path"
 import { Effect } from "effect"
 import type {
   ProjectPlan,
@@ -51,14 +51,18 @@ const nextContent = (params: {
 }): Effect.Effect<string | null, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { file, current } = params
   switch (file.kind) {
-    case "region":
+    case "region": {
       return nextRegion(file, current)
-    case "merge":
+    }
+    case "merge": {
       return Effect.succeed(nextMerge(file, current))
-    case "owned":
+    }
+    case "owned": {
       return Effect.succeed(file.content)
-    case "seed":
+    }
+    case "seed": {
       return Effect.succeed(current === null ? file.content : null)
+    }
   }
 }
 
