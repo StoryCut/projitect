@@ -80,6 +80,34 @@ Per-package sandbox enforcement at lint time (the "soft" half of the soft sandbo
 
 `pnpm lint` is the single command. `pnpm lint:fix` applies autofixes. CI runs `pnpm lint`; no `format-check` job.
 
+## Reach for ESLint first
+
+Whenever you introduce a new dep, library, framework, or architectural rule — or notice a class
+of bug that "should have been caught automatically" — **check whether an ESLint plugin (or a
+hand-written `no-restricted-imports` / `no-restricted-syntax` rule) can enforce the constraint
+mechanically**. This is a default reflex, not an after-the-fact polish.
+
+Static linting is the cheapest enforcement layer in the stack. It runs on every save (IDE), every
+commit (`lint-staged`), and every CI run. Promoting a rule from code review or docs up to lint
+multiplies its leverage:
+
+- **Code review** catches the issue once, for the patient reviewer who notices.
+- **Docs** hope the next author reads them.
+- **ESLint** stops the wrong pattern from ever being committed.
+
+### Triggers — always ask "is there a plugin or rule for this?"
+
+| Trigger                                                                                                                 | Lookup                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Adding a new npm dep                                                                                                    | Search `npm` for `eslint-plugin-<name>` and read the dep's own README. Most popular libraries ship one (React, Tailwind, Vitest, Astro, Next, etc.).                               |
+| Adding a new framework or runtime                                                                                       | Check the framework's recommended ESLint preset. Bring it in even if you only need a subset of rules — drop the rest with overrides.                                               |
+| Introducing an architectural rule (e.g. "blueprints can't import `@effect/platform`'s `FileSystem`", "core stays pure") | Hand-roll a `no-restricted-imports` / `no-restricted-syntax` rule, scoped via `files:` to the relevant directories. See the per-package sandbox bans above for canonical examples. |
+| A code-review finding that turns out to be a class of bug, not a one-off                                                | Find or write a lint rule **before** the PR merges. The cost is one-time; the saving compounds.                                                                                    |
+| A `tsc --build` diagnostic the Effect LS surfaces repeatedly                                                            | The diagnostic itself is the rule — fix the violation, and the patch is doing its job. (If it surfaces a recurring pattern, also note it in this file.)                            |
+
+If no plugin or rule fits your case, leave a one-line note in the PR description so the next dep
+upgrade or refactor pass can revisit. Don't silently absorb the constraint into "team lore."
+
 ## Effect language service
 
 The package's `prepare` script runs `effect-language-service patch` on every `pnpm install`. This patches the local `node_modules/typescript` so that **`tsc --build` produces Effect-specific diagnostics in addition to the standard TS checks** — things like `yield* Effect.fail(new X())` being flagged as redundant (since `new X()` is itself yieldable for `Schema.TaggedErrorClass` errors), `Effect.sync` thunks accidentally returning a Promise, missing Effect requirements, etc.
