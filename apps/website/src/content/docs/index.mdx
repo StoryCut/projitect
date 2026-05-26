@@ -43,13 +43,14 @@ Your project's blueprint file is one file at the root, called `.pjt.ts`:
 ```ts
 import { pjt } from "projitect/cli"
 import { gitignores } from "@projitect/blueprint-gitignore"
+import { vitest } from "@projitect/blueprint-vitest"
 
 export default pjt({
   blueprints: [
     gitignores.macOs(),
     gitignores.node(),
     gitignores.vscode(),
-    // Add framework blueprints here as your project grows.
+    vitest(), // vitest.config.ts + scripts + devDeps + coverage/ in .gitignore
   ],
 })
 ```

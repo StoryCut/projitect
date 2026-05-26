@@ -103,14 +103,16 @@ Each blueprint owns a comment-fenced region of the file. The CLI uses those mark
 
 You can still hand-edit lines **outside** the markers — they belong to you, not projitect.
 
-<Aside type="tip" title="Want more than .gitignore?">
-  This guide uses gitignores because they're the first blueprint set we ship. Framework blueprints
-  (`react`, `next`, `tsconfig`, `eslint`) are on the [roadmap](/docs/roadmap/). When they land,
-  adopting them is one import + one array entry.
+<Aside type="tip" title="More than .gitignore">
+  `@projitect/blueprint-vitest` is the next blueprint package on npm: one line adds
+  `vitest.config.ts`, the `test` script, the devDeps, and a `coverage/` entry in `.gitignore`. See
+  the [vitest-setup example](/examples/vitest-setup/). Framework blueprints (`react`, `next`,
+  `tsconfig`, `eslint`) are next.
 </Aside>
 
 ## Next steps
 
+- [vitest-setup example](/examples/vitest-setup/) — one line adds vitest config + scripts + devDeps
 - [Blueprints concept](/docs/concepts/blueprints/) — the data model
 - [Ownership modes](/docs/concepts/ownership-modes/) — region / merge / owned / seed
 - [Authoring guide](/docs/authoring/) — write your own blueprint

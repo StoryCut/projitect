@@ -41,6 +41,7 @@ npm install --no-package-lock --silent \
   "file:${PKG}/cli-internals" \
   "file:${PKG}/projitect" \
   "file:${PKG}/blueprint-gitignore" \
+  "file:${PKG}/blueprint-vitest" \
   "effect@beta" "tsx" 2>&1 | tail -1
 
 BIN=node_modules/projitect/bin/pjt.mjs
@@ -98,6 +99,29 @@ $BIN remodel > /dev/null
 $BIN inspect > /dev/null 2>&1 && pass "clean after removal applied" || fail "still dirty after removal"
 grep -q "gitignore:node"  .gitignore && fail "node region still present" || pass "node region cleaned up"
 grep -q "gitignore:macos" .gitignore && pass "macos region kept"          || fail "macos region missing"
+
+echo "=== 5b. vitest blueprint adds vitest.config.ts + merges package.json ==="
+# Splice the vitest blueprint into the same .pjt.ts (still using the splice helper —
+# real `pjt add` would shell out to npm install, which would touch the registry).
+cat > splice-vitest.mjs <<'EOF'
+import { Effect } from "effect"
+import { splice } from "@projitect/cli-internals"
+await Effect.runPromise(splice({
+  projectRoot: process.cwd(),
+  blueprintFile: ".pjt.ts",
+  importLine: 'import { vitest } from "@projitect/blueprint-vitest"',
+  callLines: ["vitest(),"],
+}))
+EOF
+node --experimental-strip-types splice-vitest.mjs > /dev/null 2>&1
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after vitest remodel" || fail "vitest blueprint left drift"
+[ -f vitest.config.ts ] && pass "vitest.config.ts created" || fail "vitest.config.ts missing"
+grep -q 'provider: "v8"' vitest.config.ts && pass "vitest.config has v8 coverage" || fail "coverage missing from config"
+grep -q '"vitest"' package.json && pass "vitest devDep merged into package.json" || fail "vitest devDep not merged"
+grep -q '"test": "vitest run"' package.json && pass "vitest test script merged" || fail "test script missing"
+grep -q "pjt:vitest" .gitignore && pass ".gitignore got coverage/ region" || fail "no coverage region"
+grep -q "coverage/" .gitignore && pass ".gitignore contains coverage/" || fail "coverage/ entry missing"
 
 echo "=== 6. explain ==="
 OUT=$($BIN explain pjt.lock.parse-failed 2>&1)
