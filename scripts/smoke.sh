@@ -42,6 +42,7 @@ npm install --no-package-lock --silent \
   "file:${PKG}/projitect" \
   "file:${PKG}/blueprint-gitignore" \
   "file:${PKG}/blueprint-vitest" \
+  "file:${PKG}/blueprint-tsconfig" \
   "effect@beta" "tsx" 2>&1 | tail -1
 
 BIN=node_modules/projitect/bin/pjt.mjs
@@ -122,6 +123,34 @@ grep -q '"vitest"' package.json && pass "vitest devDep merged into package.json"
 grep -q '"test": "vitest run"' package.json && pass "vitest test script merged" || fail "test script missing"
 grep -q "pjt:vitest" .gitignore && pass ".gitignore got coverage/ region" || fail "no coverage region"
 grep -q "coverage/" .gitignore && pass ".gitignore contains coverage/" || fail "coverage/ entry missing"
+
+echo "=== 5c. tsconfig blueprint writes tsconfig.json with strict defaults ==="
+cat > splice-tsconfig.mjs <<'EOF'
+import { Effect } from "effect"
+import { splice } from "@projitect/cli-internals"
+await Effect.runPromise(splice({
+  projectRoot: process.cwd(),
+  blueprintFile: ".pjt.ts",
+  importLine: 'import { tsconfig } from "@projitect/blueprint-tsconfig"',
+  callLines: ["tsconfig(),"],
+}))
+EOF
+node --experimental-strip-types splice-tsconfig.mjs > /dev/null 2>&1
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after tsconfig remodel" || fail "tsconfig drift after remodel"
+[ -f tsconfig.json ] && pass "tsconfig.json created" || fail "tsconfig.json missing"
+grep -q '"strict": true'                       tsconfig.json && pass "strict default = true"          || fail "strict missing"
+grep -q '"noUncheckedIndexedAccess": true'     tsconfig.json && pass "noUncheckedIndexedAccess on"   || fail "noUncheckedIndexedAccess missing"
+grep -q '"exactOptionalPropertyTypes": true'   tsconfig.json && pass "exactOptionalPropertyTypes on" || fail "EOPT missing"
+grep -q '"module": "NodeNext"'                 tsconfig.json && pass "module = NodeNext"             || fail "module wrong"
+grep -q '"rootDir": "./src"'                   tsconfig.json && pass "rootDir = ./src"               || fail "rootDir wrong"
+
+# Drift on the owned file should be caught (owned mode = whole-file content match).
+sed -i.bak 's/"strict": true/"strict": false/' tsconfig.json && rm tsconfig.json.bak
+$BIN inspect > /dev/null 2>&1
+[ $? -eq 1 ] && pass "owned drift detected (exit 1)" || fail "owned drift NOT detected"
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after owned remodel re-applies" || fail "owned still dirty"
 
 echo "=== 6. explain ==="
 OUT=$($BIN explain pjt.lock.parse-failed 2>&1)
