@@ -69,6 +69,59 @@ describe("readLockfile / writeLockfile round-trip", () => {
     expect(raw).toContain('  "version": 1')
   })
 
+  it("preserves a region operation's commentSuffix when set", async () => {
+    const original: PjtLock.PjtLock = {
+      version: 1,
+      blueprints: {
+        "pjt:md": {
+          version: "1",
+          operations: [
+            {
+              mode: "region",
+              path: "README.md",
+              ownerId: "pjt:md",
+              commentPrefix: "<!--",
+              commentSuffix: " -->",
+            },
+          ],
+        },
+      },
+    }
+    await Effect.runPromise(writeLockfile({ projectRoot: cwd, lock: original }))
+    const out = await Effect.runPromise(readLockfile({ projectRoot: cwd }))
+    expect(out).toEqual(original)
+  })
+
+  it("decodes an older lockfile without commentSuffix (backwards compat)", async () => {
+    // Hand-write a lockfile shaped like a pre-suffix version.
+    const raw = {
+      version: 1,
+      blueprints: {
+        "pjt:old": {
+          version: "1",
+          operations: [
+            {
+              mode: "region",
+              path: ".gitignore",
+              ownerId: "pjt:old",
+              commentPrefix: "#",
+              // no commentSuffix field
+            },
+          ],
+        },
+      },
+    }
+    await fs.writeFile(path.join(cwd, ".pjt.lock"), `${JSON.stringify(raw, null, 2)}\n`, "utf8")
+    const out = await Effect.runPromise(readLockfile({ projectRoot: cwd }))
+    expect(out).not.toBeNull()
+    expect(out?.blueprints["pjt:old"]?.operations[0]).toEqual({
+      mode: "region",
+      path: ".gitignore",
+      ownerId: "pjt:old",
+      commentPrefix: "#",
+    })
+  })
+
   it("preserves operations across all four ownership modes", async () => {
     const original: PjtLock.PjtLock = {
       version: 1,

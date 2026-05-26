@@ -1,8 +1,15 @@
 import { Effect } from "effect"
 import { Errors } from "@projitect/core"
 
-const START = (prefix: string, owner: string): string => `${prefix} ${owner} start`
-const END = (prefix: string, owner: string): string => `${prefix} ${owner} end`
+/**
+ * Render a region marker. The optional `suffix` covers comment styles that need a closing
+ * delimiter — HTML/MDX/XML need `-->`, everything else passes the empty string. Without a
+ * suffix the marker just runs to end-of-line (the `#` and `//` cases).
+ */
+const START = (prefix: string, owner: string, suffix = ""): string =>
+  `${prefix} ${owner} start${suffix}`
+const END = (prefix: string, owner: string, suffix = ""): string =>
+  `${prefix} ${owner} end${suffix}`
 
 interface RegionFound {
   readonly kind: "found"
@@ -26,14 +33,19 @@ export const findRegion = (params: {
   readonly fileContent: string
   readonly ownerId: string
   readonly commentPrefix: string
+  /**
+   * Optional closing delimiter for the comment style (e.g. `" -->"` for HTML/MDX). Defaults
+   * to the empty string so single-prefix styles (`#`, `//`) stay unchanged.
+   */
+  readonly commentSuffix?: string
   readonly path: string
 }): Effect.Effect<RegionLookup, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
-  const { fileContent, ownerId, commentPrefix, path } = params
+  const { fileContent, ownerId, commentPrefix, commentSuffix = "", path } = params
   type Result = Effect.Effect<RegionLookup, Errors.RegionMissingEnd | Errors.RegionDuplicate>
   return Effect.suspend((): Result => {
     const lines = fileContent.split("\n")
-    const startMarker = START(commentPrefix, ownerId)
-    const endMarker = END(commentPrefix, ownerId)
+    const startMarker = START(commentPrefix, ownerId, commentSuffix)
+    const endMarker = END(commentPrefix, ownerId, commentSuffix)
 
     let startLine = -1
     let endLine = -1
@@ -92,13 +104,15 @@ export const findRegion = (params: {
 export const renderRegion = (params: {
   readonly ownerId: string
   readonly commentPrefix: string
+  readonly commentSuffix?: string
   readonly content: string
 }): string => {
+  const suffix = params.commentSuffix ?? ""
   const body = params.content.endsWith("\n") ? params.content.slice(0, -1) : params.content
   return [
-    START(params.commentPrefix, params.ownerId),
+    START(params.commentPrefix, params.ownerId, suffix),
     body,
-    END(params.commentPrefix, params.ownerId),
+    END(params.commentPrefix, params.ownerId, suffix),
   ].join("\n")
 }
 

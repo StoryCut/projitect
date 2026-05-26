@@ -186,6 +186,65 @@ describe("buildPlan — happy paths", () => {
     })
   })
 
+  it("threads commentSuffix from region ops into the FilePlan + lockfile entry", async () => {
+    const tree = [
+      makeBlueprint({
+        id: "pjt:readme:intro",
+        ops: [
+          {
+            mode: "region",
+            ownerId: "pjt:readme:intro",
+            path: "README.md",
+            commentPrefix: "<!--",
+            commentSuffix: " -->",
+            content: "Welcome.\n",
+          },
+        ],
+      }),
+    ]
+    const { plan, byBlueprint } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
+    expect(plan.files[0]).toMatchObject({
+      kind: "region",
+      path: "README.md",
+      commentPrefix: "<!--",
+      commentSuffix: " -->",
+    })
+    // toLockOp records the suffix so the remover can re-find the region on disk later.
+    expect(byBlueprint["pjt:readme:intro"]?.operations[0]).toEqual({
+      mode: "region",
+      path: "README.md",
+      ownerId: "pjt:readme:intro",
+      commentPrefix: "<!--",
+      commentSuffix: " -->",
+    })
+  })
+
+  it("omits commentSuffix from the lockfile entry when empty (keeps the file lean)", async () => {
+    const tree = [
+      makeBlueprint({
+        id: "pjt:hash",
+        ops: [
+          {
+            mode: "region",
+            ownerId: "pjt:hash",
+            path: ".gitignore",
+            commentPrefix: "#",
+            content: ".DS_Store\n",
+          },
+        ],
+      }),
+    ]
+    const { byBlueprint } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
+    const op = byBlueprint["pjt:hash"]?.operations[0]
+    expect(op).toEqual({
+      mode: "region",
+      path: ".gitignore",
+      ownerId: "pjt:hash",
+      commentPrefix: "#",
+    })
+    expect(op && "commentSuffix" in op).toBe(false)
+  })
+
   it("rebases child paths inside a directory() wrapper", async () => {
     const tree = [
       directory("apps", [

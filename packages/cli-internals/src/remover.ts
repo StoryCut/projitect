@@ -66,6 +66,7 @@ const removeRegion = (
       fileContent: current,
       ownerId: op.ownerId,
       commentPrefix: op.commentPrefix,
+      commentSuffix: op.commentSuffix ?? "",
       path: op.path,
     })
     if (found.kind === "absent") return false

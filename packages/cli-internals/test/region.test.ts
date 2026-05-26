@@ -240,3 +240,90 @@ describe("upsertRegion", () => {
     expect(twice).toBe(once)
   })
 })
+
+/**
+ * Suffix-pair markers (HTML / MDX / XML). Same round-trip as the prefix-only case, but the
+ * marker shape is `<!-- pjt:foo start -->` instead of `# pjt:foo start`. These tests prove the
+ * suffix threads through find/render/upsert without breaking anything.
+ */
+describe("region markers with commentSuffix (HTML/MDX)", () => {
+  it("renderRegion fences with prefix + suffix on both lines", () => {
+    const rendered = renderRegion({
+      ownerId: "pjt:readme:intro",
+      commentPrefix: "<!--",
+      commentSuffix: " -->",
+      content: "Welcome to the project.\n",
+    })
+    expect(rendered).toBe(
+      [
+        "<!-- pjt:readme:intro start -->",
+        "Welcome to the project.",
+        "<!-- pjt:readme:intro end -->",
+      ].join("\n"),
+    )
+  })
+
+  it("findRegion picks up an HTML-fenced region between matching markers", () => {
+    const file = [
+      "# Project README",
+      "",
+      "<!-- pjt:readme:intro start -->",
+      "Welcome to the project.",
+      "<!-- pjt:readme:intro end -->",
+      "",
+      "## Contributing",
+    ].join("\n")
+    const out = runSync(
+      findRegion({
+        fileContent: file,
+        ownerId: "pjt:readme:intro",
+        commentPrefix: "<!--",
+        commentSuffix: " -->",
+        path: "README.md",
+      }),
+    )
+    expect(out).toEqual({
+      kind: "found",
+      startLine: 2,
+      endLine: 4,
+      content: "Welcome to the project.",
+    })
+  })
+
+  it("does not match HTML markers when the suffix is wrong", () => {
+    const file = ["<!-- pjt:x start -->", "body", "<!-- pjt:x end -->"].join("\n")
+    // Search without suffix — should fail to find the region (start marker shape doesn't match).
+    const out = runSync(
+      findRegion({
+        fileContent: file,
+        ownerId: "pjt:x",
+        commentPrefix: "<!--",
+        // commentSuffix omitted → marker is `<!-- pjt:x start`, which doesn't match.
+        path: "f.md",
+      }),
+    )
+    expect(out.kind).toBe("absent")
+  })
+
+  it("round-trips HTML region through render + upsert without drift", () => {
+    const rendered = renderRegion({
+      ownerId: "pjt:agents:rules",
+      commentPrefix: "<!--",
+      commentSuffix: " -->",
+      content: "Always run `pnpm check-all` before merging.\n",
+    })
+    const file = "# AGENTS.md\n\nGeneral guidance.\n"
+    const once = upsertRegion({ fileContent: file, existing: { kind: "absent" }, rendered })
+    const found = runSync(
+      findRegion({
+        fileContent: once,
+        ownerId: "pjt:agents:rules",
+        commentPrefix: "<!--",
+        commentSuffix: " -->",
+        path: "AGENTS.md",
+      }),
+    )
+    const twice = upsertRegion({ fileContent: once, existing: found, rendered })
+    expect(twice).toBe(once)
+  })
+})

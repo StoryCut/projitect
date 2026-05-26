@@ -77,11 +77,13 @@ const nextRegion = (
         fileContent: content,
         ownerId: region.ownerId,
         commentPrefix: file.commentPrefix,
+        commentSuffix: file.commentSuffix,
         path: file.path,
       })
       const rendered = renderRegion({
         ownerId: region.ownerId,
         commentPrefix: file.commentPrefix,
+        commentSuffix: file.commentSuffix,
         content: region.content,
       })
       content = upsertRegion({ fileContent: content, existing: found, rendered })

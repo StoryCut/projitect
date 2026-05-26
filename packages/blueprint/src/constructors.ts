@@ -12,6 +12,11 @@ export interface RegionFileSpec {
   readonly description?: string
   readonly path: string
   readonly commentPrefix?: string
+  /**
+   * Optional closing delimiter for prefix/suffix-pair comment styles. Set to `" -->"` for
+   * HTML/MDX. Leave undefined (default) for single-prefix styles like `#` and `//`.
+   */
+  readonly commentSuffix?: string
   readonly content: string
   readonly extraPermissions?: ReadonlyArray<Permission.Permission>
 }
@@ -19,6 +24,10 @@ export interface RegionFileSpec {
 /**
  * Create a region-mode blueprint. The blueprint's `id` doubles as the region's `ownerId`.
  * `commentPrefix` defaults to `#` (suitable for `.gitignore` / YAML / shell).
+ *
+ * For HTML / MDX / XML files, prefer the `markdownSection` helper — it sets the right
+ * prefix and suffix pair for you. For ignore-style files, prefer `ignoreSection` — same
+ * shape with a name that documents its intent.
  */
 export const regionFile = (spec: RegionFileSpec): Blueprint.Blueprint => ({
   id: spec.id,
@@ -35,6 +44,7 @@ export const regionFile = (spec: RegionFileSpec): Blueprint.Blueprint => ({
       ownerId: spec.id,
       path: spec.path,
       commentPrefix: spec.commentPrefix ?? "#",
+      ...(spec.commentSuffix !== undefined && { commentSuffix: spec.commentSuffix }),
       content: spec.content,
     }),
   ),

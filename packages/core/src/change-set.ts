@@ -17,6 +17,12 @@ export const RegionOp = Schema.Struct({
   ownerId: Schema.String,
   path: Schema.String,
   commentPrefix: Schema.String,
+  /**
+   * Optional comment suffix for prefix/suffix-pair comment styles (HTML/MDX/XML). When omitted
+   * (the default), the marker terminates at end-of-line — that's the right shape for `#`, `//`,
+   * `--`, and other single-prefix comment syntaxes. Set to `" -->"` for HTML/markdown.
+   */
+  commentSuffix: Schema.optional(Schema.String),
   content: Schema.String,
 })
 

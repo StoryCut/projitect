@@ -11,6 +11,13 @@ export const LockRegionOp = Schema.Struct({
   path: Schema.String,
   ownerId: Schema.String,
   commentPrefix: Schema.String,
+  /**
+   * Optional — present for prefix/suffix-pair comment styles (HTML/MDX/XML). Absent on
+   * older lockfiles, which carried only single-prefix regions; readers treat the absence as
+   * the empty string. Bumping the lockfile version is not required because adding an optional
+   * field decodes backwards-compatibly.
+   */
+  commentSuffix: Schema.optional(Schema.String),
 })
 
 export const LockMergeOp = Schema.Struct({

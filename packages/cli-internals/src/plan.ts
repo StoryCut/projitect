@@ -13,6 +13,8 @@ export interface RegionPlanFile {
   readonly kind: "region"
   readonly path: string
   readonly commentPrefix: string
+  /** Optional closing delimiter for HTML/MDX comments. Empty for `#`/`//`-style regions. */
+  readonly commentSuffix: string
   readonly regions: ReadonlyArray<{ readonly ownerId: string; readonly content: string }>
 }
 
@@ -190,7 +192,22 @@ const groupByBlueprint = (attributed: ReadonlyArray<AttributedOp>): ByBlueprint 
 const toLockOp = (op: ChangeSet.Operation): PjtLock.LockOperation => {
   switch (op.mode) {
     case "region": {
-      return { mode: "region", path: op.path, ownerId: op.ownerId, commentPrefix: op.commentPrefix }
+      // Only record commentSuffix when non-empty — empty-string suffixes are noise in the
+      // lockfile, and absence decodes the same as empty per the schema.
+      return op.commentSuffix !== undefined && op.commentSuffix !== ""
+        ? {
+            mode: "region",
+            path: op.path,
+            ownerId: op.ownerId,
+            commentPrefix: op.commentPrefix,
+            commentSuffix: op.commentSuffix,
+          }
+        : {
+            mode: "region",
+            path: op.path,
+            ownerId: op.ownerId,
+            commentPrefix: op.commentPrefix,
+          }
     }
     case "merge": {
       return { mode: "merge", path: op.path, ownedKeys: op.ownedKeys }
@@ -242,6 +259,7 @@ const reduceOps = (
           const seen = new Set<string>()
           const regions: Array<{ ownerId: string; content: string }> = []
           let commentPrefix = regionOps[0]!.commentPrefix
+          let commentSuffix = regionOps[0]!.commentSuffix ?? ""
           for (const op of regionOps) {
             if (seen.has(op.ownerId)) {
               return yield* new Errors.PlanConflictRegion({
@@ -253,10 +271,15 @@ const reduceOps = (
               })
             }
             seen.add(op.ownerId)
+            // Last-write-wins on prefix/suffix mismatch — in practice all blueprints targeting
+            // the same file should use the same comment style. The lint preset surfaces the
+            // mistake at authoring time.
             if (op.commentPrefix !== commentPrefix) commentPrefix = op.commentPrefix
+            const opSuffix = op.commentSuffix ?? ""
+            if (opSuffix !== commentSuffix) commentSuffix = opSuffix
             regions.push({ ownerId: op.ownerId, content: op.content })
           }
-          files.push({ kind: "region", path: filePath, commentPrefix, regions })
+          files.push({ kind: "region", path: filePath, commentPrefix, commentSuffix, regions })
           break
         }
         case "merge": {

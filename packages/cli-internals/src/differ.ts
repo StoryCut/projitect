@@ -97,6 +97,7 @@ const diffRegion = (
         fileContent: current,
         ownerId: region.ownerId,
         commentPrefix: file.commentPrefix,
+        commentSuffix: file.commentSuffix,
         path: file.path,
       })
       const expected = region.content.trimEnd()
