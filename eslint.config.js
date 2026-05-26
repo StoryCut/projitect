@@ -1,6 +1,7 @@
 import js from "@eslint/js"
 import tseslint from "typescript-eslint"
 import unicorn from "eslint-plugin-unicorn"
+import packageJson from "eslint-plugin-package-json"
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments/configs"
 import prettierRecommended from "eslint-plugin-prettier/recommended"
 
@@ -34,17 +35,24 @@ export default tseslint.config(
     ],
   },
 
-  // ===== Base presets =====
+  // ===== Base presets (JS-wide; type-checked rules scoped to TS below) =====
   js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
   unicorn.configs["flat/recommended"],
   eslintComments.recommended,
-  // Prettier must come last — its `/recommended` shape disables conflicting style rules from
-  // earlier presets and turns Prettier issues into ESLint errors.
+
+  // ===== Type-checked TS rules — scoped to TS files only so they don't trip on JSON =====
+  ...tseslint.configs.recommendedTypeChecked.map((cfg) => ({
+    ...cfg,
+    files: ["**/*.{ts,tsx,mts,cts}"],
+  })),
+
+  // Prettier integration. Last so it disables conflicting style rules from earlier presets.
   prettierRecommended,
 
-  // ===== Workspace-wide rules =====
+  // ===== Workspace-wide rules (scoped to JS/TS — package.json is handled by its own
+  // parser via eslint-plugin-package-json below) =====
   {
+    files: ["**/*.{ts,tsx,mts,cts,js,mjs,cjs,jsx}"],
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -104,7 +112,13 @@ export default tseslint.config(
     },
   },
 
-  // ===== Blueprint packages can't import @effect/platform FileSystem =====
+  // ===== Sandbox enforcement: blueprint packages can't reach raw Node APIs =====
+  //
+  // The blueprint sandbox is "soft" today — enforced at the Effect Layer level by
+  // cli-internals' permission gate. This lint rule is the second line of defense: it stops a
+  // blueprint package from ever importing `node:fs`, `node:child_process`, etc. directly,
+  // which would bypass the sandbox at runtime. A worker-process sandbox (v0.2+) makes this
+  // moot; until then, the rule keeps the soft sandbox honest.
   {
     files: ["packages/blueprint/**", "packages/blueprint-*/**"],
     rules: {
@@ -119,8 +133,67 @@ export default tseslint.config(
                 "Blueprints must use `BlueprintFileSystem` from `@projitect/blueprint`, never `@effect/platform`'s `FileSystem` directly. See https://projitect.dev/docs/concepts/sandbox",
             },
           ],
+          patterns: [
+            {
+              regex: "^node:",
+              message:
+                "Blueprint packages must not import raw Node APIs (node:fs, node:child_process, etc.). Use `BlueprintFileSystem` for filesystem access; shell-out belongs in cli-internals.",
+            },
+          ],
         },
       ],
     },
   },
+
+  // ===== @projitect/core stays runtime-pure =====
+  //
+  // Core is types + Schema + error definitions; it must work in any JS runtime. Banning
+  // `node:*` imports keeps it portable should we later want to run a blueprint planner in the
+  // browser (interactive in-browser demo on the docs site is on the roadmap).
+  {
+    files: ["packages/core/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^node:",
+              message:
+                "@projitect/core must stay runtime-pure (no node:* imports). Move runtime-only helpers into @projitect/cli-internals.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ===== @projitect/test-kit is an in-memory FS by definition =====
+  //
+  // If a test-kit consumer needs real disk access in their tests, they should bypass
+  // BlueprintFileSystem entirely — but the test-kit itself must never touch the disk.
+  {
+    files: ["packages/test-kit/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^node:",
+              message:
+                "@projitect/test-kit must stay in-memory. Don't import node:* — that would defeat the purpose of an in-memory test FS.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ===== Package.json validation =====
+  //
+  // Lints every `package.json` in the workspace: required fields, sorted dependencies,
+  // valid name pattern, no duplicates. Catches the kinds of mistakes that previously
+  // surfaced only when `pnpm publish --dry-run` ran in CI.
+  packageJson.configs.recommended,
 )

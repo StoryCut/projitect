@@ -77,11 +77,9 @@ export const ensureGitRepo = (params: {
   Effect.gen(function* () {
     const ok = yield* isGitRepo(params.projectRoot)
     if (ok) return
-    return yield* Effect.fail(
-      new Errors.GitNotARepo({
-        id: "pjt.git.not-a-repo",
-        projectRoot: params.projectRoot,
-        message: `No \`.git\` directory at ${params.projectRoot}. \`pjt build --force\` requires a git repository so destructive operations are recoverable.`,
-      }),
-    )
+    return yield* new Errors.GitNotARepo({
+      id: "pjt.git.not-a-repo",
+      projectRoot: params.projectRoot,
+      message: `No \`.git\` directory at ${params.projectRoot}. \`pjt build --force\` requires a git repository so destructive operations are recoverable.`,
+    })
   })

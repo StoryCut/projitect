@@ -20,13 +20,13 @@
     "build:clean": "tsc --build --clean",
     "tc": "tsc --build"
   },
-  "peerDependencies": {
-    "@projitect/core": "workspace:*",
-    "effect": "^4.0.0-beta.70"
-  },
   "devDependencies": {
     "@projitect/core": "workspace:*",
     "effect": "^4.0.0-beta.70",
     "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@projitect/core": "workspace:*",
+    "effect": "^4.0.0-beta.70"
   }
 }

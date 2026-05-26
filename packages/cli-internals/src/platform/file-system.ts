@@ -36,14 +36,12 @@ const tryEffect = <A>(
 ): Effect.Effect<A, PlatformError.PlatformError> =>
   Effect.tryPromise({ try: p, catch: (e) => sysError(method, e) })
 
-const NOT_IMPL = (method: string): never => {
-  throw new Error(
-    `FileSystem.${method} is not implemented in projitect's Node Layer (v0.1). File an issue if you need it.`,
-  )
-}
-
 const dieNotImpl = <A>(method: string): Effect.Effect<A, PlatformError.PlatformError> =>
-  Effect.sync(() => NOT_IMPL(method))
+  Effect.die(
+    new Error(
+      `FileSystem.${method} is not implemented in projitect's Node Layer (v0.1). File an issue if you need it.`,
+    ),
+  )
 
 const make = FileSystem.make({
   access: (path, options) =>

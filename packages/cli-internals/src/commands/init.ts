@@ -47,12 +47,10 @@ const requireGit = (projectRoot: string): Effect.Effect<void, Errors.InitGitMiss
       ),
     )
     if (!ok) {
-      return yield* Effect.fail(
-        new Errors.InitGitMissing({
-          id: "pjt.init.git-missing",
-          message: "No `.git` directory found. Run `git init` first, then re-run `pjt init`.",
-        }),
-      )
+      return yield* new Errors.InitGitMissing({
+        id: "pjt.init.git-missing",
+        message: "No `.git` directory found. Run `git init` first, then re-run `pjt init`.",
+      })
     }
   })
 
@@ -67,13 +65,11 @@ const requirePackageJson = (
       ),
     )
     if (!ok) {
-      return yield* Effect.fail(
-        new Errors.InitPackageJsonMissing({
-          id: "pjt.init.package-json-missing",
-          message:
-            "No `package.json` found. Run `npm init -y` (or your PM equivalent) first, then re-run `pjt init`.",
-        }),
-      )
+      return yield* new Errors.InitPackageJsonMissing({
+        id: "pjt.init.package-json-missing",
+        message:
+          "No `package.json` found. Run `npm init -y` (or your PM equivalent) first, then re-run `pjt init`.",
+      })
     }
   })
 

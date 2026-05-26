@@ -50,14 +50,12 @@ export const build = (params: {
 }): Effect.Effect<BuildResult, BuildError, BuildRequirements> =>
   Effect.gen(function* () {
     if (!params.force) {
-      return yield* Effect.fail(
-        new Errors.ApplyDirtyGit({
-          id: "pjt.apply.dirty-git",
-          command: "build",
-          message:
-            "`pjt build` requires the `--force` flag. This command is destructive — it wipes the project tree before re-applying.",
-        }),
-      )
+      return yield* new Errors.ApplyDirtyGit({
+        id: "pjt.apply.dirty-git",
+        command: "build",
+        message:
+          "`pjt build` requires the `--force` flag. This command is destructive — it wipes the project tree before re-applying.",
+      })
     }
 
     yield* ensureGitRepo({ projectRoot: params.config.projectRoot })
@@ -65,15 +63,13 @@ export const build = (params: {
     if (!params.forceDirty) {
       const status = yield* gitStatus({ projectRoot: params.config.projectRoot })
       if (!status.clean) {
-        return yield* Effect.fail(
-          new Errors.ApplyDirtyGit({
-            id: "pjt.apply.dirty-git",
-            command: "build",
-            message:
-              `Git working tree is dirty (${status.lines.length} uncommitted change${status.lines.length === 1 ? "" : "s"}). ` +
-              "Commit or stash, or pass `--force-dirty` to override.",
-          }),
-        )
+        return yield* new Errors.ApplyDirtyGit({
+          id: "pjt.apply.dirty-git",
+          command: "build",
+          message:
+            `Git working tree is dirty (${status.lines.length} uncommitted change${status.lines.length === 1 ? "" : "s"}). ` +
+            "Commit or stash, or pass `--force-dirty` to override.",
+        })
       }
     }
 

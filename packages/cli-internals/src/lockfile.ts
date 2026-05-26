@@ -44,14 +44,12 @@ export const readLockfile = (params: {
       typeof parsed.version === "number" &&
       parsed.version > CURRENT_VERSION
     ) {
-      return yield* Effect.fail(
-        new Errors.LockVersionMismatch({
-          id: "pjt.lock.version-mismatch",
-          found: parsed.version,
-          expected: CURRENT_VERSION,
-          message: `${LOCKFILE_NAME} was written by a newer projitect (version ${parsed.version}). Upgrade the \`projitect\` devDep.`,
-        }),
-      )
+      return yield* new Errors.LockVersionMismatch({
+        id: "pjt.lock.version-mismatch",
+        found: parsed.version,
+        expected: CURRENT_VERSION,
+        message: `${LOCKFILE_NAME} was written by a newer projitect (version ${parsed.version}). Upgrade the \`projitect\` devDep.`,
+      })
     }
 
     return yield* Schema.decodeUnknownEffect(PjtLock.PjtLock)(parsed).pipe(

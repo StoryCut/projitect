@@ -72,13 +72,11 @@ export const loadBlueprintFile = (params: {
       ),
     )
     if (!exists) {
-      return yield* Effect.fail(
-        new Errors.ConfigBlueprintFileNotFound({
-          id: "pjt.config.blueprint-file-not-found",
-          blueprintFile,
-          message: `No blueprint file found at ${full}. Run \`pjt init\` to create one.`,
-        }),
-      )
+      return yield* new Errors.ConfigBlueprintFileNotFound({
+        id: "pjt.config.blueprint-file-not-found",
+        blueprintFile,
+        message: `No blueprint file found at ${full}. Run \`pjt init\` to create one.`,
+      })
     }
     const module_ = yield* Effect.tryPromise({
       try: () => import(pathToFileURL(full).href) as Promise<{ default?: unknown }>,
@@ -92,14 +90,12 @@ export const loadBlueprintFile = (params: {
     })
     const value = module_.default
     if (!isProjitectFile(value)) {
-      return yield* Effect.fail(
-        new Errors.LoaderInvalidDefaultExport({
-          id: "pjt.loader.invalid-default-export",
-          blueprintFile,
-          received: describe(value),
-          message: `${blueprintFile} must \`export default pjt({...})\`. Received ${describe(value)}.`,
-        }),
-      )
+      return yield* new Errors.LoaderInvalidDefaultExport({
+        id: "pjt.loader.invalid-default-export",
+        blueprintFile,
+        received: describe(value),
+        message: `${blueprintFile} must \`export default pjt({...})\`. Received ${describe(value)}.`,
+      })
     }
     return value
   })

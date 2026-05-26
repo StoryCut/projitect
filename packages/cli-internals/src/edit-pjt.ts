@@ -76,16 +76,14 @@ const spliceImport = (params: {
     const startIndex = lines.findIndex((l) => l.trim() === IMPORTS_START)
     const endIndex = lines.findIndex((l) => l.trim() === IMPORTS_END)
     if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
-      return yield* Effect.fail(
-        new Errors.AddMarkersMissing({
-          id: "pjt.add.markers-missing",
-          blueprintFile,
-          missingMarker: `${IMPORTS_START} / ${IMPORTS_END}`,
-          message:
-            `${blueprintFile} is missing the \`pjt:imports start\` / \`pjt:imports end\` markers. ` +
-            "Restore them (see `pjt init`'s starter template) and re-run `pjt add`.",
-        }),
-      )
+      return yield* new Errors.AddMarkersMissing({
+        id: "pjt.add.markers-missing",
+        blueprintFile,
+        missingMarker: `${IMPORTS_START} / ${IMPORTS_END}`,
+        message:
+          `${blueprintFile} is missing the \`pjt:imports start\` / \`pjt:imports end\` markers. ` +
+          "Restore them (see `pjt init`'s starter template) and re-run `pjt add`.",
+      })
     }
     // Dedupe: skip if any line between the markers already equals the import
     const between = lines.slice(startIndex + 1, endIndex).map((l) => l.trim())
@@ -108,16 +106,14 @@ const spliceCalls = (params: {
     const startIndex = lines.findIndex((l) => l.trim() === BLUEPRINTS_START)
     const endIndex = lines.findIndex((l) => l.trim() === BLUEPRINTS_END)
     if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
-      return yield* Effect.fail(
-        new Errors.AddMarkersMissing({
-          id: "pjt.add.markers-missing",
-          blueprintFile,
-          missingMarker: `${BLUEPRINTS_START} / ${BLUEPRINTS_END}`,
-          message:
-            `${blueprintFile} is missing the \`pjt:blueprints start\` / \`pjt:blueprints end\` markers. ` +
-            "Restore them and re-run `pjt add`.",
-        }),
-      )
+      return yield* new Errors.AddMarkersMissing({
+        id: "pjt.add.markers-missing",
+        blueprintFile,
+        missingMarker: `${BLUEPRINTS_START} / ${BLUEPRINTS_END}`,
+        message:
+          `${blueprintFile} is missing the \`pjt:blueprints start\` / \`pjt:blueprints end\` markers. ` +
+          "Restore them and re-run `pjt add`.",
+      })
     }
     const indent = "    " // 4-space, matching the starter template
     const newCalls = callLines.map((c) => `${indent}${c.replace(/^\s+/, "")}`)

@@ -226,15 +226,13 @@ const reduceOps = (
 
       for (const op of opsForPath) {
         if (op.mode !== mode) {
-          return yield* Effect.fail(
-            new Errors.PlanConflictOwned({
-              id: "pjt.plan.conflict-owned",
-              path: filePath,
-              ownerA: first.ownerId,
-              ownerB: op.ownerId,
-              message: `Blueprints ${first.ownerId} (${mode}) and ${op.ownerId} (${op.mode}) both target ${filePath} with incompatible modes`,
-            }),
-          )
+          return yield* new Errors.PlanConflictOwned({
+            id: "pjt.plan.conflict-owned",
+            path: filePath,
+            ownerA: first.ownerId,
+            ownerB: op.ownerId,
+            message: `Blueprints ${first.ownerId} (${mode}) and ${op.ownerId} (${op.mode}) both target ${filePath} with incompatible modes`,
+          })
         }
       }
 
@@ -246,15 +244,13 @@ const reduceOps = (
           let commentPrefix = regionOps[0]!.commentPrefix
           for (const op of regionOps) {
             if (seen.has(op.ownerId)) {
-              return yield* Effect.fail(
-                new Errors.PlanConflictRegion({
-                  id: "pjt.plan.conflict-region",
-                  path: filePath,
-                  ownerA: op.ownerId,
-                  ownerB: op.ownerId,
-                  message: `Multiple blueprints share ownerId ${op.ownerId} for region in ${filePath}`,
-                }),
-              )
+              return yield* new Errors.PlanConflictRegion({
+                id: "pjt.plan.conflict-region",
+                path: filePath,
+                ownerA: op.ownerId,
+                ownerB: op.ownerId,
+                message: `Multiple blueprints share ownerId ${op.ownerId} for region in ${filePath}`,
+              })
             }
             seen.add(op.ownerId)
             if (op.commentPrefix !== commentPrefix) commentPrefix = op.commentPrefix
@@ -271,16 +267,14 @@ const reduceOps = (
             for (const key of op.ownedKeys) {
               const prior = ownership.get(key)
               if (prior !== undefined && prior !== op.ownerId) {
-                return yield* Effect.fail(
-                  new Errors.PlanConflictMerge({
-                    id: "pjt.plan.conflict-merge",
-                    path: filePath,
-                    key,
-                    ownerA: prior,
-                    ownerB: op.ownerId,
-                    message: `Blueprints ${prior} and ${op.ownerId} both claim key "${key}" in ${filePath}`,
-                  }),
-                )
+                return yield* new Errors.PlanConflictMerge({
+                  id: "pjt.plan.conflict-merge",
+                  path: filePath,
+                  key,
+                  ownerA: prior,
+                  ownerB: op.ownerId,
+                  message: `Blueprints ${prior} and ${op.ownerId} both claim key "${key}" in ${filePath}`,
+                })
               }
               ownership.set(key, op.ownerId)
             }
@@ -291,15 +285,13 @@ const reduceOps = (
         }
         case "owned": {
           if (opsForPath.length > 1) {
-            return yield* Effect.fail(
-              new Errors.PlanConflictOwned({
-                id: "pjt.plan.conflict-owned",
-                path: filePath,
-                ownerA: opsForPath[0]!.ownerId,
-                ownerB: opsForPath[1]!.ownerId,
-                message: `Multiple blueprints claim full ownership of ${filePath}`,
-              }),
-            )
+            return yield* new Errors.PlanConflictOwned({
+              id: "pjt.plan.conflict-owned",
+              path: filePath,
+              ownerA: opsForPath[0]!.ownerId,
+              ownerB: opsForPath[1]!.ownerId,
+              message: `Multiple blueprints claim full ownership of ${filePath}`,
+            })
           }
           const op = first
           files.push({ kind: "owned", path: filePath, ownerId: op.ownerId, content: op.content })
@@ -307,15 +299,13 @@ const reduceOps = (
         }
         case "seed": {
           if (opsForPath.length > 1) {
-            return yield* Effect.fail(
-              new Errors.PlanConflictOwned({
-                id: "pjt.plan.conflict-owned",
-                path: filePath,
-                ownerA: opsForPath[0]!.ownerId,
-                ownerB: opsForPath[1]!.ownerId,
-                message: `Multiple blueprints try to seed ${filePath}`,
-              }),
-            )
+            return yield* new Errors.PlanConflictOwned({
+              id: "pjt.plan.conflict-owned",
+              path: filePath,
+              ownerA: opsForPath[0]!.ownerId,
+              ownerB: opsForPath[1]!.ownerId,
+              message: `Multiple blueprints try to seed ${filePath}`,
+            })
           }
           const op = first
           files.push({ kind: "seed", path: filePath, ownerId: op.ownerId, content: op.content })

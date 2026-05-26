@@ -14,8 +14,8 @@ importers:
         specifier: ^2.27.10
         version: 2.31.0(@types/node@22.19.19)
       "@effect/language-service":
-        specifier: ^0.27.0
-        version: 0.27.2
+        specifier: ^0.86.2
+        version: 0.86.2
       "@eslint-community/eslint-plugin-eslint-comments":
         specifier: ^4.4.0
         version: 4.7.1(eslint@9.39.4(jiti@2.7.0))
@@ -31,6 +31,9 @@ importers:
       eslint:
         specifier: ^9.16.0
         version: 9.39.4(jiti@2.7.0)
+      eslint-plugin-package-json:
+        specifier: ^0.39.0
+        version: 0.39.2(@types/estree@1.0.9)(eslint@9.39.4(jiti@2.7.0))(jsonc-eslint-parser@2.4.2)
       eslint-plugin-prettier:
         specifier: ^5.2.1
         version: 5.5.5(eslint-config-prettier@9.1.2(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.3)
@@ -191,6 +194,12 @@ importers:
         version: 5.9.3
 
 packages:
+  "@altano/repository-tools@1.0.1":
+    resolution:
+      {
+        integrity: sha512-/FFHQOMp5TZWplkDWbbLIjmANDr9H/FtqUm+hfJMK76OBut0Ht0cNfd0ZXd/6LXf4pWUTzvpgVjcin7EEHSznA==,
+      }
+
   "@astrojs/compiler@2.13.1":
     resolution:
       {
@@ -459,10 +468,10 @@ packages:
       }
     engines: { node: ">=14" }
 
-  "@effect/language-service@0.27.2":
+  "@effect/language-service@0.86.2":
     resolution:
       {
-        integrity: sha512-AFgxoIZ6xpfwCZp7+1mj3f1HsK3Yqe9I0iUfpf8Iu2gl9F3dmdFiOvuoLRVSkfVsK2BTQr8kv2zPi53Lst2haw==,
+        integrity: sha512-SaPln+8srOqDJDUwNTDmP5e+IYpEDr9+1epGznnsLqu8xvo6VnxyWARdeLpqvZJlb0Pgy9ca7ppqvvdWbHPXAg==,
       }
     hasBin: true
 
@@ -3244,6 +3253,13 @@ packages:
       }
     engines: { node: ">=18" }
 
+  cliui@9.0.1:
+    resolution:
+      {
+        integrity: sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==,
+      }
+    engines: { node: ">=20" }
+
   clsx@2.1.1:
     resolution:
       {
@@ -3450,12 +3466,33 @@ packages:
       }
     engines: { node: ">=8" }
 
+  detect-indent@7.0.1:
+    resolution:
+      {
+        integrity: sha512-Mc7QhQ8s+cLrnUfU/Ji94vG/r8M26m8f++vyres4ZoojaRDpZ1eSIh/EpzLNwlWuvzSZ3UbDFspjFvTDXe6e/g==,
+      }
+    engines: { node: ">=12.20" }
+
+  detect-indent@7.0.2:
+    resolution:
+      {
+        integrity: sha512-y+8xyqdGLL+6sh0tVeHcfP/QDd8gUgbasolJJpY7NgeQGSZ739bDtSiaiDgtoicy+mtYB81dKLxO9xRhCyIB3A==,
+      }
+    engines: { node: ">=12.20" }
+
   detect-libc@2.1.2:
     resolution:
       {
         integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==,
       }
     engines: { node: ">=8" }
+
+  detect-newline@4.0.1:
+    resolution:
+      {
+        integrity: sha512-qE3Veg1YXzGHQhlA6jzebZN2qVf6NX+A7m7qlhCGG30dJixrAQhYOsJjsnBjJkCSmuOPpCk30145fr8FV0bzog==,
+      }
+    engines: { node: ^12.20.0 || ^14.13.1 || >=16.0.0 }
 
   deterministic-object-hash@2.0.2:
     resolution:
@@ -3692,6 +3729,29 @@ packages:
     peerDependencies:
       eslint: ">=7.0.0"
 
+  eslint-fix-utils@0.2.1:
+    resolution:
+      {
+        integrity: sha512-vHvLGmqdgPhZgH+cymlAlAqVuV22auB+uk/mgFdg5zotEtMHAHcOzNzhr5XOrDzyKGEQY2uQHoT+tS8P36/2CQ==,
+      }
+    engines: { node: ">=18.3.0" }
+    peerDependencies:
+      "@types/estree": ">=1"
+      eslint: ">=8"
+    peerDependenciesMeta:
+      "@types/estree":
+        optional: true
+
+  eslint-plugin-package-json@0.39.2:
+    resolution:
+      {
+        integrity: sha512-uvyMjUlzr0CKsmj7IfDK5s2RvFVei2KZRxr3WAycpFR+p22R957lZlGIcmwSuVoNmSq9/uk+jZMLqzS/TcYS1A==,
+      }
+    engines: { node: ^=20.19.0 || >=22.12.0 }
+    peerDependencies:
+      eslint: ">=8.0.0"
+      jsonc-eslint-parser: ^2.0.0
+
   eslint-plugin-prettier@5.5.5:
     resolution:
       {
@@ -3765,6 +3825,13 @@ packages:
         integrity: sha512-j6PAQ2uUr79PZhBjP5C5fhl8e39FmRnOjsD5lGnWrFU8i2G776tBK7+nP8KuQUTTyAZUwfQqXAgrVH5MbH9CYQ==,
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
+
+  espree@9.6.1:
+    resolution:
+      {
+        integrity: sha512-oruZaFkjorTpF32kDSI5/75ViwGeZginGGy2NoOSg3Q9bnwlnmDm4HLnkl0RE3n+njDXR037aY1+x58Z/zFdwQ==,
+      }
+    engines: { node: ^12.22.0 || ^14.17.0 || >=16.0.0 }
 
   esprima@4.0.1:
     resolution:
@@ -4053,6 +4120,13 @@ packages:
         integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==,
       }
 
+  get-caller-file@2.0.5:
+    resolution:
+      {
+        integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==,
+      }
+    engines: { node: 6.* || 8.* || >= 10.* }
+
   get-east-asian-width@1.6.0:
     resolution:
       {
@@ -4071,6 +4145,12 @@ packages:
     resolution:
       {
         integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==,
+      }
+
+  git-hooks-list@4.2.1:
+    resolution:
+      {
+        integrity: sha512-WNvqJjOxxs/8ZP9+DWdwWJ7cDsd60NHf39XnD82pDVrKO5q7xfPqpkK6hwEAmBa/ZSEE4IOoR75EzbbIuwGlMw==,
       }
 
   github-slugger@2.0.0:
@@ -4626,6 +4706,13 @@ packages:
       {
         integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==,
       }
+
+  jsonc-eslint-parser@2.4.2:
+    resolution:
+      {
+        integrity: sha512-1e4qoRgnn448pRuMvKGsFFymUCquZV0mpGgOyIKNgD3JVDTsVJyRBGH/Fm0tBb8WsWGgmB1mDe6/yJMQM37DUA==,
+      }
+    engines: { node: ^12.22.0 || ^14.17.0 || >=16.0.0 }
 
   jsonfile@4.0.0:
     resolution:
@@ -5556,6 +5643,14 @@ packages:
       }
     engines: { node: ">=6" }
 
+  package-json-validator@0.13.3:
+    resolution:
+      {
+        integrity: sha512-/BeP6SFebqXJS27aLrTMjpmF0OZtsptoxYVU9pUGPdUNTc1spFfNcnOOhvT4Cghm1OQ75CyMM11H5jtQbe7bAQ==,
+      }
+    engines: { node: ">=18" }
+    hasBin: true
+
   package-manager-detector@0.2.11:
     resolution:
       {
@@ -6181,6 +6276,26 @@ packages:
       }
     engines: { node: ">= 18" }
 
+  sort-object-keys@1.1.3:
+    resolution:
+      {
+        integrity: sha512-855pvK+VkU7PaKYPc+Jjnmt4EzejQHyhhF33q31qG8x7maDzkeFhAAThdCYay11CISO+qAMwjOBP+fPZe0IPyg==,
+      }
+
+  sort-object-keys@2.1.0:
+    resolution:
+      {
+        integrity: sha512-SOiEnthkJKPv2L6ec6HMwhUcN0/lppkeYuN1x63PbyPRrgSPIuBJCiYxYyvWRTtjMlOi14vQUCGUJqS6PLVm8g==,
+      }
+
+  sort-package-json@3.6.1:
+    resolution:
+      {
+        integrity: sha512-Chgejw1+10p2D0U2tB7au1lHtz6TkFnxmvZktyBCRyV0GgmF6nl1IxXxAsPtJVsUyg/fo+BfCMAVVFUVRkAHrQ==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
+
   source-map-js@1.2.1:
     resolution:
       {
@@ -6754,6 +6869,13 @@ packages:
         integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==,
       }
 
+  validate-npm-package-name@6.0.2:
+    resolution:
+      {
+        integrity: sha512-IUoow1YUtvoBBC06dXs8bR8B9vuA3aJfmQNKMoaPG/OFsPmoQvw8xh+6Ye25Gx9DQhoEom3Pcu9MKHerm/NpUQ==,
+      }
+    engines: { node: ^18.17.0 || >=20.5.0 }
+
   vfile-location@5.0.3:
     resolution:
       {
@@ -6991,6 +7113,13 @@ packages:
         integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA==,
       }
 
+  y18n@5.0.8:
+    resolution:
+      {
+        integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==,
+      }
+    engines: { node: ">=10" }
+
   yaml@2.9.0:
     resolution:
       {
@@ -7005,6 +7134,20 @@ packages:
         integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==,
       }
     engines: { node: ">=12" }
+
+  yargs-parser@22.0.0:
+    resolution:
+      {
+        integrity: sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw==,
+      }
+    engines: { node: ^20.19.0 || ^22.12.0 || >=23 }
+
+  yargs@18.0.0:
+    resolution:
+      {
+        integrity: sha512-4UEqdc2RYGHZc7Doyqkrqiln3p9X2DZVxaGbwhn2pi7MrRagKaOcIKe8L3OxYcbhXLgLFUS3zAYuQjKBQgmuNg==,
+      }
+    engines: { node: ^20.19.0 || ^22.12.0 || >=23 }
 
   yocto-queue@0.1.0:
     resolution:
@@ -7070,6 +7213,8 @@ packages:
       }
 
 snapshots:
+  "@altano/repository-tools@1.0.1": {}
+
   "@astrojs/compiler@2.13.1": {}
 
   "@astrojs/internal-helpers@0.7.6": {}
@@ -7414,7 +7559,7 @@ snapshots:
 
   "@ctrl/tinycolor@4.2.0": {}
 
-  "@effect/language-service@0.27.2": {}
+  "@effect/language-service@0.86.2": {}
 
   "@emnapi/core@1.10.0":
     dependencies:
@@ -8810,6 +8955,12 @@ snapshots:
       slice-ansi: 5.0.0
       string-width: 7.2.0
 
+  cliui@9.0.1:
+    dependencies:
+      string-width: 7.2.0
+      strip-ansi: 7.2.0
+      wrap-ansi: 9.0.2
+
   clsx@2.1.1: {}
 
   collapse-white-space@2.1.0: {}
@@ -8900,7 +9051,13 @@ snapshots:
 
   detect-indent@6.1.0: {}
 
+  detect-indent@7.0.1: {}
+
+  detect-indent@7.0.2: {}
+
   detect-libc@2.1.2: {}
+
+  detect-newline@4.0.1: {}
 
   deterministic-object-hash@2.0.2:
     dependencies:
@@ -9098,6 +9255,28 @@ snapshots:
       eslint: 9.39.4(jiti@2.7.0)
     optional: true
 
+  eslint-fix-utils@0.2.1(@types/estree@1.0.9)(eslint@9.39.4(jiti@2.7.0)):
+    dependencies:
+      eslint: 9.39.4(jiti@2.7.0)
+    optionalDependencies:
+      "@types/estree": 1.0.9
+
+  eslint-plugin-package-json@0.39.2(@types/estree@1.0.9)(eslint@9.39.4(jiti@2.7.0))(jsonc-eslint-parser@2.4.2):
+    dependencies:
+      "@altano/repository-tools": 1.0.1
+      detect-indent: 7.0.1
+      detect-newline: 4.0.1
+      eslint: 9.39.4(jiti@2.7.0)
+      eslint-fix-utils: 0.2.1(@types/estree@1.0.9)(eslint@9.39.4(jiti@2.7.0))
+      jsonc-eslint-parser: 2.4.2
+      package-json-validator: 0.13.3
+      semver: 7.8.1
+      sort-object-keys: 1.1.3
+      sort-package-json: 3.6.1
+      validate-npm-package-name: 6.0.2
+    transitivePeerDependencies:
+      - "@types/estree"
+
   eslint-plugin-prettier@5.5.5(eslint-config-prettier@9.1.2(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.3):
     dependencies:
       eslint: 9.39.4(jiti@2.7.0)
@@ -9184,6 +9363,12 @@ snapshots:
       acorn: 8.16.0
       acorn-jsx: 5.3.2(acorn@8.16.0)
       eslint-visitor-keys: 4.2.1
+
+  espree@9.6.1:
+    dependencies:
+      acorn: 8.16.0
+      acorn-jsx: 5.3.2(acorn@8.16.0)
+      eslint-visitor-keys: 3.4.3
 
   esprima@4.0.1: {}
 
@@ -9351,6 +9536,8 @@ snapshots:
 
   function-bind@1.1.2: {}
 
+  get-caller-file@2.0.5: {}
+
   get-east-asian-width@1.6.0: {}
 
   get-stream@8.0.1: {}
@@ -9358,6 +9545,8 @@ snapshots:
   get-tsconfig@4.14.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  git-hooks-list@4.2.1: {}
 
   github-slugger@2.0.0: {}
 
@@ -9736,6 +9925,13 @@ snapshots:
   json-schema-traverse@0.4.1: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
+
+  jsonc-eslint-parser@2.4.2:
+    dependencies:
+      acorn: 8.16.0
+      eslint-visitor-keys: 3.4.3
+      espree: 9.6.1
+      semver: 7.8.1
 
   jsonfile@4.0.0:
     optionalDependencies:
@@ -10570,6 +10766,10 @@ snapshots:
 
   p-try@2.2.0: {}
 
+  package-json-validator@0.13.3:
+    dependencies:
+      yargs: 18.0.0
+
   package-manager-detector@0.2.11:
     dependencies:
       quansync: 0.2.11
@@ -11054,6 +11254,20 @@ snapshots:
 
   smol-toml@1.6.1: {}
 
+  sort-object-keys@1.1.3: {}
+
+  sort-object-keys@2.1.0: {}
+
+  sort-package-json@3.6.1:
+    dependencies:
+      detect-indent: 7.0.2
+      detect-newline: 4.0.1
+      git-hooks-list: 4.2.1
+      is-plain-obj: 4.1.0
+      semver: 7.8.1
+      sort-object-keys: 2.1.0
+      tinyglobby: 0.2.16
+
   source-map-js@1.2.1: {}
 
   source-map@0.7.6: {}
@@ -11331,6 +11545,8 @@ snapshots:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
 
+  validate-npm-package-name@6.0.2: {}
+
   vfile-location@5.0.3:
     dependencies:
       "@types/unist": 3.0.3
@@ -11445,9 +11661,22 @@ snapshots:
 
   xxhash-wasm@1.1.0: {}
 
+  y18n@5.0.8: {}
+
   yaml@2.9.0: {}
 
   yargs-parser@21.1.1: {}
+
+  yargs-parser@22.0.0: {}
+
+  yargs@18.0.0:
+    dependencies:
+      cliui: 9.0.1
+      escalade: 3.2.0
+      get-caller-file: 2.0.5
+      string-width: 7.2.0
+      y18n: 5.0.8
+      yargs-parser: 22.0.0
 
   yocto-queue@0.1.0: {}
 

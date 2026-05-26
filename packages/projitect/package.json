@@ -4,9 +4,6 @@
   "description": "Project scaffolding that stays in sync. Like Terraform, for your frontend repo. Drift-aware, idempotent, blueprint-driven.",
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "pjt": "./bin/pjt.mjs"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -20,6 +17,9 @@
       "types": "./dist/projitect-blueprint.d.ts",
       "import": "./dist/projitect-blueprint.js"
     }
+  },
+  "bin": {
+    "pjt": "./bin/pjt.mjs"
   },
   "files": [
     "dist",
@@ -38,12 +38,12 @@
     "@projitect/core": "workspace:*",
     "tsx": "^4.19.2"
   },
-  "peerDependencies": {
-    "effect": "^4.0.0-beta.70"
-  },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "effect": "^4.0.0-beta.70",
     "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.70"
   }
 }
