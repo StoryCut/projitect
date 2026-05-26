@@ -1,12 +1,13 @@
 import { Effect, Option, Terminal } from "effect"
-import { Argument, Command, Flag } from "effect/unstable/cli"
+import { Argument, Command, Flag, Prompt } from "effect/unstable/cli"
 import type { Errors, ProjitectConfig } from "@projitect/core"
-import { inspect } from "./inspect.js"
+import { inspect, renderInspectJson } from "./inspect.js"
 import { remodel } from "./remodel.js"
 import { build } from "./build.js"
 import { init } from "./init.js"
 import { explain } from "./explain.js"
-import { add } from "./add.js"
+import { add, type SectionStrategy } from "./add.js"
+import type { ProjitectPackageMetadata } from "../pm.js"
 import { parseEnv, resolveConfig } from "../config-cascade.js"
 
 /**
@@ -37,34 +38,63 @@ const configFromEnv = (): ProjitectConfig.ProjitectConfig =>
     cliArgs: { projectRoot: process.cwd() },
   })
 
+/**
+ * Interactive section picker for `pjt add` against a `type: "blueprint-set"` package. The
+ * dispatcher passes this as the `ask` callback so the command logic stays Prompt-free.
+ *
+ * Returns the package's full section list if no sections are declared (defensive default —
+ * shouldn't happen for well-formed metadata, but we don't want to crash on a malformed package).
+ */
+const chooseSectionsInteractive = (
+  metadata: ProjitectPackageMetadata,
+): Effect.Effect<ReadonlyArray<string>, never, Prompt.Environment> => {
+  const sections = metadata.sections ?? []
+  if (sections.length === 0) return Effect.succeed([])
+  return Prompt.multiSelect({
+    message: "Pick sections to add (space to toggle, enter to confirm):",
+    choices: sections.map((name) => ({ title: name, value: name })),
+  }).pipe(Effect.catchTag("QuitError", () => Effect.succeed([] as ReadonlyArray<string>)))
+}
+
 // ---------------------------------------------------------------------------
 // pjt init
 // ---------------------------------------------------------------------------
 
-const initCmd = Command.make("init", {}, () =>
-  Effect.gen(function* () {
-    const config = configFromEnv()
-    const result = yield* init({ config }).pipe(
-      Effect.matchEffect({
-        onSuccess: (r) => Effect.succeed(r),
-        onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
-      }),
-    )
-    if (result === null) return
-    const lines: Array<string> = []
-    if (result.seededBlueprintFile) lines.push(`Created ${config.blueprintFile}`)
-    if (result.remodel.written.length > 0) {
-      lines.push(
-        `Wrote ${result.remodel.written.length} file${result.remodel.written.length === 1 ? "" : "s"}:`,
-        ...result.remodel.written.map((p) => `  ${p}`),
+const initCmd = Command.make(
+  "init",
+  {
+    yes: Flag.boolean("yes").pipe(
+      Flag.withDescription(
+        "Auto-bootstrap missing `.git/` (via `git init`) and `package.json` (minimal stub).",
+      ),
+    ),
+  },
+  (input) =>
+    Effect.gen(function* () {
+      const config = configFromEnv()
+      const result = yield* init({ config, yes: input.yes }).pipe(
+        Effect.matchEffect({
+          onSuccess: (r) => Effect.succeed(r),
+          onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
+        }),
       )
-    }
-    lines.push(
-      "",
-      "projitect initialized. Edit `.pjt.ts` to add blueprints, then run `pnpm pjt remodel`.",
-    )
-    yield* display(`${lines.join("\n")}\n`)
-  }),
+      if (result === null) return
+      const lines: Array<string> = []
+      if (result.bootstrappedGit) lines.push("Initialized git repo (.git/)")
+      if (result.bootstrappedPackageJson) lines.push("Created package.json")
+      if (result.seededBlueprintFile) lines.push(`Created ${config.blueprintFile}`)
+      if (result.remodel.written.length > 0) {
+        lines.push(
+          `Wrote ${result.remodel.written.length} file${result.remodel.written.length === 1 ? "" : "s"}:`,
+          ...result.remodel.written.map((p) => `  ${p}`),
+        )
+      }
+      lines.push(
+        "",
+        "projitect initialized. Edit `.pjt.ts` to add blueprints, then run `pnpm pjt remodel`.",
+      )
+      yield* display(`${lines.join("\n")}\n`)
+    }),
 ).pipe(Command.withDescription("Bootstrap projitect in the current project."))
 
 // ---------------------------------------------------------------------------
@@ -111,10 +141,12 @@ const inspectCmd = Command.make(
   "inspect",
   {
     json: Flag.boolean("json").pipe(
-      Flag.withDescription("Emit machine-readable JSON output (v0.1.1, currently same as text)"),
+      Flag.withDescription(
+        "Emit machine-readable JSON output { hasDrift, files, removals, upgrades }. Exit code still 1 on drift.",
+      ),
     ),
   },
-  () =>
+  (input) =>
     Effect.gen(function* () {
       const config = configFromEnv()
       const result = yield* inspect({ config }).pipe(
@@ -124,7 +156,8 @@ const inspectCmd = Command.make(
         }),
       )
       if (result === null) return
-      yield* display(`${result.output}\n`)
+      const rendered = input.json ? renderInspectJson(result) : `${result.output}\n`
+      yield* display(rendered)
       if (result.hasDrift) process.exitCode = 1
     }),
 ).pipe(
@@ -227,15 +260,27 @@ const addCmd = Command.make(
   (input) =>
     Effect.gen(function* () {
       const config = configFromEnv()
-      const sections = Option.match(input.section, {
-        onNone: () => [] as ReadonlyArray<string>,
+      const explicitSections = Option.match(input.section, {
+        onNone: () => null as ReadonlyArray<string> | null,
         onSome: (raw) =>
           raw
             .split(",")
             .map((s) => s.trim())
             .filter((s) => s.length > 0),
       })
-      const result = yield* add({ config, pkg: input.pkg, sections }).pipe(
+
+      // When `--section` is given, honor it verbatim. Otherwise: if stdin is a TTY, ask the
+      // user via `Prompt.multiSelect`; if not (CI / piped), fall back to "all" so scripted
+      // installs stay deterministic. The strategy is parametrized over Prompt.Environment so
+      // the requirement propagates out through `add`; Command.run provides the platform.
+      const strategy: SectionStrategy<Prompt.Environment> =
+        explicitSections === null
+          ? process.stdin.isTTY === true
+            ? { kind: "ask", choose: chooseSectionsInteractive }
+            : { kind: "all" }
+          : { kind: "explicit", sections: explicitSections }
+
+      const result = yield* add({ config, pkg: input.pkg, strategy }).pipe(
         Effect.matchEffect({
           onSuccess: (r) => Effect.succeed(r),
           onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),

@@ -17,25 +17,49 @@ export interface AddResult {
 }
 
 /**
+ * Strategy for picking which sections of a `blueprint-set` package to splice.
+ *
+ *   - `"all"` — silent default; pick every section the package declares. Used when the caller
+ *     wants the legacy "no --section means everything" behavior.
+ *   - `{ kind: "explicit", sections }` — caller already knows. `--section macOs,node` lands here.
+ *   - `{ kind: "ask", choose }` — interactive: defer to the supplied callback (typically a
+ *     `Prompt.multiSelect` from the dispatcher). The callback runs only when the installed
+ *     package's metadata says `type: "blueprint-set"` and exposes sections.
+ *
+ * `R` parametrizes the callback's requirement channel so the dispatcher can hand us an Effect
+ * that needs `Prompt.Environment` (FileSystem | Path | Terminal); the requirement propagates
+ * out to the top of `add` and is satisfied by the bin shim's `NodePlatformLive`.
+ */
+export type SectionStrategy<R = never> =
+  | { readonly kind: "all" }
+  | { readonly kind: "explicit"; readonly sections: ReadonlyArray<string> }
+  | {
+      readonly kind: "ask"
+      readonly choose: (
+        metadata: ProjitectPackageMetadata,
+      ) => Effect.Effect<ReadonlyArray<string>, Errors.ProjitectError, R>
+    }
+
+/**
  * `pjt add <package>` — install a blueprint package and splice it into `.pjt.ts`.
  *
  * Flow:
  *   1. Detect package manager (pnpm / yarn / bun / npm).
  *   2. Shell out `<pm> add -D <package>`.
  *   3. Read the installed package's `package.json` for the `"projitect"` metadata field.
- *      - If present and `type: "blueprint-set"`: requested sections (or all sections if none
- *        requested) get spliced as separate calls.
- *      - If present and `type: "blueprint"`: a single call line.
+ *      - If present and `type: "blueprint-set"`: section selection resolves per `strategy`
+ *        (all / explicit / ask).
+ *      - If present and `type: "blueprint"`: a single call line, strategy ignored.
  *      - If absent: install-only behavior. The caller (dispatcher) prints a hint about editing
  *        `.pjt.ts` by hand.
  *   4. Splice the import + call lines into `.pjt.ts` between the convention markers
  *      (`pjt:imports` and `pjt:blueprints`).
  */
-export const add = (params: {
+export const add = <R = never>(params: {
   readonly config: ProjitectConfig.ProjitectConfig
   readonly pkg: string
-  readonly sections: ReadonlyArray<string>
-}): Effect.Effect<AddResult, Errors.ProjitectError> =>
+  readonly strategy: SectionStrategy<R>
+}): Effect.Effect<AddResult, Errors.ProjitectError, R> =>
   Effect.gen(function* () {
     const pm = yield* detect({ projectRoot: params.config.projectRoot })
     yield* installDevelopment({ projectRoot: params.config.projectRoot, pm, pkg: params.pkg })
@@ -54,9 +78,11 @@ export const add = (params: {
       }
     }
 
+    const sections = yield* resolveSections({ metadata, strategy: params.strategy })
+
     const { importLine, callLines, sectionsAdded } = computeSplice({
       metadata,
-      requestedSections: params.sections,
+      requestedSections: sections,
     })
 
     yield* splice({
@@ -74,6 +100,27 @@ export const add = (params: {
       splicedIntoBlueprintFile: true,
     }
   })
+
+const resolveSections = <R>(params: {
+  readonly metadata: ProjitectPackageMetadata
+  readonly strategy: SectionStrategy<R>
+}): Effect.Effect<ReadonlyArray<string>, Errors.ProjitectError, R> => {
+  const { metadata, strategy } = params
+  // Section strategy only matters for blueprint-sets. For `type: "blueprint"`, return empty —
+  // `computeSplice` will emit a single non-templated call line.
+  if (metadata.type === "blueprint") return Effect.succeed([])
+  switch (strategy.kind) {
+    case "all": {
+      return Effect.succeed([])
+    }
+    case "explicit": {
+      return Effect.succeed(strategy.sections)
+    }
+    case "ask": {
+      return strategy.choose(metadata)
+    }
+  }
+}
 
 const computeSplice = (params: {
   readonly metadata: ProjitectPackageMetadata

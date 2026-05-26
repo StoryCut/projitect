@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs"
+import { spawn } from "node:child_process"
 import path from "node:path"
 import { Effect } from "effect"
 import { Errors, type ProjitectConfig } from "@projitect/core"
@@ -6,6 +7,8 @@ import { remodel, type RemodelResult } from "./remodel.js"
 
 export interface InitResult {
   readonly seededBlueprintFile: boolean
+  readonly bootstrappedGit: boolean
+  readonly bootstrappedPackageJson: boolean
   readonly remodel: RemodelResult
 }
 
@@ -18,15 +21,25 @@ export interface InitResult {
  * by `projitect/cli`'s `pjt()`) writes the package.json entries and the `.pjt.ts` import region
  * on its first apply.
  *
+ * With `yes: true`, both prerequisites are auto-bootstrapped instead of erroring:
+ *   - Missing `.git/` → `git init -q` shell-out.
+ *   - Missing `package.json` → a minimal stub is written (`{ "name": "<dirname>", ... }`).
+ * This is what CI / scripted setups use (`pjt init --yes`); the interactive flow keeps the
+ * stricter prerequisite checks so a typo doesn't accidentally create a git repo in `$HOME`.
+ *
  * No special-case code for "the projitect bootstrap" lives here — the projitect blueprint owns
  * those concerns and runs through the same pipeline as every other blueprint.
  */
 export const init = (params: {
   readonly config: ProjitectConfig.ProjitectConfig
+  readonly yes?: boolean
 }): Effect.Effect<InitResult, Errors.ProjitectError> =>
   Effect.gen(function* () {
-    yield* requireGit(params.config.projectRoot)
-    yield* requirePackageJson(params.config.projectRoot)
+    const bootstrappedGit = yield* ensureGit(params.config.projectRoot, params.yes ?? false)
+    const bootstrappedPackageJson = yield* ensurePackageJson(
+      params.config.projectRoot,
+      params.yes ?? false,
+    )
 
     const seededBlueprintFile = yield* seedBlueprintFileIfAbsent(
       params.config.projectRoot,
@@ -35,10 +48,18 @@ export const init = (params: {
 
     const remodelResult = yield* remodel({ config: params.config })
 
-    return { seededBlueprintFile, remodel: remodelResult }
+    return {
+      seededBlueprintFile,
+      bootstrappedGit,
+      bootstrappedPackageJson,
+      remodel: remodelResult,
+    }
   })
 
-const requireGit = (projectRoot: string): Effect.Effect<void, Errors.InitGitMissing> =>
+const ensureGit = (
+  projectRoot: string,
+  yes: boolean,
+): Effect.Effect<boolean, Errors.InitGitMissing> =>
   Effect.gen(function* () {
     const ok = yield* Effect.promise(() =>
       fs.access(path.join(projectRoot, ".git")).then(
@@ -46,17 +67,32 @@ const requireGit = (projectRoot: string): Effect.Effect<void, Errors.InitGitMiss
         () => false,
       ),
     )
-    if (!ok) {
+    if (ok) return false
+    if (!yes) {
       return yield* new Errors.InitGitMissing({
         id: "pjt.init.git-missing",
-        message: "No `.git` directory found. Run `git init` first, then re-run `pjt init`.",
+        message:
+          "No `.git` directory found. Run `git init` first, then re-run `pjt init` — or pass `--yes` to auto-bootstrap.",
       })
     }
+    yield* Effect.promise(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const child = spawn("git", ["init", "-q"], { cwd: projectRoot, stdio: "ignore" })
+          child.on("error", reject)
+          child.on("close", (code) => {
+            if (code === 0) resolve()
+            else reject(new Error(`git init exited with ${code}`))
+          })
+        }),
+    )
+    return true
   })
 
-const requirePackageJson = (
+const ensurePackageJson = (
   projectRoot: string,
-): Effect.Effect<void, Errors.InitPackageJsonMissing> =>
+  yes: boolean,
+): Effect.Effect<boolean, Errors.InitPackageJsonMissing | Errors.FsWriteFailed> =>
   Effect.gen(function* () {
     const ok = yield* Effect.promise(() =>
       fs.access(path.join(projectRoot, "package.json")).then(
@@ -64,13 +100,37 @@ const requirePackageJson = (
         () => false,
       ),
     )
-    if (!ok) {
+    if (ok) return false
+    if (!yes) {
       return yield* new Errors.InitPackageJsonMissing({
         id: "pjt.init.package-json-missing",
         message:
-          "No `package.json` found. Run `npm init -y` (or your PM equivalent) first, then re-run `pjt init`.",
+          "No `package.json` found. Run `npm init -y` (or your PM equivalent) first, then re-run `pjt init` — or pass `--yes` to auto-bootstrap.",
       })
     }
+    const name = path.basename(projectRoot) || "project"
+    const stub = {
+      name,
+      version: "0.0.0",
+      private: true,
+      type: "module" as const,
+    }
+    yield* Effect.tryPromise({
+      try: () =>
+        fs.writeFile(
+          path.join(projectRoot, "package.json"),
+          `${JSON.stringify(stub, null, 2)}\n`,
+          "utf8",
+        ),
+      catch: (e) =>
+        new Errors.FsWriteFailed({
+          id: "pjt.fs.write-failed",
+          path: "package.json",
+          cause: e instanceof Error ? e.message : String(e),
+          message: "Failed to seed package.json during `pjt init --yes`",
+        }),
+    })
+    return true
   })
 
 const seedBlueprintFileIfAbsent = (

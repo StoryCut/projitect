@@ -128,6 +128,14 @@ OUT=$($BIN explain pjt.lock.parse-failed 2>&1)
 echo "$OUT" | grep -q "pjt.lock.parse-failed" && pass "explain renders" || fail "explain broken"
 echo "$OUT" | grep -q "projitect.dev/errors" && pass "explain links docs url" || fail "no docs url"
 
+echo "=== 6b. inspect --json emits structured output ==="
+JSON_OUT=$($BIN inspect --json 2>&1)
+echo "$JSON_OUT" | grep -q '"hasDrift"' && pass "--json includes hasDrift" || fail "no hasDrift in JSON"
+echo "$JSON_OUT" | grep -q '"files"'    && pass "--json includes files"    || fail "no files in JSON"
+echo "$JSON_OUT" | grep -q '"removals"' && pass "--json includes removals" || fail "no removals in JSON"
+echo "$JSON_OUT" | grep -q '"upgrades"' && pass "--json includes upgrades" || fail "no upgrades in JSON"
+echo "$JSON_OUT" | python3 -c "import sys, json; json.loads(sys.stdin.read())" > /dev/null 2>&1 && pass "--json output is valid JSON" || fail "--json output is malformed"
+
 echo "=== 7. init refuses without git ==="
 NOGIT="$(mktemp -d -t pjt-nogit.XXXXXX)"
 cp -r "${SMOKE}/node_modules" "${NOGIT}/"
@@ -136,6 +144,23 @@ echo '{"name":"x","version":"0","private":true}' > package.json
 node node_modules/projitect/bin/pjt.mjs init 2>&1 | grep -q "pjt.init.git-missing" && pass "init refuses without git" || fail "no git error"
 cd "$SMOKE"
 rm -rf "$NOGIT"
+
+echo "=== 7b. init --yes auto-bootstraps missing git + package.json ==="
+YESDIR="$(mktemp -d -t pjt-yes.XXXXXX)"
+cp -r "${SMOKE}/node_modules" "${YESDIR}/"
+cd "$YESDIR"
+# Neither .git nor package.json present.
+[ ! -d .git ] && [ ! -f package.json ] && pass "yes-test starts clean" || fail "yes-test dirty start"
+node node_modules/projitect/bin/pjt.mjs init --yes > /tmp/init-yes.out 2>&1
+INIT_YES_EXIT=$?
+[ $INIT_YES_EXIT -eq 0 ] && pass "init --yes exits 0 (bootstrap succeeded)" || fail "init --yes exited $INIT_YES_EXIT"
+[ -d .git ]            && pass "init --yes ran git init"          || fail "no .git after --yes"
+[ -f package.json ]    && pass "init --yes wrote package.json"    || fail "no package.json after --yes"
+[ -f .pjt.ts ]         && pass "init --yes seeded .pjt.ts"        || fail "no .pjt.ts after --yes"
+grep -q "Initialized git repo" /tmp/init-yes.out && pass "init --yes announces git bootstrap" || fail "no git announce"
+grep -q "Created package.json" /tmp/init-yes.out && pass "init --yes announces package.json bootstrap" || fail "no pkg announce"
+cd "$SMOKE"
+rm -rf "$YESDIR"
 
 echo "=== 8. build --force refuses on dirty git ==="
 git add -A && git commit -q -m "checkpoint"

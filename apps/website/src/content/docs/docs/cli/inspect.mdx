@@ -32,9 +32,37 @@ Four kinds of lines:
 
 ## Flags
 
-| Flag     | Description                                                                                   |
-| -------- | --------------------------------------------------------------------------------------------- |
-| `--json` | Emit machine-readable JSON output. Currently same as text; structured JSON is on the roadmap. |
+| Flag     | Description                                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--json` | Emit structured JSON output `{ hasDrift, files, removals, upgrades }`. Exit code stays 1 on drift — useful for CI tooling. |
+
+### `--json` output shape
+
+```json
+{
+  "hasDrift": true,
+  "files": [
+    {
+      "path": ".gitignore",
+      "status": "modify",
+      "summary": "~ modify .gitignore — region pjt:gitignore:macos content drift"
+    },
+    { "path": "package.json", "status": "ok", "summary": "  ok package.json" }
+  ],
+  "removals": [
+    {
+      "mode": "region",
+      "path": ".gitignore",
+      "ownerId": "pjt:gitignore:windows",
+      "commentPrefix": "#"
+    }
+  ],
+  "upgrades": [{ "blueprintId": "pjt:gitignore:macos", "from": "0.0.0", "to": "0.1.0" }]
+}
+```
+
+Keys are stable across minor versions; new keys may be added (consumers should ignore unknown
+keys). The schema is the same one rendered for `--json` output across the v0.x line.
 
 ## Use in CI
 
@@ -42,7 +70,9 @@ Four kinds of lines:
 - run: pnpm pjt inspect
 ```
 
-Done. The job fails if any blueprint-managed file drifts.
+Done. The job fails if any blueprint-managed file drifts. For richer CI tooling (Slack
+notification with diff contents, GitHub Actions step summary, etc.), pipe `pjt inspect --json`
+into your own formatter.
 
 ## What it doesn't check
 

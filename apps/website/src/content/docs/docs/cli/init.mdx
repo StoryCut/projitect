@@ -4,25 +4,33 @@ description: Bootstrap projitect in the current project.
 ---
 
 ```bash
-pjt init
+pjt init [--yes]
 ```
 
 Bootstraps projitect in the current project. Internally:
 
-1. Verifies `.git/` exists. If not, fails with `pjt.init.git-missing`.
-2. Verifies `package.json` exists. If not, fails with `pjt.init.package-json-missing`.
+1. Verifies `.git/` exists. If not: with `--yes` runs `git init -q`; without, fails with `pjt.init.git-missing`.
+2. Verifies `package.json` exists. If not: with `--yes` writes a minimal stub; without, fails with `pjt.init.package-json-missing`.
 3. Seeds `.pjt.ts` with the marker structure if absent.
 4. Runs the standard plan/apply/lockfile pipeline. The **projitect blueprint** (auto-prepended by `projitect/cli`'s `pjt()`) writes `package.json` keys (`scripts.pjt`, `devDependencies.projitect`, `devDependencies.effect`) and the projitect import inside `.pjt.ts`'s `pjt:projitect:imports` region.
 5. Writes `.pjt.lock` with the projitect blueprint's claims.
 
 After init you still need `pnpm install` (or your PM equivalent) to actually fetch the deps that were added.
 
+## Flags
+
+| Flag    | Description                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--yes` | Auto-bootstrap missing `.git/` (via `git init -q`) and `package.json` (minimal stub). Useful for CI and scripted setups. |
+
 ## Prerequisites
+
+Without `--yes`:
 
 - A `.git` directory (run `git init` first)
 - A `package.json` (run `npm init -y` first)
 
-Both are hard requirements — `pjt init` exits with a clear error id if either is missing.
+Both are hard requirements in interactive mode — `pjt init` exits with a clear error id if either is missing.
 
 ## What `.pjt.ts` looks like after init
 
@@ -46,6 +54,13 @@ The two `pjt:projitect:imports` lines are a **managed region** — the projitect
 
 The `pjt:imports` and `pjt:blueprints` markers are **convention anchors** — not in the lockfile, not drift-checked. They're the splice points `pjt add` uses to insert new blueprints. You can edit between them freely.
 
-## Why there's no `--yes` flag (yet)
+## Scripted use
 
-Auto-bootstrapping git or package.json from `pjt init` is on the roadmap but not in v0.1. For now the prerequisites are explicit.
+```bash
+mkdir my-project && cd my-project
+npx pjt init --yes
+```
+
+That single command does the git+package.json+`.pjt.ts` bootstrap, then runs the projitect
+blueprint to seed `package.json` scripts and devDeps. From there you `pjt add` the blueprint
+packages you want.
