@@ -10,19 +10,20 @@ Anyone who can write Effect can write a blueprint.
 
 ## Your first blueprint
 
-A region-mode blueprint that adds a section to `README.md`:
+A region-mode blueprint that adds a section to `README.md`. Reach for `markdownSection` —
+the SDK helper that bakes in the HTML comment delimiters so the markers don't render in the
+published file:
 
 ```ts
-import { regionFile } from "@projitect/blueprint"
+import { markdownSection } from "@projitect/blueprint"
 import type { Blueprint } from "@projitect/core"
 
 export const myReadmeSection = (): Blueprint.Blueprint =>
-  regionFile({
+  markdownSection({
     id: "my-org:readme:intro",
     version: "1.0.0",
     description: "Intro section for org-standard README",
     path: "README.md",
-    commentPrefix: "<!--", // closing tag handled by the marker convention
     content: "This project is part of My Org. See https://my-org/handbook.\n",
   })
 ```
@@ -37,6 +38,40 @@ export default pjt({ blueprints: [myReadmeSection()] })
 ```
 
 That's the whole API for static content blueprints.
+
+## Section helpers
+
+Two thin wrappers over `regionFile` are exported for the two most common region shapes —
+they exist because the names document intent and the right comment delimiters are baked in:
+
+- **`markdownSection`** for HTML/MDX/XML files. Fences with `<!-- pjt:<id> start -->` and
+  `<!-- pjt:<id> end -->`. The markers render invisible in markdown output, so READMEs stay
+  clean for human readers. Use for `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, MDX docs,
+  any HTML/XML file.
+- **`ignoreSection`** for `#`-comment ignore-style files. Fences with `# pjt:<id> start`
+  and `# pjt:<id> end`. Use for `.gitignore`, `.eslintignore`, `.prettierignore`,
+  `.dockerignore`, `.npmignore`.
+
+```ts
+import { ignoreSection, markdownSection } from "@projitect/blueprint"
+
+ignoreSection({
+  id: "my-org:eslintignore:generated",
+  version: "1.0.0",
+  path: ".eslintignore",
+  content: "dist/\nbuild/\ncoverage/\n",
+})
+
+markdownSection({
+  id: "my-org:agents:rules",
+  version: "1.0.0",
+  path: "AGENTS.md",
+  content: "Always run `pnpm check-all` before merging.\n",
+})
+```
+
+For other comment styles (`//`, `--`, `;`), drop down to `regionFile` directly and pass the
+prefix you need.
 
 ## Computed blueprints (using Effect)
 

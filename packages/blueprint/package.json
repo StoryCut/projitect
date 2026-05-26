@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@projitect/core": "workspace:*",
+    "@projitect/test-kit": "workspace:*",
     "effect": "^4.0.0-beta.70",
     "typescript": "^5.7.0"
   },

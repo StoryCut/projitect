@@ -124,6 +124,43 @@ grep -q '"test": "vitest run"' package.json && pass "vitest test script merged" 
 grep -q "pjt:vitest" .gitignore && pass ".gitignore got coverage/ region" || fail "no coverage region"
 grep -q "coverage/" .gitignore && pass ".gitignore contains coverage/" || fail "coverage/ entry missing"
 
+echo "=== 5b2. markdownSection writes a fenced region into README.md ==="
+# Define a one-off markdownSection blueprint inline in .pjt.ts (avoids cross-file resolution).
+# The splice adds an import + a call line; the inline `const readmeIntro = ...` goes between
+# the `pjt:imports` markers so the file still parses.
+cat > splice-md.mjs <<'EOF'
+import { Effect } from "effect"
+import { splice } from "@projitect/cli-internals"
+await Effect.runPromise(splice({
+  projectRoot: process.cwd(),
+  blueprintFile: ".pjt.ts",
+  importLine: 'import { markdownSection } from "@projitect/blueprint"',
+  callLines: ["markdownSection({ id: \"smoke:readme:intro\", version: \"1.0.0\", path: \"README.md\", content: \"Hello from the smoke test.\\n\" }),"],
+}))
+EOF
+
+# Seed an existing README.md so the blueprint splices into it (rather than creating one).
+cat > README.md <<'EOF'
+# My project
+
+Some prose written by the user. Lives outside the fence.
+EOF
+
+node --experimental-strip-types splice-md.mjs > /dev/null 2>&1
+$BIN remodel > /dev/null
+grep -q "<!-- smoke:readme:intro start -->" README.md && pass "markdown start marker spliced" || fail "no markdown start marker"
+grep -q "<!-- smoke:readme:intro end -->"   README.md && pass "markdown end marker spliced"   || fail "no markdown end marker"
+grep -q "Hello from the smoke test"         README.md && pass "markdown body present"        || fail "markdown body missing"
+grep -q "Some prose written by the user"    README.md && pass "user content outside fence preserved" || fail "user content lost"
+$BIN inspect > /dev/null 2>&1 && pass "clean after markdown remodel" || fail "markdown drift detected"
+
+# Drift inside the markdown region → inspect fails.
+sed -i.bak 's/Hello from the smoke test/HAND EDITED/' README.md && rm README.md.bak
+$BIN inspect > /dev/null 2>&1
+[ $? -eq 1 ] && pass "markdown region drift detected" || fail "markdown drift NOT detected"
+$BIN remodel > /dev/null
+$BIN inspect > /dev/null 2>&1 && pass "clean after markdown re-remodel" || fail "markdown still dirty"
+
 echo "=== 5c. tsconfig blueprint writes tsconfig.json with strict defaults ==="
 cat > splice-tsconfig.mjs <<'EOF'
 import { Effect } from "effect"

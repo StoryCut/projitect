@@ -10,19 +10,21 @@
  * ones you need; this package does not assume one-size-fits-all.
  */
 
-import { regionFile } from "@projitect/blueprint"
+import { ignoreSection } from "@projitect/blueprint"
 import type { Blueprint } from "@projitect/core"
 import * as templates from "./templates.js"
 
 const PACKAGE_VERSION = "0.0.0"
 
+// Built on `ignoreSection` from the SDK rather than `regionFile` directly — the name documents
+// intent, and any future enhancement to ignore-style fencing (e.g. dedup-aware merging) lands
+// in one place. On-disk output is byte-identical to the old direct-`regionFile` shape.
 const makeSection = (name: string, content: string): Blueprint.Blueprint =>
-  regionFile({
+  ignoreSection({
     id: `pjt:gitignore:${name}`,
     version: PACKAGE_VERSION,
     description: `gitignore section for ${name}`,
     path: ".gitignore",
-    commentPrefix: "#",
     content,
   })
 

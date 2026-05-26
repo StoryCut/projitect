@@ -116,6 +116,9 @@ importers:
       "@projitect/core":
         specifier: workspace:*
         version: link:../core
+      "@projitect/test-kit":
+        specifier: workspace:*
+        version: link:../test-kit
       effect:
         specifier: ^4.0.0-beta.70
         version: 4.0.0-beta.70

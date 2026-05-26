@@ -204,7 +204,9 @@ tracked follow-up; the interface is designed to swap transparently when we ship 
 
 ## Region marker convention
 
-Region-owned file operations use comment-fenced markers. The format is:
+Region-owned file operations use comment-fenced markers. Two shapes:
+
+**Single-prefix** (`#`, `//`, `--`, `;`, etc.) — marker terminates at end-of-line:
 
 ```
 <comment-prefix> pjt:<owner-id> start
@@ -212,11 +214,25 @@ Region-owned file operations use comment-fenced markers. The format is:
 <comment-prefix> pjt:<owner-id> end
 ```
 
-The comment prefix varies by file:
+**Prefix + suffix pair** (HTML/MDX/XML) — marker needs a closing delimiter:
 
-- `#` for `.gitignore`, `.editorconfig`, YAML, shell
-- `//` for JS/TS/JSON5 (when the file is JSON5; standard JSON uses `merge` mode instead)
-- `<!--` `-->` for HTML/MDX/XML
+```
+<comment-prefix> pjt:<owner-id> start<comment-suffix>
+... content ...
+<comment-prefix> pjt:<owner-id> end<comment-suffix>
+```
+
+Comment style by file:
+
+| File                                                          | Prefix | Suffix |
+| ------------------------------------------------------------- | ------ | ------ |
+| `.gitignore`, `.eslintignore`, `.prettierignore`, YAML, shell | `#`    | (none) |
+| JS/TS/JSON5                                                   | `//`   | (none) |
+| HTML, MDX, XML, `README.md`, `AGENTS.md`                      | `<!--` | ` -->` |
+
+The `@projitect/blueprint` SDK ships two helpers that bake in the right pair so authors
+don't have to remember them: `ignoreSection({ ... })` for `#`-comment files, `markdownSection({ ... })`
+for HTML/MDX. Reach for those before dropping down to `regionFile({ commentPrefix, commentSuffix, ... })`.
 
 `owner-id` is the string the blueprint puts in its `id` field, e.g. `pjt:gitignore:macos`. Two
 blueprints attempting to own the same region in the same file is a `pjt.plan.conflict` error.
