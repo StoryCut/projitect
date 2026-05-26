@@ -3,6 +3,7 @@ import tseslint from "typescript-eslint"
 import unicorn from "eslint-plugin-unicorn"
 import packageJson from "eslint-plugin-package-json"
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments/configs"
+import vitestPlugin from "@vitest/eslint-plugin"
 import prettierRecommended from "eslint-plugin-prettier/recommended"
 
 /**
@@ -187,6 +188,25 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+
+  // ===== Vitest plugin =====
+  //
+  // Scoped to test files only — the plugin's rules don't make sense for non-test code (`no-focused-tests`
+  // would never fire elsewhere, etc.). Recommended preset covers the lint rules the team gets the most
+  // value from: forbid `.only` / `.skip` slipping into CI, assertion-shape sanity, etc. See the
+  // "Reach for ESLint first" reflex in AGENTS.md — adding vitest is exactly the trigger that calls for
+  // this plugin.
+  {
+    files: ["**/test/**/*.{ts,tsx,mts,cts}", "**/*.{test,spec}.{ts,tsx,mts,cts}"],
+    plugins: { vitest: vitestPlugin },
+    rules: {
+      ...vitestPlugin.configs.recommended.rules,
+    },
+    settings: { vitest: { typecheck: true } },
+    languageOptions: {
+      globals: { ...vitestPlugin.environments.env.globals },
     },
   },
 
