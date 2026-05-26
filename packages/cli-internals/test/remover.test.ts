@@ -1,0 +1,238 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { Effect } from "effect"
+import { promises as fs } from "node:fs"
+import * as os from "node:os"
+import path from "node:path"
+import { applyRemovals } from "../src/remover.js"
+
+/**
+ * Tests for `remover.ts` — the path that fires when a blueprint *leaves* `.pjt.ts` and its
+ * previously-applied operations need to be unwound from disk. This is what makes "swap frameworks
+ * cleanly" actually deliver: removing a blueprint must also delete the stuff it added.
+ *
+ * Coverage:
+ *  - region removal preserves surrounding content (and the marker pair gets deleted, not just the
+ *    body)
+ *  - merge removal deep-deletes dotted keys and prunes now-empty parent objects so the file
+ *    doesn't bloat with `"scripts": {}`
+ *  - owned removal deletes the file
+ *  - seed removal is a no-op (write-once; we never delete what the user might have edited)
+ *  - missing files / missing regions are silently skipped (the file may have been hand-deleted)
+ *  - touched-paths return value lists exactly the paths actually mutated
+ */
+
+const ROOT = path.join(os.tmpdir(), "projitect-test-remover")
+
+let cwd: string
+
+beforeEach(async () => {
+  cwd = await fs.mkdtemp(`${ROOT}-`)
+})
+
+afterEach(async () => {
+  await fs.rm(cwd, { recursive: true, force: true })
+})
+
+const writeFile = (relative: string, content: string) =>
+  fs.writeFile(path.join(cwd, relative), content, "utf8")
+
+const readFile = (relative: string) => fs.readFile(path.join(cwd, relative), "utf8")
+
+const exists = (relative: string) =>
+  fs.access(path.join(cwd, relative)).then(
+    () => true,
+    () => false,
+  )
+
+const run = <A>(effect: Effect.Effect<A, never>): Promise<A> => Effect.runPromise(effect)
+
+describe("applyRemovals — region", () => {
+  it("removes the marker pair + body, preserving surrounding content", async () => {
+    await writeFile(
+      ".gitignore",
+      [
+        "header",
+        "# pjt:gitignore:macos start",
+        ".DS_Store",
+        ".AppleDouble",
+        "# pjt:gitignore:macos end",
+        "footer",
+        "",
+      ].join("\n"),
+    )
+
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [
+          {
+            mode: "region",
+            path: ".gitignore",
+            ownerId: "pjt:gitignore:macos",
+            commentPrefix: "#",
+          },
+        ],
+      }),
+    )
+
+    expect(touched).toEqual([".gitignore"])
+    expect(await readFile(".gitignore")).toBe(["header", "footer", ""].join("\n"))
+  })
+
+  it("is silent when the file doesn't exist (already cleaned up)", async () => {
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "region", path: "nope.txt", ownerId: "pjt:x", commentPrefix: "#" }],
+      }),
+    )
+    expect(touched).toEqual([])
+  })
+
+  it("is silent when the region marker pair is no longer in the file", async () => {
+    await writeFile(".gitignore", "user-written\n.env\n")
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "region", path: ".gitignore", ownerId: "pjt:gone", commentPrefix: "#" }],
+      }),
+    )
+    expect(touched).toEqual([])
+    expect(await readFile(".gitignore")).toBe("user-written\n.env\n")
+  })
+})
+
+describe("applyRemovals — merge", () => {
+  it("deletes dotted keys from a JSON file and prunes empty parents", async () => {
+    await writeFile(
+      "package.json",
+      `${JSON.stringify(
+        {
+          name: "x",
+          scripts: { pjt: "pjt", test: "vitest" },
+          devDependencies: { effect: "^4", projitect: "^0" },
+        },
+        null,
+        2,
+      )}\n`,
+    )
+
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [
+          {
+            mode: "merge",
+            path: "package.json",
+            ownedKeys: ["scripts.pjt", "devDependencies.projitect"],
+          },
+        ],
+      }),
+    )
+
+    expect(touched).toEqual(["package.json"])
+    const remaining = JSON.parse(await readFile("package.json")) as {
+      scripts: Record<string, string>
+      devDependencies: Record<string, string>
+    }
+    expect(remaining.scripts).toEqual({ test: "vitest" })
+    expect(remaining.devDependencies).toEqual({ effect: "^4" })
+  })
+
+  it("prunes a parent object once the last owned key is removed", async () => {
+    await writeFile(
+      "package.json",
+      `${JSON.stringify({ name: "x", scripts: { pjt: "pjt" } }, null, 2)}\n`,
+    )
+
+    await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
+      }),
+    )
+
+    const remaining = JSON.parse(await readFile("package.json")) as Record<string, unknown>
+    expect(remaining).toEqual({ name: "x" })
+  })
+
+  it("is a no-op when the file's JSON does not contain the owned key", async () => {
+    await writeFile("package.json", `${JSON.stringify({ name: "x" }, null, 2)}\n`)
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
+      }),
+    )
+    expect(touched).toEqual([])
+  })
+
+  it("is a no-op when the file is unparseable JSON (don't corrupt user state further)", async () => {
+    await writeFile("package.json", "{not json")
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
+      }),
+    )
+    expect(touched).toEqual([])
+    expect(await readFile("package.json")).toBe("{not json")
+  })
+})
+
+describe("applyRemovals — owned", () => {
+  it("deletes the owned file", async () => {
+    await writeFile("generated.ts", "// generated\n")
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "owned", path: "generated.ts", ownerId: "pjt:gen" }],
+      }),
+    )
+    expect(touched).toEqual(["generated.ts"])
+    expect(await exists("generated.ts")).toBe(false)
+  })
+
+  it("is fine when the owned file is already missing", async () => {
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "owned", path: "already-gone.ts", ownerId: "pjt:gen" }],
+      }),
+    )
+    expect(touched).toEqual(["already-gone.ts"])
+  })
+})
+
+describe("applyRemovals — seed", () => {
+  it("is a no-op (seed is write-once; the user owns the file after first apply)", async () => {
+    await writeFile(".pjt.ts", "export default pjt({ blueprints: [] })\n")
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [{ mode: "seed", path: ".pjt.ts", ownerId: "pjt:projitect:seed" }],
+      }),
+    )
+    expect(touched).toEqual([])
+    expect(await exists(".pjt.ts")).toBe(true)
+  })
+})
+
+describe("applyRemovals — touched-paths return value", () => {
+  it("lists only the paths that were actually mutated", async () => {
+    await writeFile(".gitignore", ["# pjt:a start", "x", "# pjt:a end", ""].join("\n"))
+    // intentionally NOT creating package.json
+
+    const touched = await run(
+      applyRemovals({
+        projectRoot: cwd,
+        removals: [
+          { mode: "region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" },
+          { mode: "merge", path: "package.json", ownedKeys: ["scripts.x"] },
+        ],
+      }),
+    )
+
+    expect(touched).toEqual([".gitignore"])
+  })
+})
