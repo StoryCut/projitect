@@ -132,26 +132,35 @@ When a commit is blocked: read the lint-staged output, fix the surfaced errors, 
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines one job per check. All ten jobs
 run in parallel on every PR and every push to `main`. Concurrency group cancels in-progress
-runs on new pushes to the same ref. Node version is sourced from `.nvmrc`.
+runs on new pushes to the same ref. Default Node version is sourced from `.nvmrc` (22.12);
+behavioral jobs run a 22 + 24 matrix.
 
-| Job               | What it runs                                                                        |
-| ----------------- | ----------------------------------------------------------------------------------- |
-| `typecheck`       | `pnpm tc`                                                                           |
-| `lint`            | `pnpm lint` (code style + Prettier formatting via `eslint-plugin-prettier`)         |
-| `test`            | `pnpm test` (passWithNoTests until v0.2)                                            |
-| `knip`            | `pnpm knip`                                                                         |
-| `build-packages`  | `pnpm build` — uploads `packages/*/dist/` as a build artifact                       |
-| `build-website`   | downloads the build artifact, then `pnpm --filter website build`                    |
-| `check-errors`    | downloads the build artifact, then `pnpm --filter website check:errors`             |
-| `check-examples`  | downloads the build artifact, then `pnpm --filter website check:examples`           |
-| `smoke`           | downloads the build artifact, then `./scripts/smoke.sh`                             |
-| `publish-dry-run` | `pnpm -r --filter './packages/*' publish --dry-run --no-git-checks --access public` |
+| Job               | Matrix       | What it runs                                                                        |
+| ----------------- | ------------ | ----------------------------------------------------------------------------------- |
+| `typecheck`       | node 22 / 24 | `pnpm tc`                                                                           |
+| `lint`            | (.nvmrc)     | `pnpm lint` (code style + Prettier formatting via `eslint-plugin-prettier`)         |
+| `test`            | node 22 / 24 | `pnpm test` (Vitest unit suites; `needs: build-packages`)                           |
+| `knip`            | (.nvmrc)     | `pnpm knip`                                                                         |
+| `build-packages`  | (.nvmrc)     | `pnpm build` — uploads `packages/*/dist/` as a build artifact                       |
+| `build-website`   | (.nvmrc)     | downloads the build artifact, then `pnpm --filter website build`                    |
+| `check-errors`    | (.nvmrc)     | downloads the build artifact, then `pnpm --filter website check:errors`             |
+| `check-examples`  | (.nvmrc)     | downloads the build artifact, then `pnpm --filter website check:examples`           |
+| `smoke`           | node 22 / 24 | downloads the build artifact, then `./scripts/smoke.sh`                             |
+| `publish-dry-run` | (.nvmrc)     | `pnpm -r --filter './packages/*' publish --dry-run --no-git-checks --access public` |
+
+Only `typecheck`, `test`, and `smoke` get the 22 + 24 matrix. Those three are the ones whose
+outcome can genuinely depend on Node version (TS strip-types behavior, Node API additions /
+removals between majors, smoke-script `node` invocations). `lint` / `knip` / `build-packages`
+have no Node-version-dependent behavior worth matrixing — they run on the .nvmrc default.
+
+The setup action at `.github/actions/setup/action.yml` accepts an optional `node-version`
+input; matrixed jobs pass `${{ matrix.node }}`, others omit it and fall through to .nvmrc.
 
 Total wall-clock ≈ 60-90s (bounded by `smoke`). If a check passes locally but fails in CI,
 prefer "fix the workflow's pnpm-store cache" or "fix the underlying determinism" — never `if:`
 the check off.
 
-A Node version matrix (22 + 24) and snapshot npm publishes on PR branches are tracked for v0.2.
+Snapshot npm publishes on PR branches are a tracked follow-up.
 
 ## Effect v4 conventions
 
