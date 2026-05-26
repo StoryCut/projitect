@@ -8,4 +8,4 @@ sidebar:
 
 **What**: There's no `.git` directory at the project root. projitect needs version control so destructive operations have a recoverable state.
 
-**How to fix**: Run `git init` first, then re-run `pjt init`. An interactive `--yes` mode that bootstraps git automatically is on the roadmap; for now the prerequisites are explicit.
+**How to fix**: Run `git init` first, then re-run `pjt init`. Or, in scripted setups, pass `--yes` — `pjt init --yes` shells out `git init -q` automatically before continuing.
