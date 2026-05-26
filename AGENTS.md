@@ -68,8 +68,25 @@ One tool, one config, one command. Adapted from StoryCut's and effect-clue's fla
 - `eslint-plugin-prettier/recommended` runs Prettier as an ESLint rule. Formatting drift surfaces as a `prettier/prettier` lint error — no separate `prettier --check` step.
 - For files ESLint doesn't parse (MDX, YAML, JSON5, CSS) the `pnpm format` script invokes Prettier directly. `lint-staged` covers them automatically on commit.
 - The Unicorn recommended preset is enabled with a small list of overrides for rules that clash with Effect-heavy code (`no-null`, `custom-error-definition`, `no-array-reduce`, etc.). See [eslint.config.js](./eslint.config.js) for the canonical list with rationale.
+- `eslint-plugin-package-json` validates every `package.json` in the monorepo: required fields, npm-standard property order, alphabetized dependencies. Catches "would-publish-but-broken" mistakes alongside the `publish-dry-run` CI job.
+
+Per-package sandbox enforcement at lint time (the "soft" half of the soft sandbox):
+
+| Files                                              | Banned imports                                                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `packages/blueprint/**`, `packages/blueprint-*/**` | `@effect/platform`'s `FileSystem`, all `node:*` — blueprints must go through `BlueprintFileSystem`      |
+| `packages/core/**`                                 | All `node:*` — core stays runtime-pure so it can run in a browser (planned interactive in-browser demo) |
+| `packages/test-kit/**`                             | All `node:*` — test-kit is an in-memory FS by definition; touching the disk would defeat its purpose    |
 
 `pnpm lint` is the single command. `pnpm lint:fix` applies autofixes. CI runs `pnpm lint`; no `format-check` job.
+
+## Effect language service
+
+The package's `prepare` script runs `effect-language-service patch` on every `pnpm install`. This patches the local `node_modules/typescript` so that **`tsc --build` produces Effect-specific diagnostics in addition to the standard TS checks** — things like `yield* Effect.fail(new X())` being flagged as redundant (since `new X()` is itself yieldable for `Schema.TaggedErrorClass` errors), `Effect.sync` thunks accidentally returning a Promise, missing Effect requirements, etc.
+
+If you delete `.tsbuildinfo` files or wipe `node_modules` and the patch doesn't seem to be applied, run `pnpm install` to re-fire `prepare`. `pnpm effect-language-service check` verifies the patch state.
+
+The `tsconfig.base.json`'s `"plugins": [{ "name": "@effect/language-service" }]` covers the editor / LSP side. The `patch` covers the build / CLI side. Both should be active.
 
 ## Pre-commit hooks (husky + lint-staged)
 
