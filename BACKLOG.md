@@ -392,29 +392,66 @@ _As an author, I want a guide for starting a blueprint package with the blueprin
 
 ---
 
+## Epic: Engine capabilities
+
+Core-pipeline features that unlock new blueprint shapes. Distinct from the catalog (which is
+blueprints built _on_ the engine).
+
+### ENG-1 — Exec / post-apply operations
+
+_As an author, I want a blueprint to declare a command that runs after all file ops are applied, so that blueprints like `eslint.fix()` / `prettier.fix()` can normalize everything the plan just wrote._
+
+- [ ] New `ExecOp` in the `ChangeSet` union — `{ mode: "exec", ownerId, command, args, check? }` — gated by the existing `{ kind: "exec", command }` permission
+- [ ] Applier runs exec ops in a **final phase**, after every region/merge/owned/seed op, in declared (array) order; shells out from cli-internals (trusted — blueprints only _declare_ the command, they don't run it, so the soft sandbox holds)
+- [ ] `inspect` runs the op's `check` variant (e.g. `eslint .` / `prettier --check .`) and reports drift **without mutating**; `remodel` / `build` run the fix variant
+- [ ] Ordering guarantee documented: exec ops always run last, so a `*.fix()` blueprint placed anywhere in the array still post-processes files written by every other blueprint
+- [ ] Lockfile records the claim; removal is a no-op (like `seed` — there's no file to delete)
+- [ ] New error `pjt.exec.command-failed` (+ MDX page); permission denial reuses the `exec` permission gate
+- [ ] Reuses the `node:child_process` precedent already in `pm.ts` / `git.ts`
+- [ ] Security note in docs: ties into SBX-1 — the command runs in the trusted CLI, not the blueprint sandbox; the `exec` permission is the author's declaration of intent
+
+> Depends on: nothing (existing `exec` permission + child_process precedent) · Size: L
+
+---
+
 ## Epic: Framework blueprint catalog
 
 More first-party blueprints. Each is a self-contained package following the vitest/tsconfig
-pattern: a few ops, unit tests, a smoke section, an example page, a landing-page mention.
+pattern: a few ops, unit tests, a smoke section, an example page, a landing-page mention. The
+ESLint and Prettier packages each export **two** blueprints — a `config()` that scaffolds the
+tool and a `fix()` that auto-fixes the project (the most reliable way to guarantee every
+blueprint-written file matches the project's code style).
 
 ### CAT-1 — `@projitect/blueprint-prettier`
 
-_As a user, I want `prettier()` to scaffold Prettier config + script + devDep, so that formatting is one line._
+_As a user, I want a Prettier blueprint that both configures Prettier and auto-formats my project, so that every file the plan writes ends up correctly formatted._
 
-- [ ] Owned `prettier.config.js` (options: tabs, semi, printWidth, etc.)
-- [ ] Merge package.json: `format` script + `prettier` devDep
-- [ ] Unit tests + smoke section + example page
-  > Depends on: (pattern established) · Size: M
+Exports two blueprints:
+
+- `prettier.config({...})` — owned `prettier.config.js` (tabs / semi / printWidth / …); merge package.json `format` script + `prettier` devDep; optional `.prettierignore` via `ignoreSection`
+- `prettier.fix({...})` — post-apply exec op (ENG-1) running `prettier --write .` after all file ops; `inspect` runs `prettier --check .` and reports drift
+
+* [ ] Both exports ship; composing only `config` (no `fix`) is valid
+* [ ] `fix` declares `{ kind: "exec", command: "prettier" }` and runs in the final phase
+* [ ] Unit tests (emitted ops) + smoke (config written; `fix` normalizes a deliberately-misformatted file; `inspect` flags it before fix) + example page
+
+> Depends on: ENG-1 (for `prettier.fix`) · `ignoreSection` shipped · Size: M
 
 ### CAT-2 — `@projitect/blueprint-eslint`
 
-_As a user, I want `eslint()` to scaffold a flat config + scripts + devDeps + `.eslintignore`, so that linting is one line._
+_As a user, I want an ESLint blueprint that both configures ESLint and auto-fixes my project, so that blueprint changes always satisfy my lint rules._
 
-- [ ] Owned `eslint.config.js`
-- [ ] Merge package.json: `lint` / `lint:fix` scripts + devDeps
-- [ ] `.eslintignore` via `ignoreSection`
-- [ ] Unit tests + smoke + example page
-  > Depends on: `ignoreSection` (shipped) · Size: M
+Exports two blueprints:
+
+- `eslint.config({...})` — owned flat `eslint.config.js` (including its `ignores`); merge package.json `lint` / `lint:fix` scripts + devDeps (eslint, typescript-eslint, …)
+- `eslint.fix({...})` — post-apply exec op (ENG-1) running `eslint --fix .` after all file ops; `inspect` runs `eslint .` and reports drift if anything is auto-fixable
+
+* [ ] Both exports ship; composing only `config` is valid
+* [ ] `fix` declares `{ kind: "exec", command: "eslint" }` and runs in the final phase
+* [ ] Document the interaction when both `eslint.fix()` and `prettier.fix()` are present: exec ops run in array order, so the user controls sequencing; note the eslint-config-prettier vs eslint-plugin-prettier options so the two don't fight over formatting
+* [ ] Unit tests + smoke (`fix` normalizes a deliberately-misstyled file; `inspect` flags it) + example page
+
+> Depends on: ENG-1 (for `eslint.fix`) · `ignoreSection` shipped · Size: M
 
 ### CAT-3 — `@projitect/blueprint-husky-lint-staged`
 
