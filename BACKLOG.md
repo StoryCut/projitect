@@ -499,6 +499,24 @@ _As a prospective user, I want to run `pjt inspect` against a fake project in th
 
 ---
 
+## Epic: Contributor documentation (docs/)
+
+Repo-level docs for people working **on** projitect — distinct from the end-user marketing site
+under `apps/website`. The first file (`docs/agents-signing.md`) shipped with the commit-signing
+setup; this epic fills out the rest.
+
+### DOCS-1 — Seed getting-started, architecture, and publishing-pipeline docs
+
+_As a new contributor, I want `docs/` to explain how to build, how the codebase fits together, and how releases publish, so that I can ramp without reverse-engineering the repo._
+
+- [ ] `docs/getting-started.md` — clone → `nvm use` → `pnpm install` → `pnpm check-all`; running `pjt` locally against a scratch project; where `scripts/smoke.sh` fits
+- [ ] `docs/architecture.md` — the package graph (`core` → `blueprint` → `cli-internals` → `projitect`; `test-kit`; the `blueprint-*` set), the load → plan → diff → apply pipeline, the four ownership modes, the `.pjt.lock` model, and the soft sandbox
+- [ ] `docs/publishing.md` — the lockstep changeset flow, `release.yml`, what publishes to npm vs the docs site, and the OPS prerequisites (npm scope/OIDC, Vercel)
+- [ ] Cross-link from AGENTS.md (and a root README, if/when one lands); keep these contributor docs separate from `apps/website`
+  > Depends on: `docs/agents-signing.md` (shipped) · Size: M
+
+---
+
 ## Epic: Polish & ergonomics
 
 ### DX-1 — Publish a JSON Schema for `pjt inspect --json`
