@@ -18,6 +18,8 @@ Use whenever:
   to the backlog" (even though it goes to Brain Dump first — that's intentional).
 - An agent (you, while doing something else) notices something worth flagging that doesn't
   belong in the current task — drop it here instead of derailing.
+- The user just finished [`/grill-me`](../grill-me/SKILL.md) and its summary's "Suggested
+  next step" line proposes `/kanban-dump "<thesis>"`. The thesis is your title.
 
 Do not use this for:
 

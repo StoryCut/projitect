@@ -299,6 +299,19 @@ implementation pipeline.
 | `/kanban-run`        | Full pipeline orchestrator — Backlog → Done, with a human gate at every transition. |
 | `/kanban`            | Foundation — primitive CRUD (list, show, add, comment, move) used by the others.    |
 
+Pairs naturally with [`/grill-me`](.claude/skills/grill-me/SKILL.md) — an adversarial
+interviewer that stress-tests a half-formed thought one question at a time, then proposes
+the `/kanban-dump` for you. Use it whenever you'd otherwise put a fuzzy idea on the board
+without thinking it through.
+
+### Daily workflows
+
+Common patterns — capture, triage, refine, run, watch — are walked end-to-end in
+[`docs/kanban/workflows.md`](docs/kanban/workflows.md). Read it once when you adopt the
+workflow; come back when a new situation comes up that you're not sure how to handle. From
+inside Claude Code, `/kanban-help` is the interactive version — it asks what you want to do
+and prints the matching recipe.
+
 ### Human-in-the-loop at every step
 
 Every column transition fires `AskUserQuestion` first. There is no `--auto` mode. At each
