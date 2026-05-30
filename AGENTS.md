@@ -268,6 +268,39 @@ Use the `new-error-code` skill in `.claude/skills/` to scaffold all three at onc
 - PR merge style: merge commit (never squash) — preserves the conventional commit history
 - Run `pnpm check-all` before pushing
 
+### Commit signing
+
+**Every commit in this repo is signed** with a dedicated "Claude Code" SSH key, so it lands
+with the green **Verified** badge on GitHub. You (the agent) do **not** decide whether to sign —
+git does it for you because `commit.gpgsign=true` is configured, and the
+[`scripts/setup-signing.sh`](scripts/setup-signing.sh) helper keeps that config in place. You
+should never need a reminder to sign.
+
+How it stays configured without anyone remembering:
+
+- The `SessionStart` hook in [`.claude/settings.json`](.claude/settings.json) runs
+  `bash scripts/setup-signing.sh` at the start of every agent session. The script is idempotent
+  — it sets the repo-local signing config (`gpg.format=ssh`, `user.signingkey`,
+  `commit.gpgsign=true`, `tag.gpgsign=true`, `gpg.ssh.allowedSignersFile`) if it isn't already,
+  then exits silently.
+- A fresh clone doesn't carry repo-local git config, so the hook re-applies it the first session
+  in that clone. If you ever see an unsigned commit or git complains about `user.signingkey`,
+  run `bash scripts/setup-signing.sh` directly — it's safe to run any time.
+
+How this differs from StoryCut (which projitect's setup is adapted from): StoryCut rewrites the
+**author identity** to `Claude Code (<contributor>)` via per-worktree config, gated on `claude/*`
+branches. projitect keeps the contributor's normal authorship (you author as the contributor,
+with a `Co-Authored-By` trailer) and configures **signing only**, repo-local, on every branch.
+The goal here is the Verified badge on every commit, not a separate author identity.
+
+**One-time machine setup** (per machine, for a new contributor): generate the dedicated key,
+register it on GitHub as a **Signing Key**, and run `bash scripts/setup-signing.sh`. The full
+steps are in [docs/agents-signing.md](docs/agents-signing.md). Skip it entirely if your commits
+already show Verified.
+
+If `setup-signing.sh` finds no key, it prints a one-line hint and exits 0 — it never blocks a
+session or a CI install, so the only consequence of skipping setup is unsigned commits.
+
 ## No destructive shortcuts
 
 When a check fails, fix the root cause. **Do not**:
