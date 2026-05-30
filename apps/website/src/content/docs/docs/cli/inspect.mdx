@@ -1,0 +1,83 @@
+---
+title: pjt inspect
+description: Report drift between the project and its blueprints. Nonzero exit on drift.
+---
+
+```bash
+pjt inspect [--json]
+```
+
+Compares the project against `.pjt.ts`. Exits **0** if in sync, **1** if drift is detected.
+Built for CI.
+
+## Output
+
+```text
+↑ upgrade pjt:gitignore:macos 0.0.0 → 0.1.0
+- remove pjt:gitignore:windows region from .gitignore   (blueprint left .pjt.ts)
+~ modify .gitignore — region pjt:gitignore:macos content drift
++ create src/routes.generated.ts
+  ok package.json
+```
+
+Four kinds of lines:
+
+| Symbol  | Meaning                                                                                                          |
+| ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `↑`     | Blueprint version changed since the lockfile was written. `pjt remodel` rewrites with the new version's content. |
+| `+`     | File missing or new region/key claim. `pjt remodel` will create it.                                              |
+| `~`     | File exists but managed content drifts. `pjt remodel` will rewrite to match.                                     |
+| `-`     | Lockfile records this region/key/file but no current blueprint claims it. `pjt remodel` will delete the orphan.  |
+| (blank) | In sync.                                                                                                         |
+
+## Flags
+
+| Flag     | Description                                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--json` | Emit structured JSON output `{ hasDrift, files, removals, upgrades }`. Exit code stays 1 on drift — useful for CI tooling. |
+
+### `--json` output shape
+
+```json
+{
+  "hasDrift": true,
+  "files": [
+    {
+      "path": ".gitignore",
+      "status": "modify",
+      "summary": "~ modify .gitignore — region pjt:gitignore:macos content drift"
+    },
+    { "path": "package.json", "status": "ok", "summary": "  ok package.json" }
+  ],
+  "removals": [
+    {
+      "mode": "region",
+      "path": ".gitignore",
+      "ownerId": "pjt:gitignore:windows",
+      "commentPrefix": "#"
+    }
+  ],
+  "upgrades": [{ "blueprintId": "pjt:gitignore:macos", "from": "0.0.0", "to": "0.1.0" }]
+}
+```
+
+Keys are stable across minor versions; new keys may be added (consumers should ignore unknown
+keys). The schema is the same one rendered for `--json` output across the v0.x line.
+
+## Use in CI
+
+```yaml
+- run: pnpm pjt inspect
+```
+
+Done. The job fails if any blueprint-managed file drifts. For richer CI tooling (Slack
+notification with diff contents, GitHub Actions step summary, etc.), pipe `pjt inspect --json`
+into your own formatter.
+
+## What it doesn't check
+
+- Files no blueprint claims (untouched and uncomplained-about).
+- `seed`-mode files after first write.
+- Content outside region markers in `region`-mode files.
+
+This is intentional. projitect manages what it owns; you own everything else.

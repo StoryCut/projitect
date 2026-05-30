@@ -1,0 +1,11 @@
+---
+title: pjt.config.invalid
+slug: errors/pjt.config.invalid
+description: A config value failed schema validation.
+sidebar:
+  label: pjt.config.invalid
+---
+
+**What**: One of the four config layers (defaults / env / blueprintFile / cliArgs) produced a value that doesn't match `ProjitectConfig`'s schema. The offending field and source layer are reported.
+
+**How to fix**: Check the source layer named in the error and remove or correct the bad value.

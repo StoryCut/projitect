@@ -1,0 +1,114 @@
+---
+title: Ownership modes
+description: Every blueprint operation declares one of four modes — region, merge, owned, or seed.
+---
+
+projitect supports four ways a blueprint can own a piece of a file. Picking the right mode is
+the most important design decision when authoring a blueprint.
+
+## region — comment-fenced section in a shared text file
+
+**When to use**: multiple blueprints can write to the same file (`.gitignore`, `.editorconfig`,
+`README.md` sections, shell snippets).
+
+```ts
+import { regionFile } from "@projitect/blueprint"
+
+regionFile({
+  id: "pjt:gitignore:macos",
+  version: "1.0.0",
+  path: ".gitignore",
+  commentPrefix: "#",
+  content: ".DS_Store\n.AppleDouble\n.LSOverride\n",
+})
+```
+
+On disk:
+
+```text
+# pjt:gitignore:macos start
+.DS_Store
+.AppleDouble
+.LSOverride
+# pjt:gitignore:macos end
+```
+
+The CLI splices regions in and out of the file independently. Hand-editing inside the markers
+is detected as drift; hand-editing outside the markers is yours.
+
+## merge — deep-merge into structured JSON
+
+**When to use**: blueprint owns specific keys inside a JSON file (`package.json`,
+`tsconfig.json`, etc.). Comment markers don't work in JSON — this mode replaces them.
+
+```ts
+import { jsonMerge } from "@projitect/blueprint"
+
+jsonMerge({
+  id: "pjt:react:bootstrap",
+  version: "1.0.0",
+  path: "package.json",
+  ownedKeys: ["dependencies.react", "dependencies.react-dom", "scripts.dev"],
+  value: {
+    dependencies: { react: "^19.0.0", "react-dom": "^19.0.0" },
+    scripts: { dev: "next dev" },
+  },
+})
+```
+
+Each blueprint declares **which dotted-path keys it owns**. Two blueprints claiming the same
+key (e.g. both want to own `scripts.dev`) is a `pjt.plan.conflict-merge` error at plan time —
+the human resolves it by removing one or renaming the script.
+
+## owned — single blueprint owns the whole file
+
+**When to use**: generated code or config that no human should hand-edit (e.g. generated TS
+types, lockfiles, route manifests).
+
+```ts
+import { ownFile } from "@projitect/blueprint"
+
+ownFile({
+  id: "pjt:route-manifest:generated",
+  version: "1.0.0",
+  path: "src/routes.generated.ts",
+  content: GENERATED_ROUTES_TS,
+})
+```
+
+If two blueprints claim the same path in this mode, the planner fails with
+`pjt.plan.conflict-owned`. Hand-editing the file is detected as drift.
+
+## seed — write once, never enforce
+
+**When to use**: starter content the user is expected to customize (initial `README.md`,
+boilerplate `.pjt.ts`, default `src/index.ts`).
+
+```ts
+import { seedFile } from "@projitect/blueprint"
+
+seedFile({
+  id: "pjt:readme:seed",
+  version: "1.0.0",
+  path: "README.md",
+  content: "# My project\n\nReplace this with your own content.\n",
+})
+```
+
+`pjt remodel` writes the file only if it's absent. Once it exists, `pjt inspect` ignores it
+forever — including content drift. This is the escape hatch for "we want to bootstrap this once
+but never own it."
+
+## Comparison
+
+| Mode     | Multi-blueprint per file?   | Drift detected? | Best for                        |
+| -------- | --------------------------- | --------------- | ------------------------------- |
+| `region` | Yes (different `ownerId`)   | Yes             | `.gitignore`, README sections   |
+| `merge`  | Yes (different `ownedKeys`) | Yes             | `package.json`, `tsconfig.json` |
+| `owned`  | No                          | Yes             | Generated files                 |
+| `seed`   | No                          | No (write-once) | Initial templates the user owns |
+
+## What about binary files?
+
+For v0, binary files are out of scope. `regionFile` and `ownFile` both assume UTF-8 text. A
+future `binaryFile` mode tracking by content hash is on the roadmap.

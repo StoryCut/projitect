@@ -1,0 +1,11 @@
+---
+title: pjt.apply.dirty-git
+slug: errors/pjt.apply.dirty-git
+description: pjt build requires a clean git working tree.
+sidebar:
+  label: pjt.apply.dirty-git
+---
+
+**What**: `pjt build` is destructive — it wipes the project tree before applying. To prevent data loss, it refuses to run when `git status` shows uncommitted changes.
+
+**How to fix**: Commit or stash your changes, then re-run `pjt build --force`. (Day-to-day, you want `pjt remodel` instead — that one is non-destructive.)

@@ -1,0 +1,88 @@
+---
+title: tsconfig-setup
+description: Lock in a strict tsconfig.json — owned, drift-checked, one line.
+sidebar:
+  label: tsconfig-setup
+  order: 5
+---
+
+import code from "../../../../examples/tsconfig-setup/example.ts?raw"
+import { Code } from "@astrojs/starlight/components"
+
+`tsconfig()` ships an opinionated, strict-by-default `tsconfig.json` as an **owned**
+blueprint: projitect rewrites the file on every `pjt remodel`, so the strictness floor is
+unfalsifiable. No one can quietly turn `noUncheckedIndexedAccess` off in a PR and have it
+slip through review.
+
+<Code code={code} lang="ts" title=".pjt.ts" />
+
+## What the default config looks like
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+## Options
+
+```ts
+tsconfig({
+  strict: true, // default; flip to false to ship loose defaults
+  target: "ES2023", // default
+  module: "NodeNext", // "NodeNext" | "ESNext" | "Node16" | "CommonJS"
+  lib: ["ES2023"], // default matches target; use `dom: true` to add DOM libs
+  dom: false, // appends "DOM" + "DOM.Iterable"
+  jsx: null, // "react" | "react-jsx" | "preserve" | null
+  rootDir: "./src", // also drives `include`
+  outDir: "./dist", // also drives `exclude`
+})
+```
+
+## Project-specific overrides
+
+The owned-mode contract means `pjt inspect` flags any hand-edit to `tsconfig.json`. For
+overrides projitect's options don't model (e.g. `paths`, custom plugins, `references` for a
+project-references monorepo), use a second config that extends the owned one:
+
+```json title="tsconfig.local.json"
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"] }
+  }
+}
+```
+
+Run `tsc -p tsconfig.local.json` (or point your `package.json` script at it) instead of the
+owned `tsconfig.json` directly. The blueprint stays in sync; your overrides stay private.
+
+## Why owned, not merge
+
+Strictness is a one-way ratchet — if half the strict flags are merge-owned and a contributor
+adds a `"strict": false` they own, the project silently regresses. Owning the whole file means
+strictness changes happen by bumping the blueprint version (which `pjt inspect` flags as an
+upgrade), not by sneaking it in.

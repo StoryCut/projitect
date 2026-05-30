@@ -1,0 +1,11 @@
+---
+title: pjt.git.command-failed
+slug: errors/pjt.git.command-failed
+description: A git command exited non-zero or git isn't installed.
+sidebar:
+  label: pjt.git.command-failed
+---
+
+**What**: projitect tried to shell out to `git` (for `git status --porcelain` on `pjt build --force`) and the process exited non-zero or wasn't found. The underlying error is included in the message.
+
+**How to fix**: Check that `git` is installed (`which git` or `git --version`). If git is installed, the most common cause is a corrupted git repository — try `git status` directly to see git's own error.

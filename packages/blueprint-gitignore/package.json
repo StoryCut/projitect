@@ -1,0 +1,49 @@
+{
+  "name": "@projitect/blueprint-gitignore",
+  "version": "0.0.0",
+  "description": "Composable .gitignore sections (macOS, Windows, Linux, Node, Next.js, VS Code, JetBrains, tsbuildinfo) for projitect.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "build:clean": "tsc --build --clean",
+    "tc": "tsc --build"
+  },
+  "devDependencies": {
+    "@projitect/blueprint": "workspace:*",
+    "@projitect/core": "workspace:*",
+    "effect": "^4.0.0-beta.70",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@projitect/blueprint": "workspace:*",
+    "@projitect/core": "workspace:*",
+    "effect": "^4.0.0-beta.70"
+  },
+  "projitect": {
+    "type": "blueprint-set",
+    "import": "import { gitignores } from \"@projitect/blueprint-gitignore\"",
+    "callTemplate": "gitignores.{section}()",
+    "sections": [
+      "macOs",
+      "windows",
+      "linux",
+      "node",
+      "next",
+      "vscode",
+      "jetbrains",
+      "tsbuildinfo"
+    ]
+  }
+}

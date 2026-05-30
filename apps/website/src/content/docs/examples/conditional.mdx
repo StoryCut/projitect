@@ -1,0 +1,28 @@
+---
+title: conditional (Effect form)
+description: Use Effect to branch the blueprint tree on detected project state.
+sidebar:
+  label: conditional
+  order: 2
+---
+
+import code from "../../../../examples/conditional/example.ts?raw"
+import { Code } from "@astrojs/starlight/components"
+
+When the blueprint tree depends on what's already in the project — say, only adding the Next.js
+gitignore section if Next is actually a dependency — switch from the array form to the Effect
+form.
+
+<Code code={code} lang="ts" title=".pjt.ts" />
+
+## Why this works
+
+`pjt` accepts either:
+
+- `Array<Blueprint | DirectoryBlueprint>` — static, evaluated at module load
+- `Effect<Array<Blueprint | DirectoryBlueprint>, Error, BlueprintFileSystem>` — dynamic, run by
+  the planner with the same permission-gated FS your blueprints receive
+
+The Effect form lets you yield to anything Effect can do — `readPackageJson`, `Effect.if`,
+`Effect.when`, `Effect.forEach`. Project maintainers rarely need this, but it's there when they
+do.

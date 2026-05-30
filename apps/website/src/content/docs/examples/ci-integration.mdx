@@ -1,0 +1,46 @@
+---
+title: ci-integration
+description: Wire pjt inspect into GitHub Actions so PRs fail on drift.
+sidebar:
+  label: ci-integration
+  order: 4
+---
+
+The whole point of `pjt inspect` is that it exits nonzero when your repo drifts. One step in
+your CI workflow turns that into a per-PR gate.
+
+```yaml title=".github/workflows/check.yml"
+name: check
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  pjt-inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pjt inspect
+```
+
+## What this guards against
+
+- Hand-edits to managed regions (e.g. someone removes `.DS_Store` from a `gitignores.macOs()`-owned section)
+- Stale `package.json` scripts from removed blueprints
+- Drift after a blueprint package upgrade where the contributor forgot to run `pjt remodel`
+
+The job fails fast with the human-readable diff in the log, and the failure links back to a
+`pjt.region.*` or `pjt.plan.*` error id that points the contributor at the fix.
+
+## Other CI providers
+
+The pattern is the same on GitLab CI, CircleCI, Buildkite, etc. — install deps, run
+`pnpm pjt inspect`, propagate the nonzero exit. No projitect-specific runner required.

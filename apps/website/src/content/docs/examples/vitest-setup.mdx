@@ -1,0 +1,55 @@
+---
+title: vitest-setup
+description: Add vitest to a project — config, scripts, devDeps, and gitignore in one line.
+sidebar:
+  label: vitest-setup
+  order: 4
+---
+
+import code from "../../../../examples/vitest-setup/example.ts?raw"
+import { Code } from "@astrojs/starlight/components"
+
+Drop `vitest()` into your `.pjt.ts`. One line buys you four things in lockstep:
+
+- A `vitest.config.ts` with v8 coverage configured (owned mode — projitect rewrites this file
+  on every `pjt remodel`, so it can't drift)
+- `test` and `test:watch` scripts in `package.json` (merge mode)
+- `vitest` and `@vitest/coverage-v8` in `devDependencies` (merge mode)
+- A `coverage/` entry in `.gitignore` (region mode, fenced by `# pjt:vitest start`/`end`)
+
+<Code code={code} lang="ts" title=".pjt.ts" />
+
+Run:
+
+```bash
+pnpm pjt remodel    # writes vitest.config.ts, merges package.json, splices .gitignore
+pnpm install        # installs vitest and @vitest/coverage-v8
+pnpm test           # vitest run
+```
+
+## Why this exists
+
+In a hand-written setup, vitest's four pieces drift independently. Someone adds a `test:watch`
+script but forgets coverage. Someone bumps `vitest` in `package.json` but the config still uses
+a deprecated option. With `vitest()`, every piece tracks the blueprint's version: `pjt inspect`
+fails the moment the script, the devDep, the config, or the gitignore region drifts from what
+the blueprint declares.
+
+## Composing with other blueprints
+
+`vitest()` coexists with `@projitect/blueprint-gitignore` because it owns its own region in
+`.gitignore` (`pjt:vitest`), distinct from the gitignore package's regions (`pjt:gitignore:*`).
+Stack as many region-mode blueprints as you want — they each get their own fence.
+
+## Options
+
+```ts
+vitest({
+  coverage: "v8" | null, // default: "v8"; pass `null` to skip coverage + .gitignore
+  scriptName: "test", // default: "test"; renames both the one-shot and watch scripts
+  environment: "node" | "jsdom", // default: "node"
+})
+```
+
+For `jsdom`, install `jsdom` separately — the blueprint doesn't add it because not every
+project that needs `jsdom` wants the same version of it.

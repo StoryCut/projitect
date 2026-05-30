@@ -1,0 +1,11 @@
+---
+title: pjt.pm.install-failed
+slug: errors/pjt.pm.install-failed
+description: The package manager install command exited non-zero.
+sidebar:
+  label: pjt.pm.install-failed
+---
+
+**What**: `pjt add <pkg>` shelled out to your detected package manager (`pnpm add -D`, `npm install -D`, etc.) and the command exited non-zero. The underlying error from the PM is included in the message.
+
+**How to fix**: Read the cause. Common ones: package doesn't exist on the registry, network error, peer-dep conflict, registry auth required. Run the install command yourself with `--verbose` to see the full output.

@@ -1,0 +1,165 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # Lightweight checks. No build needed, run in parallel.
+  # ────────────────────────────────────────────────────────────────
+
+  typecheck:
+    name: typecheck (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - run: pnpm tc
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+
+  test:
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    needs: build-packages
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+      - run: pnpm test
+
+  knip:
+    name: knip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm knip
+
+  # ────────────────────────────────────────────────────────────────
+  # Build once, share the dist/ outputs with downstream jobs.
+  # ────────────────────────────────────────────────────────────────
+
+  build-packages:
+    name: build-packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-dist
+          path: packages/*/dist/**
+          if-no-files-found: error
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────────────────
+  # Downstream consumers of build-packages. They download the artifact
+  # instead of redoing `pnpm build`.
+  # ────────────────────────────────────────────────────────────────
+
+  build-website:
+    name: build-website
+    runs-on: ubuntu-latest
+    needs: build-packages
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+      - run: pnpm --filter website build
+
+  check-errors:
+    name: check-errors
+    runs-on: ubuntu-latest
+    needs: build-packages
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+      - run: pnpm --filter website check:errors
+
+  check-examples:
+    name: check-examples
+    runs-on: ubuntu-latest
+    needs: build-packages
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+      - run: pnpm --filter website check:examples
+
+  smoke:
+    name: smoke (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    needs: build-packages
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+      - run: ./scripts/smoke.sh
+
+  # ────────────────────────────────────────────────────────────────
+  # `pnpm publish --dry-run` for every workspace library. Catches
+  # `files` / `exports` map misconfigurations that would otherwise
+  # only surface during a real release.
+  # ────────────────────────────────────────────────────────────────
+
+  publish-dry-run:
+    name: publish-dry-run
+    runs-on: ubuntu-latest
+    needs: build-packages
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-dist
+          path: packages
+      - run: pnpm -r --filter "./packages/*" publish --dry-run --no-git-checks --access public

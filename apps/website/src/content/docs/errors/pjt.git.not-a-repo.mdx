@@ -1,0 +1,11 @@
+---
+title: pjt.git.not-a-repo
+slug: errors/pjt.git.not-a-repo
+description: A command that requires a git repo was run outside one.
+sidebar:
+  label: pjt.git.not-a-repo
+---
+
+**What**: `pjt init` and `pjt build --force` both require a git repository so destructive operations are recoverable. No `.git/` directory exists at the project root.
+
+**How to fix**: Run `git init` first, then re-run your projitect command. If you intentionally don't use git, you cannot run `pjt build --force` — use `pjt remodel` instead (non-destructive).

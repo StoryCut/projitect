@@ -1,0 +1,55 @@
+---
+title: Sandbox
+description: How projitect limits what blueprints can do to your filesystem.
+---
+
+A blueprint is npm-installed code that runs on your machine. That's a security boundary. projitect
+narrows it on three fronts: **a soft sandbox today**, with a **worker-process replacement** on
+the roadmap and a **lint rule** that prevents the most common bypass.
+
+## The soft sandbox
+
+Blueprints never receive `@effect/platform`'s real `FileSystem`. Instead, the CLI provides a
+`BlueprintFileSystem` service from `@projitect/blueprint` — a wrapper that:
+
+- Resolves all paths relative to the **project root**. Absolute paths and `..` escapes are
+  rejected with `pjt.fs.permission-denied`.
+- Gates every operation against the blueprint's declared **permissions**
+  (`{ kind: "read", glob: "..." }`, `{ kind: "write", glob: "..." }`). A blueprint that didn't
+  ask to write `package.json` cannot write it, even if it tries.
+- Inside `directory("docs", [...])` blocks, the FS for child blueprints is **re-rooted** at
+  `docs/`. A child can't reach back up.
+
+The implementation is in `packages/cli-internals/src/filesystem-impl.ts`. It uses raw
+`node:fs/promises` under a permission gate and exposes the same `BlueprintFileSystem` interface
+the in-memory test layer does — so blueprint tests and production share contracts.
+
+## Why "soft"?
+
+Because the sandbox runs **in the same Node process** as the CLI. A determined blueprint author
+could:
+
+- Import `node:fs` directly and bypass the gate.
+- Use `require("child_process")` to shell out.
+- Re-import `@effect/platform` (when it lands for v4) to grab the real `FileSystem`.
+
+We close the first two with a lint rule (the `@projitect/blueprint` ESLint preset forbids both
+`node:fs` and `child_process` inside blueprint packages). The third becomes a non-issue once we
+ship the worker-process implementation — at that point, the FS in the worker is the
+permission-gated one and there's nothing to escape to.
+
+## The worker-process sandbox (roadmap)
+
+Once `@effect/platform-node` ships for v4 (or we hand-roll equivalent primitives), each blueprint
+will run in its own Node worker thread with `--permission` flags restricting the filesystem to
+the project root. The `BlueprintFileSystem` interface stays identical from the author's
+perspective — the swap is transparent.
+
+Until then: trust your blueprint authors, run the lint rule, and treat new blueprint packages
+the way you'd treat any new npm dep — read the source before adding it.
+
+## What about exec?
+
+A blueprint can declare `{ kind: "exec", command: "..." }` in its permissions, but the v0 FS
+doesn't expose a `runCommand` operation yet. That's a v0.1 feature so the contract is in place
+before any blueprint can shell out.

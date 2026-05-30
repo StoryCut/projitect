@@ -1,0 +1,40 @@
+{
+  "name": "@projitect/blueprint-vitest",
+  "version": "0.0.0",
+  "description": "Vitest scaffolding blueprint for projitect — owns vitest.config.ts, package.json scripts/devDeps, and the .gitignore coverage entry.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "build:clean": "tsc --build --clean",
+    "tc": "tsc --build"
+  },
+  "devDependencies": {
+    "@projitect/blueprint": "workspace:*",
+    "@projitect/core": "workspace:*",
+    "@projitect/test-kit": "workspace:*",
+    "effect": "^4.0.0-beta.70",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@projitect/blueprint": "workspace:*",
+    "@projitect/core": "workspace:*",
+    "effect": "^4.0.0-beta.70"
+  },
+  "projitect": {
+    "type": "blueprint",
+    "import": "import { vitest } from \"@projitect/blueprint-vitest\"",
+    "call": "vitest()"
+  }
+}

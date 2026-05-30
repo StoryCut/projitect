@@ -1,0 +1,129 @@
+/*
+ * Renovate configuration for projitect.
+ *
+ * The monorepo is mostly published library packages (`@projitect/*` and `projitect` itself).
+ * Default semantics are js-lib: keep semver ranges so consumers can dedupe. Two exceptions
+ * are pinned to exact versions via `matchFileNames` — the private docs site at
+ * `apps/website/package.json` and the workspace root `package.json` (devDeps only). Pinning
+ * those keeps the team's local builds deterministic without affecting downstream consumers.
+ *
+ * Auto-merge / scheduling / minimumReleaseAge rules are adapted from StoryCut's
+ * renovate-config presets. Schedule comments retained for context.
+ *
+ * Workflow
+ * --------
+ * 1. Renovate creates a branch.
+ * 2. CI runs; minimumReleaseAge keeps the PR queued until a few days after npm release
+ *    (avoids the 72-hour unpublish window).
+ * 3. PR opens after the wait. If CI passes and update type qualifies, Renovate auto-merges.
+ *
+ * NOTE(prCreation): "not-pending" defers PR creation until the wait ends, so the dashboard
+ * doesn't fill with stale PRs.
+ *
+ * NOTE(runAllDay): The free tier runs every ~3-4 hours, so an overnight-only schedule would
+ * not give enough time per update for branch → wait → PR → CI → merge. We let it run any time.
+ */
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  extends: ["config:recommended", "config:js-lib", ":dependencyDashboard", ":semanticCommits"],
+
+  rebaseWhen: "behind-base-branch",
+  branchConcurrentLimit: 5,
+  prCreation: "not-pending",
+  prConcurrentLimit: 1,
+  lockFileMaintenance: { enabled: true },
+  platformAutomerge: true,
+  platformCommit: "auto",
+
+  packageRules: [
+    /* ******************************************************
+     * SECTION: ecosystem grouping
+     ****************************************************** */
+    {
+      // The Effect family is published in lockstep; updating any one alone usually triggers
+      // peer-dep warnings. Always group.
+      matchPackageNames: ["/^effect$/", "/^@effect\\//"],
+      groupName: "Effect ecosystem",
+    },
+    {
+      // Astro + integrations for the docs site
+      matchPackageNames: ["/^astro$/", "/^@astrojs\\//"],
+      groupName: "Astro ecosystem",
+    },
+    {
+      // typescript-eslint and friends
+      matchPackageNames: ["/^typescript-eslint$/", "/^@typescript-eslint\\//"],
+      groupName: "typescript-eslint",
+    },
+
+    /* ******************************************************
+     * SECTION: js-app overrides for private workspaces
+     * The two private package.jsons get exact-pinning. Everything else stays js-lib semantics.
+     ****************************************************** */
+    {
+      matchFileNames: ["package.json", "apps/website/package.json"],
+      rangeStrategy: "pin",
+    },
+
+    /* ******************************************************
+     * SECTION: auto-merge + priority
+     ****************************************************** */
+    {
+      // Plumbing (pin / digest updates)
+      matchUpdateTypes: ["pin", "digest"],
+      automerge: true,
+      prPriority: 3,
+    },
+    {
+      // Non-major bumps — safe in lockstep with the test suite
+      matchUpdateTypes: ["minor", "patch"],
+      automerge: true,
+      prPriority: 2,
+    },
+    {
+      // Major devDep bumps — usually safe (typescript, eslint, tsup, vitest), human eyes
+      // optional. Auto-merge keeps the maintenance burden low.
+      matchDepTypes: ["devDependencies"],
+      matchUpdateTypes: ["major"],
+      automerge: true,
+      prPriority: 1,
+    },
+    {
+      // Major runtime-dep bumps — never auto-merge. Effect v3 → v4 is the canonical example.
+      matchDepTypes: ["dependencies", "peerDependencies"],
+      matchUpdateTypes: ["major"],
+      automerge: false,
+      prPriority: -1,
+    },
+    {
+      // Lockfile maintenance — auto-merge but limit to weekend mornings to avoid CI churn.
+      matchUpdateTypes: ["lockFileMaintenance"],
+      automerge: true,
+      schedule: [
+        "after 5am and before 9am on monday",
+        "after 5am and before 9am on thursday",
+        "after 5am and before 9am on saturday",
+      ],
+      prPriority: -2,
+    },
+
+    /* ******************************************************
+     * SECTION: minimumReleaseAge — guard against the npm unpublish window
+     ****************************************************** */
+    {
+      matchUpdateTypes: ["major", "minor", "patch"],
+      minimumReleaseAge: "3 days",
+    },
+    {
+      matchDepTypes: ["dependencies", "peerDependencies"],
+      matchUpdateTypes: ["minor"],
+      minimumReleaseAge: "5 days",
+    },
+    {
+      matchDepTypes: ["dependencies", "peerDependencies"],
+      matchUpdateTypes: ["major"],
+      minimumReleaseAge: "8 days",
+    },
+  ],
+}

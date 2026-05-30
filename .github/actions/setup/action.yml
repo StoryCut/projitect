@@ -1,0 +1,27 @@
+name: Setup workspace
+description: pnpm + Node + restore caches + install workspace dependencies.
+
+inputs:
+  node-version:
+    description: Node major version override (e.g. "24"). Empty / unset → read .nvmrc.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+    - name: Setup Node (override)
+      if: inputs.node-version != ''
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+    - name: Setup Node (.nvmrc)
+      if: inputs.node-version == ''
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile

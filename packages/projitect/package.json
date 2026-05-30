@@ -1,0 +1,49 @@
+{
+  "name": "projitect",
+  "version": "0.0.0",
+  "description": "Project scaffolding that stays in sync. Like Terraform, for your frontend repo. Drift-aware, idempotent, blueprint-driven.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    },
+    "./projitect-blueprint": {
+      "types": "./dist/projitect-blueprint.d.ts",
+      "import": "./dist/projitect-blueprint.js"
+    }
+  },
+  "bin": {
+    "pjt": "./bin/pjt.mjs"
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "build:clean": "tsc --build --clean",
+    "tc": "tsc --build"
+  },
+  "dependencies": {
+    "@projitect/blueprint": "workspace:*",
+    "@projitect/cli-internals": "workspace:*",
+    "@projitect/core": "workspace:*",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "effect": "^4.0.0-beta.70",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.70"
+  }
+}

@@ -1,0 +1,11 @@
+---
+title: pjt.loader.import-failed
+slug: errors/pjt.loader.import-failed
+description: .pjt.ts could not be imported.
+sidebar:
+  label: pjt.loader.import-failed
+---
+
+**What**: The dynamic `import()` of your blueprint file threw. Common causes: syntax errors, missing dependencies, or a TypeScript feature the loader can't handle.
+
+**How to fix**: Run `node --experimental-strip-types .pjt.ts` to see the raw error, or run with the `tsx` CLI to confirm the file parses. Install any missing packages.

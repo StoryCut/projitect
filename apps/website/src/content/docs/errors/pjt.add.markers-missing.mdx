@@ -1,0 +1,29 @@
+---
+title: pjt.add.markers-missing
+slug: errors/pjt.add.markers-missing
+description: .pjt.ts is missing the convention markers pjt add splices into.
+sidebar:
+  label: pjt.add.markers-missing
+---
+
+**What**: `pjt add` splices new imports between `// pjt:imports start` and `// pjt:imports end`, and new blueprint calls between `// pjt:blueprints start` and `// pjt:blueprints end`. One or both pairs were not found in `.pjt.ts`.
+
+**How to fix**: Restore the missing marker pairs. The starter template `pjt init` writes is:
+
+```ts
+// pjt:projitect:imports start
+import { pjt } from "projitect/cli"
+// pjt:projitect:imports end
+
+// pjt:imports start
+// pjt:imports end
+
+export default pjt({
+  blueprints: [
+    // pjt:blueprints start
+    // pjt:blueprints end
+  ],
+})
+```
+
+Note that `pjt:projitect:imports` is **different** from `pjt:imports`. The former is a managed region owned by the projitect blueprint; the latter is a convention anchor for `pjt add`. Both must be present, plus `pjt:blueprints start/end` inside the blueprints array. Once restored, re-run `pjt add`.

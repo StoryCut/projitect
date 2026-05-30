@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-launch.json",
+  "previewTargets": [
+    {
+      "name": "website-dev",
+      "command": "pnpm --filter website dev",
+      "url": "http://localhost:4321",
+      "autoPort": true
+    }
+  ]
+}

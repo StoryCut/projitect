@@ -1,0 +1,33 @@
+{
+  "name": "@projitect/blueprint",
+  "version": "0.0.0",
+  "description": "Authoring SDK for projitect blueprints — BlueprintFileSystem service, region/merge/owned/seed constructors, directory scope, detectors.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "build:clean": "tsc --build --clean",
+    "tc": "tsc --build"
+  },
+  "devDependencies": {
+    "@projitect/core": "workspace:*",
+    "@projitect/test-kit": "workspace:*",
+    "effect": "^4.0.0-beta.70",
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {
+    "@projitect/core": "workspace:*",
+    "effect": "^4.0.0-beta.70"
+  }
+}

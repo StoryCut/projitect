@@ -1,0 +1,118 @@
+---
+title: Getting started
+description: Bootstrap projitect in a new or existing project in five minutes.
+---
+
+import { Steps, Aside, Code } from "@astrojs/starlight/components"
+
+projitect adds drift-aware scaffolding to any TypeScript project. This page gets you from zero
+to a CI-protected `.gitignore` in about five minutes.
+
+## Prerequisites
+
+- Node 22.12+ (Node 23.6+ recommended for native TS strip-types in `.pjt.ts`)
+- A package manager (pnpm, npm, yarn, or bun)
+- A git repository (`git init` if you don't have one)
+- A `package.json` (`npm init -y` if you don't have one)
+
+`pjt init` will offer to bootstrap the last two for you.
+
+## Install and bootstrap
+
+<Steps>
+
+1. Run `npx pjt init` in your project root.
+
+   ```bash
+   npx pjt init
+   ```
+
+   This adds `projitect` and `effect` to your `devDependencies`, adds a `pjt` script to
+   `package.json`, and creates a starter `.pjt.ts` at the project root.
+
+2. Open `.pjt.ts` and add the blueprints you want.
+
+   ```ts
+   import { pjt } from "projitect/cli"
+   import { gitignores } from "@projitect/blueprint-gitignore"
+
+   export default pjt({
+     blueprints: [gitignores.macOs(), gitignores.node(), gitignores.vscode()],
+   })
+   ```
+
+3. Install the blueprint packages you used.
+
+   ```bash
+   pnpm add -D @projitect/blueprint-gitignore
+   ```
+
+4. Run `pjt remodel` to apply the plan to disk.
+
+   ```bash
+   pnpm pjt remodel
+   ```
+
+   Your `.gitignore` now contains the three sections, each fenced by comment markers like
+   `# pjt:gitignore:macos start` / `# pjt:gitignore:macos end`. The markers tell `pjt` which
+   blueprint owns each region, so multiple sections coexist without overwriting each other.
+
+5. Verify the project is in sync with `pjt inspect`.
+
+   ```bash
+   pnpm pjt inspect
+   ```
+
+   Output: `Project is in sync with blueprints. No changes needed.` Exit code 0.
+
+</Steps>
+
+## Add it to CI
+
+The whole point of `pjt inspect` is that it exits nonzero when your repo drifts. Add one step
+to your CI workflow:
+
+```yaml title=".github/workflows/check.yml"
+name: check
+on: [pull_request, push]
+jobs:
+  pjt-inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pjt inspect
+```
+
+Any PR that hand-edits a managed region without running `pjt remodel` will now fail this job.
+
+## What happened to my `.gitignore`?
+
+Each blueprint owns a comment-fenced region of the file. The CLI uses those markers to:
+
+- **Place** the section the first time `pjt remodel` runs
+- **Update** the section's content if the blueprint changes
+- **Coexist** with other blueprints in the same file (e.g. `node` + `macOs` + `vscode` all live
+  in `.gitignore` without overwriting each other)
+- **Detect drift** when someone hand-edits a managed region (`pjt inspect`)
+
+You can still hand-edit lines **outside** the markers — they belong to you, not projitect.
+
+<Aside type="tip" title="More than .gitignore">
+  `@projitect/blueprint-vitest` is the next blueprint package on npm: one line adds
+  `vitest.config.ts`, the `test` script, the devDeps, and a `coverage/` entry in `.gitignore`. See
+  the [vitest-setup example](/examples/vitest-setup/). Framework blueprints (`react`, `next`,
+  `tsconfig`, `eslint`) are next.
+</Aside>
+
+## Next steps
+
+- [vitest-setup example](/examples/vitest-setup/) — one line adds vitest config + scripts + devDeps
+- [Blueprints concept](/docs/concepts/blueprints/) — the data model
+- [Ownership modes](/docs/concepts/ownership-modes/) — region / merge / owned / seed
+- [Authoring guide](/docs/authoring/) — write your own blueprint

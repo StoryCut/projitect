@@ -1,0 +1,42 @@
+# Once @projitect/blueprint-gitignore exists, this file should be managed by it via the
+# `node`, `macOs`, and `vscode` blueprints. Until then, we maintain it by hand.
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output
+dist
+build
+*.tsbuildinfo
+.astro
+
+# Test output
+coverage
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
