@@ -27,6 +27,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Kanban workflow — per-user board overrides (e.g. private board ID)
+.claude/kanban.local.json
+
 # Editors
 .vscode/*
 !.vscode/extensions.json
