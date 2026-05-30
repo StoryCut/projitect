@@ -13,9 +13,8 @@ _As a <role>, I want <capability>, so that <benefit>._
 Roles: **maintainer** (works on projitect itself) · **author** (publishes blueprint packages) ·
 **user** (project maintainer consuming blueprints via `pjt`).
 
-Shipped through v0.3 (not tracked here): the 8 workspace packages, the drift pipeline, six CLI
-verbs, 117 unit tests, the 60-assertion smoke, `blueprint-vitest`, `blueprint-tsconfig`,
-`markdownSection` / `ignoreSection`, the Node 22+24 CI matrix. See git history on `v0.1`.
+Already-shipped work is tracked too — see the **Shipped (v0 → v0.3)** section at the bottom,
+checked off as a record of what's in code. Everything above it is still pending.
 
 ---
 
@@ -533,3 +532,79 @@ _As an author, I want `{a,b}` brace expansion in permission globs, so that I can
 - [ ] Glob matcher supports brace alternation
 - [ ] Unit tests over the new cases
   > Size: S
+
+---
+
+## Epic: Security & maintenance
+
+### SEC-1 — Triage the open Dependabot alerts
+
+_As a maintainer, I want the 4 Dependabot alerts on the default branch resolved, so that the repo's security tab is clean before the first release._
+
+- [ ] Review the 4 alerts surfaced on push (2 moderate, 2 low) at the repo's Dependabot tab
+- [ ] Bump / override the affected transitive deps (Renovate may cover some once OPS-7 lands)
+- [ ] Confirm the alerts clear; note any that are dev-only / not exploitable in a published library
+  > Depends on: OPS-7 (Renovate may auto-fix some) · Size: S
+
+---
+
+## Shipped (v0 → v0.3)
+
+A record of what's already in code, checked off. Detail lives in git history on `main`; this is
+the running ledger so the backlog is a complete picture, not just the pending half.
+
+### v0 — foundations
+
+- [x] pnpm monorepo skeleton — workspace, composite tsconfig project refs, base configs, `.nvmrc` 22.12
+- [x] `@projitect/core` — Blueprint / ChangeSet / Permission / ProjitectConfig / PjtLock schemas + the full error catalog (`Schema.TaggedError`, semantic ids)
+- [x] `@projitect/blueprint` — region / merge / owned / seed constructors, `directory` scope, detectors, `BlueprintFileSystem` service
+- [x] `@projitect/test-kit` — in-memory `BlueprintFileSystem` Layer + `dumpFs`
+- [x] `@projitect/cli-internals` — loader, planner, differ, applier, config cascade
+- [x] `projitect` (main) + `pjt` bin shim
+- [x] `@projitect/blueprint-gitignore` — 8 composable sections
+- [x] `apps/website` — Astro Starlight: landing, getting-started, 4 concept pages, 6 CLI refs, authoring, examples, one MDX page per error id
+
+### v0.1 — drift pipeline + Effect CLI
+
+- [x] Node-backed platform Layers (FileSystem / Terminal / Stdio) bundled as `NodePlatformLive`
+- [x] `.pjt.lock` schema + read / write / diff
+- [x] lockfile-aware plan + remove pipeline (orphan cleanup when a blueprint leaves `.pjt.ts`)
+- [x] projitect bootstrap blueprint + `pjt()` auto-prepend (no "implicit" concept in code)
+- [x] `Command.make` CLI tree (init / remodel / inspect / build / explain / add) with `--help` + `--completions`
+- [x] `pjt init` reuses the standard plan/apply/lockfile pipeline
+- [x] `pjt build --force` — wipe + rebuild with git safety (`--force-dirty`, `--yes`)
+- [x] `pjt add` — install + `"projitect"` metadata-driven `.pjt.ts` splice
+- [x] AGENTS.md: marketing-site coordination + lockstep versioning rules + `release-bump` skill
+- [x] docs sync sweep; end-to-end smoke script
+
+### v0.1 — tooling & CI
+
+- [x] ESLint absorbs Prettier (flat config, unicorn recommended, `eslint-plugin-package-json`)
+- [x] husky + lint-staged pre-commit
+- [x] Renovate config (js-lib semantics + exact-pin for the private root / website)
+- [x] GitHub Actions CI — 10 jobs, composite setup action, build-once + artifact share, `publish --dry-run`
+- [x] Effect language-service `patch` on `prepare`
+- [x] per-package sandbox import bans (`node:*`, `@effect/platform` FileSystem) via `no-restricted-imports`
+- [x] "Reach for ESLint first" AGENTS guidance
+
+### v0.2
+
+- [x] regression suites — region / plan / remover / lockfile / differ / edit-pjt (~77 tests) + `@vitest/eslint-plugin`
+- [x] `@projitect/blueprint-vitest` — merge + owned + region in one composite blueprint, + tests + smoke
+- [x] `pjt inspect --json` — structured `{ hasDrift, files, removals, upgrades }`, exit 1 on drift
+- [x] `pjt init --yes` — auto-bootstrap missing `.git/` + `package.json`
+- [x] `pjt add` interactive section picker (`Prompt.multiSelect`, TTY-aware)
+
+### v0.3
+
+- [x] `@projitect/blueprint-tsconfig` — strict-defaults owned `tsconfig.json` + tests + smoke
+- [x] CI Node 22 + 24 matrix on typecheck / test / smoke
+- [x] `commentSuffix` threaded through the region pipeline (schema → applier / remover / differ / plan), backwards-compatible lockfile decode
+- [x] `markdownSection` + `ignoreSection` SDK helpers; `blueprint-gitignore` refactored onto `ignoreSection`
+- [x] this `BACKLOG.md`
+
+### Operational (this session)
+
+- [x] git remote moved `projitect/projitect` → `StoryCut/projitect`
+- [x] PR #1 (`v0.1` → `main`, the whole v0–v0.3 body of work) merged
+- [x] PR #3 (`docs/backlog`) opened
