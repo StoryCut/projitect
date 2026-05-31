@@ -1,6 +1,6 @@
 ---
 name: kanban
-description: Trello-backed task board for the projitect workflow. Provides the primitive card operations (list, show, add, comment, move) that every other kanban-* skill builds on. Use this for one-off card edits; for full pipeline orchestration use /kanban-run, for capture use /kanban-dump, for bootstrap use /kanban-init.
+description: Trello-backed task board — the foundation skill. Provides the primitive card operations (list, show, add, comment, move) that every other kanban-* skill builds on. Use this for one-off card edits; for full pipeline orchestration use /kanban-run, for capture use /kanban-dump, for bootstrap use /kanban-init.
 ---
 
 # kanban
