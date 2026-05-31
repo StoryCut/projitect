@@ -9,6 +9,8 @@
     "changeset": "changeset",
     "check-all": "pnpm tc && pnpm lint && pnpm test && pnpm knip",
     "format": "prettier --write \"**/*.{md,mdx,yml,yaml,json5,css}\"",
+    "kanban:score": "tsx scripts/kanban/score-backlog.ts",
+    "kanban:status": "tsx scripts/kanban/status-check.ts",
     "knip": "knip",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
