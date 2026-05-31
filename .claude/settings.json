@@ -70,8 +70,8 @@
       "Bash(grep:*)",
       "Bash(jq:*)",
       "Bash(curl https://api.trello.com:*)",
-      "Bash(./scripts/launch-trello-mcp.sh)",
-      "Bash(./scripts/launch-trello-mcp.sh:*)",
+      "Bash(./.claude/skills/kanban/bin/launch-trello-mcp.sh)",
+      "Bash(./.claude/skills/kanban/bin/launch-trello-mcp.sh:*)",
       "mcp__trello__*"
     ]
   },

@@ -1,6 +1,6 @@
 // Ensure the 8 required lists exist on the board. Idempotent.
 //
-// Usage: pnpm exec tsx scripts/kanban/reconcile-lists.ts <board-id>
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/reconcile-lists.ts <board-id>
 //
 // Output JSON: { lists: { brainDump: "id", ... }, created: [{ key, name, id }],
 //                existing: [{ key, name, id }], extras: [{ name, id }] }

@@ -2,7 +2,7 @@
 // lib/transitions.ts. Refuses invalid moves with exit code 3. On success, also appends a
 // "Human decision" signed comment so the move and audit-trail are atomic.
 //
-// Usage: pnpm exec tsx scripts/kanban/move-card-validated.ts \
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/move-card-validated.ts \
 //          --card-id ABC --to <listKey> [--notes "..."] \
 //          [--actor "Human decision"] [--model "human"]
 //

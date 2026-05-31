@@ -2,7 +2,7 @@
 // If the file exists and differs from what would be written, prints diff to stderr and
 // exits 2 unless --force.
 //
-// Usage: pnpm exec tsx scripts/kanban/write-kanban-json.ts [--force]
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/write-kanban-json.ts [--force]
 // Stdin: JSON shaped like { boardId, boardUrl, lists, labels } per lib/types.ts → KanbanConfig
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"

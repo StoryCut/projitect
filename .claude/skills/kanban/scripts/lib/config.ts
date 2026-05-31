@@ -28,8 +28,10 @@ export function loadEnv(): Env {
 
 // Walks up from this script's location to find the repo root (.git or pnpm-workspace.yaml).
 // Anchors on the script's location, not cwd, so scripts work no matter where they're invoked.
+// Starts from this file's directory so the walk-up loop handles any depth — robust to
+// future file moves.
 export function findRepoRoot(start?: string): string {
-  const begin = start ?? path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..")
+  const begin = start ?? path.dirname(fileURLToPath(import.meta.url))
   let dir = begin
   while (true) {
     if (existsSync(path.join(dir, ".git")) || existsSync(path.join(dir, "pnpm-workspace.yaml"))) {

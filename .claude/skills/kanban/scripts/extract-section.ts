@@ -3,7 +3,7 @@
 // content. Used by /kanban-run to pass "the approved plan" into the Builder template
 // without round-tripping the entire card through the LLM.
 //
-// Usage: pnpm exec tsx scripts/kanban/extract-section.ts <card-id> "<section-name>"
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/extract-section.ts <card-id> "<section-name>"
 // Stdout: raw markdown of the section (no header)
 
 import { TrelloClient } from "./lib/client.js"

@@ -3,7 +3,7 @@
 // markdown that goes into the Trello card's `desc` field.
 //
 // Usage: echo '{"summary":"fix tsconfig refs"}' | \
-//          pnpm exec tsx scripts/kanban/render-card-description.ts
+//          pnpm exec tsx .claude/skills/kanban/scripts/render-card-description.ts
 // Stdin: JSON (Partial<CardParts>)
 // Stdout: markdown
 

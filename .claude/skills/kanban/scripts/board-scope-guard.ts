@@ -1,7 +1,7 @@
 // Exit 0 if the given card belongs to the configured board, nonzero otherwise.
 // Used as defense-in-depth by every mutating script (Trello tokens are account-wide).
 //
-// Usage: pnpm exec tsx scripts/kanban/board-scope-guard.ts <card-id>
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/board-scope-guard.ts <card-id>
 
 import { TrelloClient } from "./lib/client.js"
 import { loadEnv, loadKanbanConfig } from "./lib/config.js"

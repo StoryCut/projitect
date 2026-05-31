@@ -144,7 +144,7 @@ signed creation comment.
 
 ## Step 7 — Sourcing `.env.local` for future sessions
 
-`scripts/launch-trello-mcp.sh` (the launcher referenced by `.mcp.json`) sources `.env.local`
+The launcher at `.claude/skills/kanban/bin/launch-trello-mcp.sh` (referenced by `.mcp.json`) sources `.env.local`
 itself before exec'ing the MCP server. **You do not need to source it in your shell.** Just
 launch Claude Code from the repo root and the MCP picks up the creds.
 
@@ -158,7 +158,7 @@ launch from the repo root.
 The launcher likely failed. Run it manually to see the error:
 
 ```bash
-./scripts/launch-trello-mcp.sh
+./.claude/skills/kanban/bin/launch-trello-mcp.sh
 ```
 
 Most common failures: env var missing (the launcher prints which one), `pnpm` not on PATH

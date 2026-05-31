@@ -2,7 +2,7 @@
 // (single source of truth) rather than being duplicated across the SKILL.md files;
 // keep them in sync with docs/kanban/workflows.md.
 //
-// Usage: pnpm exec tsx scripts/kanban/recipe-lookup.ts <bucket> <intent>
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/recipe-lookup.ts <bucket> <intent>
 //
 // Buckets + intents:
 //   capture    just-save | pushback-first | during-task

@@ -3,8 +3,8 @@
 // write-kanban-json.ts to persist.
 //
 // Usage:
-//   pnpm exec tsx scripts/kanban/bootstrap-board.ts --board-id ABC
-//   pnpm exec tsx scripts/kanban/bootstrap-board.ts --create \
+//   pnpm exec tsx .claude/skills/kanban/scripts/bootstrap-board.ts --board-id ABC
+//   pnpm exec tsx .claude/skills/kanban/scripts/bootstrap-board.ts --create \
 //     --name "projitect" --workspace ORG_ID --visibility private
 //
 // --workspace accepts an organization id or "personal" / "" for a personal board.

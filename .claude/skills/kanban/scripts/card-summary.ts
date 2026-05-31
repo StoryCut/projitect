@@ -1,7 +1,7 @@
 // Render a card for human reading — name, current list, labels, acceptance-criteria
 // progress, dependencies, and the last N comments (default 3).
 //
-// Usage: pnpm exec tsx scripts/kanban/card-summary.ts <card-id> [--comments N]
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/card-summary.ts <card-id> [--comments N]
 // Stdout: human-readable text
 
 import { TrelloClient } from "./lib/client.js"

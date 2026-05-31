@@ -1,6 +1,6 @@
 // Sanity-check the kanban setup. JSON report to stdout; exit 0 if all green, 1 otherwise.
 //
-// Usage: pnpm exec tsx scripts/kanban/status-check.ts
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/status-check.ts
 
 import { existsSync } from "node:fs"
 import path from "node:path"

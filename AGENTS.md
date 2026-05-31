@@ -353,7 +353,7 @@ projitect board, and generate the API key + token from that account.
 ### Scope: contributor tooling, not a product feature
 
 Changes to the kanban skill bundle (`.claude/skills/kanban*/`) and the supporting files
-(`.mcp.json`, `.env.local.example`, `scripts/launch-trello-mcp.sh`,
+(`.mcp.json`, `.env.local.example`, `.claude/skills/kanban/bin/launch-trello-mcp.sh`,
 `.claude/kanban.json`) are **contributor tooling** — they don't affect the published
 projitect packages or the marketing site. The
 [Marketing site coordination](#marketing-site-coordination-at-every-phase) and

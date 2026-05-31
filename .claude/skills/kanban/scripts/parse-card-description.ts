@@ -2,7 +2,7 @@
 // CardParts as JSON on stdout. Useful when a skill wants to read the current state of a
 // card (e.g. to update one section without clobbering others).
 //
-// Usage: pnpm exec tsx scripts/kanban/parse-card-description.ts < card-description.md
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/parse-card-description.ts < card-description.md
 
 import { parseDescription } from "./lib/description-schema.js"
 import { die, printJson, readStdin, runScript } from "./lib/exit.js"

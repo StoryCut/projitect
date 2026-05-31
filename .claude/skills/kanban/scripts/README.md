@@ -1,9 +1,9 @@
-# scripts/kanban
+# kanban — scripts
 
-Deterministic helpers for the Trello-backed kanban workflow. The `/kanban-*` skills under
-[.claude/skills/](../../.claude/skills/) delegate API choreography to these scripts and keep
-the LLM responsible only for conversation, `AskUserQuestion` gates, free-text parsing, and
-`Task`-dispatched subagents.
+Deterministic helpers for the Trello-backed kanban workflow. The sibling `/kanban-*` skills
+under [..](..) delegate API choreography to these scripts and keep the LLM responsible only
+for conversation, `AskUserQuestion` gates, free-text parsing, and `Task`-dispatched
+subagents.
 
 The scripts talk to Trello directly via REST (typed client in [lib/client.ts](./lib/client.ts))
 — they do not go through the Trello MCP. MCP is for the LLM's runtime; scripts are for
@@ -11,7 +11,8 @@ deterministic work.
 
 ## Convention
 
-- TypeScript, ESM, run via `pnpm exec tsx scripts/kanban/<name>.ts <args>`
+- TypeScript, ESM, run via `pnpm exec tsx .claude/skills/kanban/scripts/<name>.ts <args>`
+- Two scripts have convenience npm aliases: `pnpm kanban:status`, `pnpm kanban:score`
 - Credentials from env: `TRELLO_API_KEY`, `TRELLO_TOKEN` (always required);
   `TRELLO_BOARD_ID` (only needed for scripts that operate on the configured board)
 - Per-project config from `.claude/kanban.json` (committed) + optional
@@ -39,6 +40,9 @@ deterministic work.
 | [`score-backlog.ts`](./score-backlog.ts)                     | Score every Backlog card per the prioritization rubric              | (none) — JSON array                                                |
 | [`recipe-lookup.ts`](./recipe-lookup.ts)                     | Print the canned recipe text for a `/kanban-help` selection         | `<bucket> <intent>`                                                |
 
+Sibling launcher: [`../bin/launch-trello-mcp.sh`](../bin/launch-trello-mcp.sh) — invoked by
+`.mcp.json` at session start, sources `.env.local`, runs `pnpm dlx @delorenj/mcp-server-trello`.
+
 ## Library
 
 Under [`lib/`](./lib/):
@@ -52,6 +56,7 @@ Under [`lib/`](./lib/):
 - [`description-schema.ts`](./lib/description-schema.ts) — render/parse/extract for the
   card description schema
 - [`exit.ts`](./lib/exit.ts) — `die`, `printJson`, `readStdin`, `parseArgs` wrapper
+- [`narrow.ts`](./lib/narrow.ts) — type-narrowing helpers (`asObject`, `stringFrom`, etc.)
 
 ## How a skill calls these
 
@@ -81,5 +86,10 @@ matrix never drift across skills — they all live in one executable place.
 ## Contributor-tooling, not a published surface
 
 These scripts are part of the kanban contributor workflow (see
-[AGENTS.md → Kanban workflow](../../AGENTS.md)). They are not part of the projitect
+[AGENTS.md → Kanban workflow](../../../../AGENTS.md)). They are not part of the projitect
 product. Marketing-site coordination and lockstep-versioning rules do not apply.
+
+## Portability
+
+Living inside the kanban skill bundle is intentional — see
+[../PORTABILITY.md](../PORTABILITY.md) for the plugin-extraction plan.

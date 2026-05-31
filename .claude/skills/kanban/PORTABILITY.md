@@ -1,7 +1,8 @@
 # Portability — extracting this bundle as a Claude Code plugin
 
-This bundle lives as project-local skills inside the `projitect` repo while it bakes. The
-goal is to package it as a Claude Code plugin so it drops cleanly into other repos.
+This bundle is self-contained inside `.claude/skills/kanban/` (plus a few config touches
+elsewhere in the repo). The goal is to package it as a Claude Code plugin so it drops
+cleanly into other repos.
 
 References:
 [Anthropic Skills docs](https://code.claude.com/docs/en/skills) ·
@@ -14,41 +15,46 @@ References:
 projitect/
 ├── .claude/
 │   ├── skills/
-│   │   ├── kanban/           ← foundation + supporting docs (SETUP.md, shared.md, templates/)
-│   │   ├── kanban-init/
-│   │   ├── kanban-dump/
-│   │   ├── kanban-triage/
-│   │   ├── kanban-prioritize/
-│   │   ├── kanban-refine/
-│   │   ├── kanban-run/
-│   │   ├── kanban-help/
-│   │   └── grill-me/
-│   └── settings.json         ← pre-allowed Bash + mcp__trello__* perms
-├── scripts/
-│   ├── kanban/               ← 14 TS helpers + lib/ + tsconfig.json
-│   └── launch-trello-mcp.sh
-├── docs/kanban/workflows.md  ← human-facing playbook
-├── .mcp.json                 ← Trello MCP registration
-├── .env.local.example        ← credential template
-└── AGENTS.md § Kanban workflow ← project-level rules
+│   │   ├── kanban/                       ← foundation skill — fully self-contained
+│   │   │   ├── SKILL.md
+│   │   │   ├── shared.md
+│   │   │   ├── SETUP.md
+│   │   │   ├── PORTABILITY.md            ← (this file)
+│   │   │   ├── templates/{planner,critic,builder,inspector,tester}.md
+│   │   │   ├── scripts/                  ← 14 TS helpers + lib/ + tsconfig.json + README.md
+│   │   │   └── bin/launch-trello-mcp.sh  ← MCP launcher
+│   │   ├── kanban-init/SKILL.md
+│   │   ├── kanban-dump/SKILL.md
+│   │   ├── kanban-triage/SKILL.md
+│   │   ├── kanban-prioritize/SKILL.md
+│   │   ├── kanban-refine/SKILL.md
+│   │   ├── kanban-run/SKILL.md
+│   │   ├── kanban-help/SKILL.md
+│   │   └── grill-me/SKILL.md
+│   └── settings.json                     ← Trello-specific perms in `permissions.allow`
+├── .mcp.json                             ← references ./.claude/skills/kanban/bin/launch-trello-mcp.sh
+├── .env.local.example                    ← credential template
+├── docs/kanban/workflows.md              ← human-facing playbook
+├── knip.json                             ← entry: .claude/skills/kanban/scripts/*.ts
+├── package.json                          ← tsx devDep, kanban:status / kanban:score scripts
+└── AGENTS.md § Kanban workflow           ← repo-level workflow rules
 ```
 
-This is correct project-local layout per the Anthropic Skills spec.
+Nine of the nine skills + all the executable infrastructure live inside the kanban skill
+directory. The seven things outside that directory are project-config integrations
+(`.mcp.json`, `.env.local.example`, `.claude/settings.json`, `docs/kanban/`, `knip.json`,
+`package.json` entries, and the `AGENTS.md` section).
 
 ## Target state (Claude Code plugin)
 
-When ready to extract, lay out the plugin like this:
+When ready to extract:
 
 ```
 projitect-kanban-plugin/
 ├── .claude-plugin/
 │   └── plugin.json
-├── skills/                       ← NB: drops the `.claude/` prefix
-│   ├── kanban/
-│   │   ├── SKILL.md
-│   │   ├── shared.md
-│   │   ├── SETUP.md
-│   │   └── templates/{planner,critic,builder,inspector,tester}.md
+├── skills/                               ← drop the `.claude/` prefix
+│   ├── kanban/                           ← copy the whole directory verbatim, including scripts/ + bin/
 │   ├── kanban-init/SKILL.md
 │   ├── kanban-dump/SKILL.md
 │   ├── kanban-triage/SKILL.md
@@ -57,19 +63,12 @@ projitect-kanban-plugin/
 │   ├── kanban-run/SKILL.md
 │   ├── kanban-help/SKILL.md
 │   └── grill-me/SKILL.md
-├── scripts/kanban/               ← TS helpers travel with the plugin
-├── docs/kanban/workflows.md
-├── bin/launch-trello-mcp.sh      ← MCP launcher (renamed from scripts/)
-├── .mcp.json                     ← uses ${CLAUDE_PLUGIN_ROOT} placeholder
-├── settings.json                 ← plugin-level pre-allowed perms
+├── .mcp.json                             ← command uses ${CLAUDE_PLUGIN_ROOT} placeholder
+├── settings.json                         ← Trello-related entries (lifted from this repo's .claude/settings.json)
 ├── .env.local.example
-└── README.md                     ← prereqs + install + first-run
+├── docs/kanban/workflows.md
+└── README.md                             ← prereqs + install + first-run
 ```
-
-Anthropic's recommendation is to keep scripts inside the skill directory (e.g.
-`skills/kanban/scripts/`). The plugin layout above keeps them sibling-level for the same
-reason we do today — they're shared across all the kanban-\* skills, not owned by any one
-of them. Either is acceptable; pick what reads best at extraction time.
 
 ## `.claude-plugin/plugin.json` template
 
@@ -85,33 +84,49 @@ of them. Either is acceptable; pick what reads best at extraction time.
 }
 ```
 
-The only required fields are `name` and `description`. `version` defaults to the git
-commit SHA if omitted, but pinning explicitly is friendlier for marketplace consumers.
+Only `name` and `description` are required. `version` defaults to the git commit SHA if
+omitted, but pinning explicitly is friendlier for marketplace consumers.
 
 ## What changes during extraction
 
-1. **Drop `.claude/` prefix on skill directories** — `.claude/skills/<name>/` → `skills/<name>/`
-2. **MCP launcher path** — `.mcp.json`'s `./scripts/launch-trello-mcp.sh` becomes
-   `${CLAUDE_PLUGIN_ROOT}/bin/launch-trello-mcp.sh` so it resolves from the installed
-   plugin location, not the consuming repo's cwd
-3. **Settings → plugin `settings.json`** — move the Trello-related entries
-   (`Bash(jq:*)`, `Bash(curl https://api.trello.com:*)`, `mcp__trello__*`,
-   `enabledMcpjsonServers: ["trello"]`) out of the consuming repo's `.claude/settings.json`
-   and into the plugin's `settings.json` so they're available wherever the plugin is
-   installed
-4. **AGENTS.md references** — the skill bodies link to `AGENTS.md → Kanban workflow` in a
-   few spots. Inline that content into `kanban/shared.md` (or a new plugin README) since
-   the consuming repo won't have a matching AGENTS.md section
-5. **Project-rule citations in templates** — `templates/builder.md` cites projitect's Effect
-   v4 / "no `as`" / pnpm-only rules. These are projitect-specific; for the plugin, swap
-   them with a generic "follow the consuming repo's AGENTS.md / CLAUDE.md conventions"
-   directive
-6. **Scripts path in skill bodies** — references like `pnpm exec tsx scripts/kanban/<x>.ts`
-   become `${CLAUDE_PLUGIN_ROOT}/scripts/kanban/<x>.ts` (or wrap each script invocation in
-   a thin plugin-installed bin shim)
-7. **tsx availability** — the plugin needs `tsx` available where it's installed. Either
-   document it as a prereq in the README or ship a small bootstrap script that installs
-   `tsx` globally on first use
+1. **Drop `.claude/` prefix on skill directories** — `.claude/skills/<name>/` →
+   `skills/<name>/`. The `kanban/` subdir comes along intact (it already contains
+   `scripts/` + `bin/` + supporting docs).
+2. **MCP launcher path placeholder** — `.mcp.json`'s
+   `./.claude/skills/kanban/bin/launch-trello-mcp.sh` becomes
+   `${CLAUDE_PLUGIN_ROOT}/skills/kanban/bin/launch-trello-mcp.sh` so it resolves from the
+   installed plugin location, not the consuming repo's cwd.
+3. **Launcher `repo_root` calculation** — `scripts/kanban/bin/launch-trello-mcp.sh`
+   currently walks four directories up to reach the repo root. In a plugin context, the
+   launcher needs the _consumer repo's_ `.env.local`, not the plugin's. Replace the
+   `repo_root` derivation with something that walks up from the consumer's `cwd`
+   (`pwd` at MCP-start time) to find `.git` / `pnpm-workspace.yaml` — the same algorithm
+   that `scripts/lib/config.ts`'s `findRepoRoot` uses.
+4. **Settings → plugin `settings.json`** — move the Trello-related entries
+   (`Bash(jq:*)`, `Bash(curl https://api.trello.com:*)`,
+   `Bash(./.claude/skills/kanban/bin/launch-trello-mcp.sh*)`, `mcp__trello__*`,
+   `enabledMcpjsonServers: ["trello"]`) out of consumer `.claude/settings.json` and into
+   the plugin's `settings.json`.
+5. **AGENTS.md references** — a few skill bodies (and the
+   [`scripts/README.md`](./scripts/README.md) footer) link to `AGENTS.md → Kanban workflow`.
+   Replace with plugin-internal links or inline the load-bearing content into
+   `kanban/shared.md` / a plugin README.
+6. **Project-rule citations in templates** — [`templates/builder.md`](./templates/builder.md)
+   cites projitect's Effect v4 / `as`-forbidden / pnpm-only rules. These are
+   projitect-specific; in the plugin, swap them with a generic "follow the consuming repo's
+   AGENTS.md / CLAUDE.md conventions" directive.
+7. **knip + package.json** — the consumer repo's `knip.json` entry pattern and the
+   `kanban:status` / `kanban:score` npm scripts reference the in-repo path. In the
+   plugin, drop both. Consumers can add similar shortcuts in their own `package.json` if
+   they want them; the underlying script invocations work without them. (knip itself
+   becomes irrelevant — the plugin doesn't have a knip config.)
+8. **tsx availability** — the plugin needs `tsx` available where it's installed. Either
+   document it as a prereq in the README or ship a bootstrap script.
+9. **`findRepoRoot` semantics** — in plugin context, "the repo root" usually means the
+   _consumer's_ repo, not the plugin's install dir. `findRepoRoot` already walks up from
+   the script's location, which would land inside the plugin install dir. Switch its
+   default `start` from `import.meta.url`-derived to `process.cwd()` so it finds the
+   consuming repo when invoked from there.
 
 ## What does NOT ship in the plugin
 
@@ -119,15 +134,15 @@ commit SHA if omitted, but pinning explicitly is friendlier for marketplace cons
   Generated by `/kanban-init` per-repo. Stays at consumer-repo `.claude/kanban.json`.
 - `.env.local` — per-user credentials. The plugin ships `.env.local.example`; consumers
   copy + fill in.
-- `package.json` `kanban:status` / `kanban:score` scripts — those are projitect-specific
-  npm scripts. Consumers can add similar shortcuts to their own `package.json` if they
-  want them; the underlying script invocation works without them.
+- `package.json` `kanban:status` / `kanban:score` scripts and `tsx` devDep — these are
+  projitect-specific. Consumers add their own if wanted.
+- `knip.json` entries — not relevant in plugin context.
 
 ## Distribution
 
 Three paths (in order of how locked-down they are):
 
-1. **File system / git path for testing** — `/plugin install <local-path-or-git-url>`
+1. **File-system / git path for testing** — `/plugin install <local-path-or-git-url>`
 2. **Private marketplace** — host a git repo containing
    `.claude-plugin/marketplace.json` that catalogs your team's plugins. Teammates run
    `/plugin marketplace add <repo>` then `/plugin install projitect-kanban@<marketplace>`
@@ -139,19 +154,21 @@ Versioning: explicit semver in `plugin.json` is friendlier than relying on git-S
 
 When you're ready (post bake-in), the steps in order:
 
-- [ ] Create new repo `projitect-kanban` (or similar). Initialize `.claude-plugin/plugin.json`.
-- [ ] Copy each `.claude/skills/<name>/` → new repo's `skills/<name>/`
-- [ ] Copy `scripts/kanban/`, `scripts/launch-trello-mcp.sh` (→ `bin/`), `docs/kanban/`,
-      `.mcp.json`, `.env.local.example`
-- [ ] Update `.mcp.json` to use `${CLAUDE_PLUGIN_ROOT}/bin/launch-trello-mcp.sh`
-- [ ] Move Trello-related entries from this repo's `.claude/settings.json` into the
+- [ ] Create new repo `projitect-kanban` (or similar). Initialize
+      `.claude-plugin/plugin.json`.
+- [ ] Copy `.claude/skills/kanban/` → new repo's `skills/kanban/` (whole tree —
+      scripts/, bin/, templates/, supporting docs)
+- [ ] Copy each `.claude/skills/<other>/` → `skills/<other>/`
+- [ ] Copy `.mcp.json`, `.env.local.example`, `docs/kanban/`
+- [ ] Update `.mcp.json` to use `${CLAUDE_PLUGIN_ROOT}/skills/kanban/bin/launch-trello-mcp.sh`
+- [ ] Update `launch-trello-mcp.sh`'s `repo_root` to walk up from `cwd`, not from
+      `BASH_SOURCE` (so it finds the consuming repo, not the plugin install dir)
+- [ ] Update `scripts/lib/config.ts`'s `findRepoRoot` default to start from
+      `process.cwd()` (same reason as above)
+- [ ] Lift Trello-related entries from this repo's `.claude/settings.json` into the
       plugin's `settings.json`
 - [ ] Replace AGENTS.md cross-references in skill bodies with plugin-internal links
 - [ ] Sanitize projitect-specific rules from `templates/builder.md` (Effect v4, pnpm-only)
 - [ ] Write the plugin's `README.md` (prereqs + install + first-run + Trello-token walkthrough)
 - [ ] In this repo, remove the now-extracted files and add the plugin via
       `/plugin install <plugin-source>`. Projitect becomes the first consumer.
-
-Anything you'd want available across all consuming repos lives in the plugin; anything
-specific to one repo's board layout or credentials stays in that repo's
-`.claude/kanban.json` and `.env.local`.

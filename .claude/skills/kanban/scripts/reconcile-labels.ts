@@ -1,6 +1,6 @@
 // Ensure the 3 priority labels exist on the board. Idempotent.
 //
-// Usage: pnpm exec tsx scripts/kanban/reconcile-labels.ts <board-id>
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/reconcile-labels.ts <board-id>
 //
 // Output JSON: { labels: { "priority-high": "id", ... }, created: [...], existing: [...] }
 

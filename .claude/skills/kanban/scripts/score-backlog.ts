@@ -9,7 +9,7 @@
 //   +15  at least one other Backlog card depends on this card (bottleneck)
 //   -10  no acceptance criteria filled in (needs refinement before planning)
 //
-// Usage: pnpm exec tsx scripts/kanban/score-backlog.ts
+// Usage: pnpm exec tsx .claude/skills/kanban/scripts/score-backlog.ts
 // Output JSON: [{ id, shortLink, name, score, factors, current_pos, proposed_pos,
 //                 priority, hasAC, dependents }, ...] sorted by proposed order (highest first).
 

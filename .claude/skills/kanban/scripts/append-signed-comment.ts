@@ -4,7 +4,7 @@
 //
 // Usage:
 //   echo "Plan complete. 3 files to modify..." | \
-//     pnpm exec tsx scripts/kanban/append-signed-comment.ts \
+//     pnpm exec tsx .claude/skills/kanban/scripts/append-signed-comment.ts \
 //       --card-id ABC --actor "Planner" --model "claude-opus-4-7" \
 //       [--suffix "attempt 1/3"]
 //
