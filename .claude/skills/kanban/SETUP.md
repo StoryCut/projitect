@@ -85,11 +85,13 @@ Open `.env.local` and fill in:
 ```
 TRELLO_API_KEY=<from step 2>
 TRELLO_TOKEN=<from step 3>
-TRELLO_BOARD_ID=<from the board URL, the segment after /b/>
+TRELLO_BOARD_ID=<from the board URL, the segment after /b/  — or leave blank>
 ```
 
-The short board ID from the URL is fine — `/kanban-init` will resolve it to the full 24-char
-id and write that into `.claude/kanban.json`.
+The short board ID from the URL is fine — `/kanban-init` resolves it to the full 24-char id
+and writes that into `.claude/kanban.json`. **If you skipped step 1**, leave
+`TRELLO_BOARD_ID` blank; `/kanban-init` creates the board for you in step 5 and tells you
+the new id to paste back here.
 
 `chmod 600 .env.local` is good hygiene if you share the machine.
 
@@ -102,13 +104,17 @@ id and write that into `.claude/kanban.json`.
 
 What it does:
 
-1. Reads `.env.local`. Aborts if any of the three vars are empty.
-2. Resolves the board id (handles both short URL segments and full ids).
+1. Reads `.env.local`. Aborts if `TRELLO_API_KEY` or `TRELLO_TOKEN` is empty.
+2. Resolves `TRELLO_BOARD_ID` if set (handles both short URL segments and full ids).
+   **If empty or 404, creates a board interactively** — asks via `AskUserQuestion` for
+   workspace, board name, and visibility (private recommended), then POSTs to Trello with
+   `defaultLists=false` so you don't have stale `To Do` / `Doing` / `Done` lists to delete.
+   Surfaces the new id and asks you to paste it into `.env.local`.
 3. Lists the existing lists on the board.
 4. For each of the 8 required lists: if present, records its id; if missing, creates it at
    the right position.
 5. Writes `.claude/kanban.json` with the board id, board URL, and the 8 list ids.
-6. Optionally creates the three priority labels (`priority-high`, `-medium`, `-low`).
+6. Creates the three priority labels (`priority-high`, `-medium`, `-low`) if missing.
 7. Asks for your approval to commit `.claude/kanban.json` (it's checked in — that's how
    teammates pick up the same board mapping).
 
