@@ -79,7 +79,13 @@
       "Bash(rm -rf */dist)",
       "Bash(find . -name:*)",
       "Bash(rg:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(jq:*)",
+      "Bash(curl https://api.trello.com:*)",
+      "Bash(./.claude/skills/kanban/bin/launch-trello-mcp.sh)",
+      "Bash(./.claude/skills/kanban/bin/launch-trello-mcp.sh:*)",
+      "mcp__trello__*"
     ]
-  }
+  },
+  "enabledMcpjsonServers": ["trello"]
 }

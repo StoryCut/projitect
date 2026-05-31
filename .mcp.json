@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "trello": {
+      "command": "./.claude/skills/kanban/bin/launch-trello-mcp.sh"
+    }
+  }
+}
