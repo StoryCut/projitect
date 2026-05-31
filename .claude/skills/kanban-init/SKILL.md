@@ -1,58 +1,126 @@
 ---
 name: kanban-init
-description: One-time per-repo bootstrap for the Trello-backed kanban workflow. Reads .env.local, resolves the board id, creates the 8 required lists if missing, writes .claude/kanban.json, and optionally creates the three priority labels. Idempotent — re-run any time the board layout drifts. See .claude/skills/kanban/SETUP.md for the full setup walkthrough this skill is the tail end of.
+description: One-time per-repo bootstrap for the Trello-backed kanban workflow. Reads .env.local; creates a Trello board if you haven't made one yet (interactive — asks for workspace, name, visibility); creates the 8 required lists and 3 priority labels if missing; writes .claude/kanban.json. Idempotent — re-run any time the board layout drifts. See .claude/skills/kanban/SETUP.md for the full walkthrough.
 ---
 
 # kanban-init
 
-This skill is the tail end of [SETUP.md](../kanban/SETUP.md) — it assumes the user has
-already created their Trello board, generated an API key + token, and populated `.env.local`.
-If those aren't done yet, point the user at SETUP.md and stop.
+This skill takes you from "I have Trello API credentials" to "the kanban workflow is live in
+this repo". It assumes the user has already generated an API key + token and populated
+`TRELLO_API_KEY` / `TRELLO_TOKEN` in `.env.local`. **The board itself is optional** — if
+`TRELLO_BOARD_ID` is empty or unresolvable, this skill creates the board for them
+interactively. See [SETUP.md](../kanban/SETUP.md) for the prerequisite walkthrough (creds
+generation).
 
 ## When to invoke
 
 - The user says "set up kanban for this repo", "init kanban", "/kanban-init", or similar.
 - Any other `kanban-*` skill fails with "missing `.claude/kanban.json`".
 - The board layout drifted — a list got renamed, a list got deleted, you added a fresh board.
+- The user has Trello credentials but hasn't created a board yet — this skill will create
+  one.
 
 Skip when:
 
-- `.env.local` is missing any of `TRELLO_API_KEY` / `TRELLO_TOKEN` / `TRELLO_BOARD_ID`. Send
-  the user to [SETUP.md](../kanban/SETUP.md) instead.
+- `.env.local` is missing `TRELLO_API_KEY` or `TRELLO_TOKEN`. Send the user to
+  [SETUP.md](../kanban/SETUP.md) steps 2-3 to generate them.
 
 ## Preflight
 
 ```bash
-test -f .env.local || { echo "Missing .env.local. See .claude/skills/kanban/SETUP.md (steps 2-4)"; exit 1; }
+test -f .env.local || { echo "Missing .env.local. See .claude/skills/kanban/SETUP.md (steps 2-3)"; exit 1; }
 set -a; source .env.local; set +a
 : "${TRELLO_API_KEY:?Set TRELLO_API_KEY in .env.local — see SETUP.md step 2}"
 : "${TRELLO_TOKEN:?Set TRELLO_TOKEN in .env.local — see SETUP.md step 3}"
-: "${TRELLO_BOARD_ID:?Set TRELLO_BOARD_ID in .env.local — see SETUP.md step 4}"
+# TRELLO_BOARD_ID may be empty on first run — Step 1 will create a board interactively.
 ```
 
-If the MCP server isn't loaded for this session yet (likely on the very first run), warn the
-user that they'll need to restart Claude Code after this init so `.mcp.json` picks up the
-new env vars. Then continue using direct REST calls (see [shared.md](../kanban/shared.md))
-for the bootstrap itself.
+If the MCP server isn't loaded for this session yet (likely on the very first run, especially
+without a board), warn the user that they'll need to restart Claude Code after this init so
+`.mcp.json` picks up the populated env vars. Then continue using direct REST calls (see
+[shared.md](../kanban/shared.md)) for the bootstrap itself.
 
 ## Steps
 
-### 1. Resolve the board id
+### 1. Resolve or create the board
+
+Two branches:
+
+**A. `TRELLO_BOARD_ID` is set — try to resolve it.**
 
 `TRELLO_BOARD_ID` may be either the 8-char short id from the URL or the 24-char full id.
-Resolve to the full id:
+Hit `GET /1/boards/$TRELLO_BOARD_ID` and inspect the HTTP status:
 
 ```bash
-BOARD_ID=$(curl -fsSL \
-  "https://api.trello.com/1/boards/$TRELLO_BOARD_ID?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN" \
-  | jq -r .id)
-BOARD_URL=$(curl -fsSL \
-  "https://api.trello.com/1/boards/$BOARD_ID?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN&fields=url" \
-  | jq -r .url)
+resp=$(curl -sSL -w "\n%{http_code}" \
+  "https://api.trello.com/1/boards/$TRELLO_BOARD_ID?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN")
+http_code=$(echo "$resp" | tail -1)
+body=$(echo "$resp" | sed '$d')
 ```
 
-If either curl returns 404 or 401, surface a specific error: 404 → bad board id; 401 → bad
-token. Point at the relevant SETUP.md step.
+- **200** → `BOARD_ID=$(echo "$body" | jq -r .id)`, `BOARD_URL=$(echo "$body" | jq -r .url)`,
+  proceed to Step 2.
+- **401** → token invalid/revoked. Surface and bail; point at SETUP.md step 3.
+- **404** → board does not exist (or the id is wrong). Fall through to branch B with a
+  one-line note: "Board id `$TRELLO_BOARD_ID` not found on this account — I'll create a new
+  one if you want."
+- Anything else → surface the status code and bail.
+
+**B. `TRELLO_BOARD_ID` is empty (or just 404'd) — create the board.**
+
+Interactive flow:
+
+1. **List the user's workspaces** so they can pick one:
+
+   ```bash
+   curl -fsSL "https://api.trello.com/1/members/me/organizations?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN&fields=displayName" | jq -r '.[] | "\(.id)\t\(.displayName)"'
+   ```
+
+2. **Ask which workspace** via `AskUserQuestion`. Show up to three workspaces by
+   `displayName` plus "Personal board (no workspace)" as a fourth option. If the user has
+   more than 3 workspaces, list the top 3 and offer "Other workspace — paste the id" via the
+   `Other` escape.
+
+3. **Ask the board name** via `AskUserQuestion`. Options: the current repo name (likely
+   `projitect`) — marked recommended — plus a couple of alternatives, and an `Other` for
+   free text.
+
+4. **Ask visibility** via `AskUserQuestion`. Three options:
+   - **Private (Recommended)** — only invited members; safest, given Trello tokens are
+     account-wide
+   - **Workspace** — anyone in the workspace can see it
+   - **Public** — anyone on the internet can see it (rare for a project board)
+
+5. **Create the board** with `defaultLists=false` so Trello doesn't pre-populate the three
+   default lists you'd then have to delete:
+
+   ```bash
+   POST_BODY="name=$BOARD_NAME&defaultLists=false&prefs_permissionLevel=$VISIBILITY"
+   [ -n "$WORKSPACE_ID" ] && POST_BODY="$POST_BODY&idOrganization=$WORKSPACE_ID"
+   created=$(curl -fsSL -X POST \
+     "https://api.trello.com/1/boards/?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN" \
+     --data "$POST_BODY")
+   BOARD_ID=$(echo "$created" | jq -r .id)
+   BOARD_URL=$(echo "$created" | jq -r .url)
+   ```
+
+   (`prefs_permissionLevel` accepts `private`, `org`, or `public`. Map the AskUserQuestion
+   answer accordingly.)
+
+6. **Tell the user the new id, and ask them to paste it into `.env.local`** — the skill
+   never modifies `.env.local` directly. Format:
+
+   > Created board `<BOARD_NAME>` at `<BOARD_URL>` (id `<BOARD_ID>`). Add this line to your
+   > `.env.local` so the MCP server uses it on next launch:
+   >
+   > ```
+   > TRELLO_BOARD_ID=<BOARD_ID>
+   > ```
+   >
+   > Restart Claude Code after saving so `.mcp.json` picks up the new env. The rest of this
+   > init run uses the new id directly — no need to restart mid-flow.
+
+   Then proceed to Step 2 with `BOARD_ID` set in the current shell.
 
 ### 2. List existing lists
 
@@ -182,8 +250,15 @@ this session yet).
 
 - **401 unauthorized** on any call → token is wrong, expired, or revoked. Send the user back
   to SETUP.md step 3.
-- **404 on the board** → `TRELLO_BOARD_ID` is wrong. SETUP.md step 4.
+- **404 on the board** → `TRELLO_BOARD_ID` points at a board that doesn't exist (or that the
+  current token can't see). Step 1 branch B catches this and offers to create a fresh board.
+- **User has no Trello workspaces** → `GET /1/members/me/organizations` returns `[]`. Skip
+  the workspace question and create a personal board (`idOrganization` omitted from the POST
+  body). Personal boards are private to the token-owning user by default.
+- **Board creation fails (Trello plan limits, name collision, etc.)** → surface Trello's
+  error response verbatim and bail. Common cases: free-plan workspace board limit reached,
+  duplicate board name in the same workspace.
 - **A list with the right name exists at the wrong position** → record its id anyway; don't
   reorder (Trello drag-rearranging is the user's prerogative).
-- **More than 8 lists with the same name** → Trello allows duplicates. Pick the lowest-pos
+- **More than one list with the same name** → Trello allows duplicates. Pick the lowest-pos
   one, warn the user that they have a dup to clean up.

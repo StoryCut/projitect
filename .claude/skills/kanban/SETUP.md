@@ -14,19 +14,23 @@ your projitect board.
 
 Total time: ~10 minutes the first time.
 
-## Step 1 — Create the Trello board
+## Step 1 — Create the Trello board (optional — `/kanban-init` can do this)
 
-Skip if you already have a board you want to use.
+You have two paths:
 
-1. Go to [trello.com](https://trello.com), pick a workspace (or create one for projitect).
-2. Create a new board, name it `projitect` (or whatever).
-3. **Delete** the three default lists (`To Do`, `Doing`, `Done`).
-4. Either: create the 8 lists by hand in this order (left-to-right), names exactly as written:
-   `Brain Dump`, `Backlog`, `Plan`, `Plan Review`, `Impl`, `Impl Review`, `Test`, `Done`.
-   Or: skip — `/kanban-init` will create any missing lists for you in step 6.
-
-Copy the board URL from your browser; it looks like
-`https://trello.com/b/abc12345/projitect`. You'll need the `abc12345` segment in step 5.
+- **Skip this step entirely** and let `/kanban-init` create the board for you in Step 5. It
+  will ask you for the workspace, board name, and visibility, then create the board with the
+  8 lists and 3 priority labels ready to go. Leave `TRELLO_BOARD_ID` blank in `.env.local`.
+- **Or create it manually** if you'd rather pick the workspace and board settings in the
+  Trello UI:
+  1. Go to [trello.com](https://trello.com), pick a workspace (or create one for projitect).
+  2. Create a new board, name it `projitect` (or whatever).
+  3. **Delete** the three default lists (`To Do`, `Doing`, `Done`).
+  4. Optionally create the 8 lists by hand (`Brain Dump`, `Backlog`, `Plan`, `Plan Review`,
+     `Impl`, `Impl Review`, `Test`, `Done`) — `/kanban-init` will also create any missing
+     ones for you.
+  5. Copy the board URL from your browser; it looks like
+     `https://trello.com/b/abc12345/projitect`. You'll need the `abc12345` segment in step 4.
 
 ### Recommended: dedicated service account
 
