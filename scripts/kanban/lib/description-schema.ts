@@ -20,7 +20,7 @@ export interface CardParts {
   }
 }
 
-export const EMPTY_PARTS: CardParts = {
+const EMPTY_PARTS: CardParts = {
   summary: "",
   acceptanceCriteria: [],
   dependsOn: [],
@@ -33,16 +33,6 @@ export const EMPTY_PARTS: CardParts = {
     implReviewAttempts: 0,
   },
 }
-
-export const SECTION_NAMES = [
-  "Summary",
-  "Acceptance criteria",
-  "Depends on",
-  "Plan",
-  "Implementation notes",
-  "Test results",
-  "Meta",
-] as const
 
 // Looser than Partial<CardParts> — accepts explicit undefined for callers that build the
 // input from optional CLI args (exactOptionalPropertyTypes interaction).

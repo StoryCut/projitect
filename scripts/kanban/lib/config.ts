@@ -26,15 +26,6 @@ export function loadEnv(): Env {
   }
 }
 
-export function requireBoardId(env: Env): string {
-  if (!env.boardId)
-    die(
-      "TRELLO_BOARD_ID is not set. Run /kanban-init first, then paste the resolved id into .env.local.",
-      2,
-    )
-  return env.boardId
-}
-
 // Walks up from this script's location to find the repo root (.git or pnpm-workspace.yaml).
 // Anchors on the script's location, not cwd, so scripts work no matter where they're invoked.
 export function findRepoRoot(start?: string): string {

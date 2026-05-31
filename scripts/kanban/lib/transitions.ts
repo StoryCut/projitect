@@ -5,7 +5,7 @@
 
 import type { ListKey } from "./types.js"
 
-export const TRANSITIONS: Record<ListKey, readonly ListKey[]> = {
+const TRANSITIONS: Record<ListKey, readonly ListKey[]> = {
   brainDump: ["backlog"],
   backlog: ["plan"],
   plan: ["planReview", "backlog"],

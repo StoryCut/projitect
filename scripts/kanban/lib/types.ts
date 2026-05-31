@@ -37,13 +37,6 @@ export function isListKey(s: string): s is ListKey {
   return (LIST_KEYS as readonly string[]).includes(s)
 }
 
-export function listKeyByDisplayName(name: string): ListKey | undefined {
-  for (const k of LIST_KEYS) {
-    if (LIST_DISPLAY_NAMES[k] === name) return k
-  }
-  return undefined
-}
-
 export type LabelKey = "priority-high" | "priority-medium" | "priority-low"
 
 export const LABEL_KEYS: readonly LabelKey[] = ["priority-high", "priority-medium", "priority-low"]

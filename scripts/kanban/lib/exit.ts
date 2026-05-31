@@ -5,7 +5,7 @@ import { parseArgs as nodeParseArgs, type ParseArgsConfig } from "node:util"
 
 // die() throws this; runScript() catches it and turns it into the right exit code.
 // Scripts use die() exclusively — they never call process.exit themselves.
-export class ScriptError extends Error {
+class ScriptError extends Error {
   constructor(
     message: string,
     readonly exitCode: number = 1,
@@ -55,8 +55,4 @@ export function parseArgs<T extends ParseArgsConfig>(config: T) {
     strict: true,
     ...config,
   })
-}
-
-export function nowIso(): string {
-  return new Date().toISOString()
 }
