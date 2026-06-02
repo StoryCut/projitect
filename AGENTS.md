@@ -173,12 +173,175 @@ this.make)`. Do not use the v3 `Effect.Tag` proxy accessor pattern.
   (`pjt.<subsystem>.<kebab-case>`) and has a matching MDX page in `apps/website`.
 - **Layer composition** memoizes across `Effect.provide` calls by default in v4. Opt out with
   `{ local: true }` only when you have a specific reason.
-- **Control flow** uses `Match.value(...).pipe(...)` and pattern matching, not `if/else` chains.
+- **Control flow** uses pattern matching, not `if/else` chains — see [Effect patterns](#effect-patterns) for the full set of conventions (Match, predicates, `dual`, data-first vs `pipe`, `Result`).
 - **Conditional construction** uses `Effect.if`, `Effect.when`, `Effect.unless`, `Effect.forEach`,
   `Effect.all`. We do not ship our own `sequence`/`when`/`unless` blueprint combinators because
-  Effect already has them.
+  Effect already has them. (This bans duplicating Effect's _control-flow_ combinators; generic
+  _data-shape_ utilities are a separate matter — see [FP mindset](#fp-mindset).)
 - **Schema** v4 uses `.check(Schema.isInt(), Schema.isGreaterThan(0))` not
   `.pipe(Schema.int(), Schema.positive())`. Mind the migration on snippets copied from older docs.
+
+## Effect patterns
+
+This codebase has specific conventions for _how_ to write Effect code. They keep code consistent
+across packages and lean on Effect's type system for safety. Apply them on every change that
+touches Effect, not just net-new files.
+
+### Match over if/else
+
+Use `Match.value` or `Match.valueTags` / `Match.tagsExhaustive` instead of `if/else` chains or
+`switch`. The compiler enforces exhaustiveness — when a new ownership mode or ChangeSet op kind
+lands, every match site fails to compile until it handles the new case.
+
+```ts
+import { Match } from "effect"
+
+// Discriminated unions — exhaustive over the tag
+const summary = Match.value(op).pipe(
+  Match.tag("Region", (region) => `region ${region.ownerId}`),
+  Match.tag("Merge", (merge) => `merge ${merge.path}`),
+  Match.tag("Owned", (owned) => `owned ${owned.path}`),
+  Match.tag("Seed", (seed) => `seed ${seed.path}`),
+  Match.exhaustive,
+)
+
+// Tagged errors — Match.valueTags maps each tag in one shot
+const message = Match.valueTags(error, {
+  FsPermissionDenied: (denied) => `permission denied: ${denied.glob}`,
+  PlanConflict: (conflict) => `conflicting owners for ${conflict.path}`,
+})
+
+// Plain values
+const exitCode = Match.value(status).pipe(
+  Match.when("clean", () => 0),
+  Match.when("drift", () => 1),
+  Match.exhaustive,
+)
+```
+
+For the success/failure split on an Effect, `Effect.matchEffect` (already used in
+`cli-internals`' command dispatchers) is the Effect-level equivalent. Short ternaries and `??`
+are fine: `const name = config.name ?? "unnamed"`.
+
+### Predicates for type checks
+
+Use predicates from Effect modules instead of manual `=== null`, `typeof`, or `.length > 0`
+checks.
+
+```ts
+import { Predicate, String, Number, Array } from "effect"
+
+if (Predicate.isNotNullable(value)) { ... }   // instead of: value != null
+if (Predicate.isString(value)) { ... }        // instead of: typeof value === "string"
+if (String.isNonEmpty(str)) { ... }           // instead of: str.length > 0
+if (Array.isNonEmptyArray(arr)) { ... }       // instead of: arr.length > 0
+if (Number.isFinite(n)) { ... }
+```
+
+A compound predicate worth reusing (e.g. an `isNonEmptyString` that combines `isNotNullable`,
+`isString`, and `String.isNonEmpty`) belongs in a `PredicateX` module in `@projitect/core` —
+see [FP mindset](#fp-mindset) for where utilities live. Create it the first time a second call
+site wants it.
+
+### Dual functions
+
+When a function supports both piped and direct call styles, use `dual` imported from
+`effect/Function` (not `Function.dual()`). List the **data-last** (piped) overload first, then
+the **data-first** overload:
+
+```ts
+import { dual } from "effect/Function"
+
+export const withPrefix = dual<
+  // Data-last (for piping): pipe(id, withPrefix("pjt:"))
+  (prefix: string) => (id: string) => string,
+  // Data-first (direct call): withPrefix(id, "pjt:")
+  (id: string, prefix: string) => string
+>(
+  2, // arity of the data-first overload
+  (id, prefix) => `${prefix}${id}`,
+)
+```
+
+### Data-first vs `pipe`
+
+Prefer **data-first** style for single function calls. Use `pipe()` only when chaining 2+
+operations.
+
+```ts
+// Good — data-first for single calls
+Option.getOrElse(option, () => fallback)
+Effect.map(effect, fn)
+
+// Good — pipe for chains of 2+
+pipe(
+  option,
+  Option.filter(predicate),
+  Option.getOrElse(() => fallback),
+)
+
+// Bad — pipe wrapping a single call
+pipe(
+  option,
+  Option.getOrElse(() => fallback),
+)
+
+// Good — pass a curried function directly (no wrapper lambda)
+Option.flatMap(option, Schema.decodeUnknownOption(BlueprintId))
+
+// Bad — unnecessary anonymous lambda wrapping a single function call
+Option.flatMap(option, (value) => Schema.decodeUnknownOption(BlueprintId)(value))
+```
+
+### `Result` over custom discriminated unions
+
+When a function returns "success or one of N failure reasons", reach for `Result<A, E>` instead
+of hand-rolling a discriminated union. This unlocks Effect's standard combinators (`Result.map`,
+`Result.match`, `Result.getOrElse`) instead of manual `_tag` checks — a natural fit for the
+planner/differ, where a step is either a clean ChangeSet or a typed reason it can't be computed.
+
+**Use `Result` when:** a function returns success or one of several failure modes; the success
+case carries data you want to transform; the failure cases are finite and tagged. **A custom
+union is fine when:** 3+ variants are all "equal" with no clear success/failure split.
+
+Pattern: `Result.match` with `onSuccess` first (the success path is what readers care about),
+and `Match.type<E>().pipe(...)` in `onFailure` for exhaustive tag matching without a wrapping
+arrow function.
+
+```ts
+import { Result, Match } from "effect"
+
+Result.match(planResult, {
+  onSuccess: (changeSet) => render(changeSet),
+  onFailure: Match.type<PlanConflict | FsPermissionDenied>().pipe(
+    Match.tag("PlanConflict", (conflict) => reportConflict(conflict)),
+    Match.tag("FsPermissionDenied", (denied) => reportDenied(denied)),
+    Match.exhaustive,
+  ),
+})
+```
+
+> v4 renamed `Either` → `Result`. The constructor names also changed: `Either.right(x)` is now
+> `Result.success(x)` and `Either.left(e)` is now `Result.failure(e)`. There is no `Either` alias.
+
+### Quick reference
+
+| Instead of                        | Use                                      |
+| --------------------------------- | ---------------------------------------- |
+| `if/else` chains                  | `Match.value` / `Match.valueTags`        |
+| `=== null`                        | `Predicate.isNull`                       |
+| `!= null`                         | `Predicate.isNotNullable`                |
+| `=== undefined`                   | `Predicate.isUndefined`                  |
+| `str.length > 0`                  | `String.isNonEmpty(str)`                 |
+| `arr.length > 0`                  | `Array.isNonEmptyArray(arr)`             |
+| `{ key: maybeUndefined }`         | `StructX.defined("key", maybeUndefined)` |
+| Custom `_tag` discriminated union | `Result<A, E>` + `Result.match`          |
+
+> `tsconfig.base.json` sets `exactOptionalPropertyTypes: true` (required by Effect Schema), so
+> spreading `{ key: undefined }` into an object whose key is `key?: T` is a type error — the
+> property must be _absent_, not present-but-undefined. A `StructX` module in `@projitect/core`
+> (conditional object-field construction: `defined`, `filterDefined`, `some`) is the canonical
+> fix; create it the first time this friction appears. See [FP mindset](#fp-mindset).
 
 ## No type assertions
 
@@ -191,6 +354,165 @@ The `as` keyword is **forbidden** outside of `as const`. ESLint enforces this wi
 - A `parseX(...): Effect<X, ParseError>` boundary function — for "I'm parsing user input"
 
 If none of those work, that's a sign the shape is wrong. Discuss before reaching for `as`.
+
+## FP mindset
+
+Compose logic from generic utilities that operate on generic data structures — don't write
+complex functions with inline manipulation. Code declares _what_ to do; utilities handle _how_ to
+manipulate the data.
+
+### Spotting reuse opportunities
+
+A `pipe()` chain is a structural declaration: each step names an operation on a named data shape.
+Reading chains this way — and applying the same lens to any loop, `reduce`, imperative
+accumulator, or complex conditional chain — is the primary way new utilities are discovered.
+Before writing inline transformation logic, ask in order:
+
+1. Does **Effect** already cover this? `Array`, `Option`, `Record`, `Predicate`, `String`,
+   `Number`, `Order`, `Result`, `Match`, `Struct`, `Tuple`, `HashMap`, `HashSet`, etc. The Effect
+   modules are wide and well-tested — most "manipulate this data shape" needs already exist there.
+   When you're unsure what's available, check the [Effect docs](https://effect.website/).
+2. Does a generic utility already exist in `@projitect/core`? As they accrue, the `*X` modules
+   (`ArrayX`, `OptionX`, …) extend the corresponding Effect module with patterns we repeat.
+3. Can the logic be expressed as a generic utility another call site could reuse?
+
+If yes to any: use or extract it. The calling code stays focused on intent while the utility
+handles the data manipulation.
+
+**Extracting from a pipe.** When a cluster of 2–3 consecutive steps in a chain forms a
+recognizable transformation, that cluster is a utility waiting to be named:
+
+1. **Name it in the abstract** — strip the domain nouns and describe what the steps do to the data
+   shape (e.g. "filter to present items, then group by key").
+2. **Check Effect and `@projitect/core`** — does an equivalent already exist? If so, replace the
+   cluster with it.
+3. **If not, extract it** — implement a generic, `dual`-compatible function in the appropriate
+   `*X` module, replace the inline steps with a single call, and add exhaustive tests.
+
+This is how the utility layer grows: not by upfront design, but by recognizing structure that
+already exists in a pipe and giving it a name.
+
+> This is **not** in tension with the "we do not ship `sequence`/`when`/`unless` combinators" rule
+> under [Effect v4 conventions](#effect-v4-conventions). That rule bans duplicating Effect's
+> _control-flow_ combinators (Effect already has them). This section is about _data-shape_
+> utilities — `ArrayX.categorize`, a compound `PredicateX`, a `StructX` field builder — which are
+> encouraged, not banned.
+
+### Where utilities live
+
+- **`effect`** (the library) — the first place to look for generic data-manipulation primitives.
+  If `Array.foo` already does what you want, use it directly.
+- **`@projitect/core`** — the shared home for projitect-specific generic utilities. Core is the
+  runtime-pure base every other package can import, so Effect-extension `*X` modules live there
+  (`packages/core/src/internal/ArrayX.ts`, etc.). They must stay `node:*`-free — core's existing
+  sandbox lint rule enforces this — and they are **not** re-exported from core's public
+  `index.ts` barrel unless a consumer genuinely needs the public API, so they don't bloat the
+  published surface.
+- A utility used by only one package can start local to that package and graduate to
+  `@projitect/core` the moment a second package wants it.
+
+### Check existing utilities first
+
+projitect has **no** generic `*X` utility modules yet. As they're extracted into `@projitect/core`,
+record them here so the next author checks before re-writing:
+
+| Module       | What it covers                         |
+| ------------ | -------------------------------------- |
+| _(none yet)_ | _grow this table as `*X` modules land_ |
+
+### Illustrative patterns
+
+These are the _shapes_ to reach for, named generically — not references to existing projitect code:
+
+- **`categorize`** — group items by a classifier, instead of a loop that builds a
+  `Record<string, T[]>`. The classifier is a `Match.type<T>().pipe(...)` returning a literal key.
+- **`chunkBy`** — group _consecutive_ items by a key, instead of a manual loop tracking
+  "current group" state.
+
+When you find yourself writing either by hand, that's the signal to check Effect / `@projitect/core`
+first and extract if it's missing.
+
+### Designing a good utility
+
+1. **Generic type parameters** — operate on `<A>`, not concrete domain types.
+2. **Pure functions** — no side effects, no mutations.
+3. **Support `dual`** when the utility takes a data argument that could be piped (see
+   [Effect patterns](#effect-patterns)).
+4. **Follow the module/barrel pattern** — `*X` module file plus an `index.ts` namespace re-export.
+5. **Exhaustive test coverage** — every public function, every branch, edge cases (empty,
+   single-element, boundary), and type-level correctness where the utility's whole point is type
+   narrowing. This is non-negotiable for generic utilities: they're consumed by every layer above,
+   they have no domain context to specify them other than their tests, and they outlive the
+   surrounding code.
+
+The enforcement counterpart is [Reach for ESLint first](#reach-for-eslint-first): when a utility
+encodes an architectural rule, promote it to a lint rule so the wrong pattern can't be committed.
+
+## Sort orders
+
+Use Effect's `Order` module for type-safe, composable sorting — never an inline `Array.prototype.sort`
+comparator.
+
+### Named orders on the type's module
+
+If an ordering is a logical property of a type — something other code will reuse, or that reads
+better with a descriptive name — define it as a named export in that type's module.
+
+```ts
+import { Order } from "effect"
+
+// e.g. in the Blueprint module: deterministic apply order
+export const ApplyOrder: Order.Order<Blueprint> = Order.combine(
+  Order.mapInput(Order.number, (blueprint: Blueprint) => blueprint.priority),
+  Order.mapInput(Order.string, (blueprint: Blueprint) => blueprint.id),
+)
+
+export const ApplyOrderDesc: Order.Order<Blueprint> = Order.reverse(ApplyOrder)
+```
+
+**Naming convention:** PascalCase with a descriptive strategy name (`ApplyOrder`, `IdOrder`). Add an
+`Asc`/`Desc` suffix only when both directions are exported as separate constants. As named orders
+accrue, list them where they live; there are none yet.
+
+### Sort inline for one-offs
+
+For sorting specific to a single function and unlikely to be reused, sort inline without a named
+constant:
+
+```ts
+const sorted = Array.sort(
+  ops,
+  Order.mapInput(Order.string, (op: ChangeSetOp) => op.path),
+)
+```
+
+### Key helpers
+
+| Helper                                    | Use case                                    |
+| ----------------------------------------- | ------------------------------------------- |
+| `Order.mapInput(baseOrder, extractField)` | Sort objects by a specific field            |
+| `Order.combine(primary, secondary)`       | Multi-key sort (two orders)                 |
+| `Order.combineAll([order1, order2, ...])` | Multi-key sort (more than two orders)       |
+| `Order.reverse(order)`                    | Flip ascending to descending                |
+| `Array.sort(array, order)`                | Sort an array by a single order             |
+| `Array.sortBy(order1, order2, ...)`       | Sort an array by multiple orders (combined) |
+
+Specialized helpers — sorting enum-like values by explicit rank (`rankedEnum`), or wrapping an
+order to push nulls last (`nullableOrder`) — belong in an `OrderX` / `NonNullableX` module in
+`@projitect/core`; create them the first time they're needed rather than re-deriving inline.
+
+### Composing and applying
+
+```ts
+// Reverse a field-derived order
+export const NewestFirst: Order.Order<Snapshot> = Order.reverse(
+  Order.mapInput(Order.Date, (snapshot: Snapshot) => snapshot.takenAt),
+)
+
+// Apply
+const sorted = Array.sort(snapshots, NewestFirst)
+const multi = Array.sortBy(blueprints, ApplyOrder, IdOrder)
+```
 
 ## Blueprint authoring rules
 
