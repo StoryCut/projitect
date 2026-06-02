@@ -193,6 +193,18 @@ _As a maintainer, I want canary `--snapshot` publishes from PRs, so that a bluep
 - [ ] The PR gets a comment with the install command
   > Depends on: OPS-6 · Size: M
 
+### REL-8 — Comment on released issues/PRs with the published version
+
+_As a maintainer, I want the release workflow to comment on the issues and PRs included in a release with the published version, so that contributors and reporters learn their fix shipped without me pinging them by hand — the `@semantic-release/github` behavior, rebuilt for changesets._
+
+- [ ] After a successful publish, each issue/PR included in the release gets a comment naming the published version with a link to the GitHub release / npm
+- [ ] Gated on `changesets/action`'s `outputs.published == 'true'`; reads `outputs.publishedPackages` for the version — no comment on no-op runs
+- [ ] PR→issue linkage resolved from closing keywords (`Fixes #N`) in the rolled-up PR bodies (the `issue-parser` approach), **or** scoped to the merged "Version Packages" PR and the PRs it includes — pick one and document the choice
+- [ ] Idempotent: re-running the workflow does not double-post
+- [ ] No drop-in plugin exists and changesets has no post-publish hook — implement as a **committed local script** (e.g. `scripts/announce-release.ts`, Octokit + `GITHUB_TOKEN`, testable, no new runtime dep) called from the release workflow after publish; inline `actions/github-script` is the lighter fallback
+- [ ] Reports the single lockstep version (one message), not per-package noise
+  > Depends on: REL-6 (release workflow live) · Size: M
+
 ---
 
 ## Epic: Schema-driven blueprint arguments
