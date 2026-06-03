@@ -167,8 +167,17 @@ Snapshot npm publishes on PR branches are a tracked follow-up.
 
 This codebase is **Effect-native**. We use `effect@beta` (currently `4.0.0-beta.70`).
 
-- **Services** use `ServiceMap.Service<...>` base class + a static `make` and `Layer.effect(this,
-this.make)`. Do not use the v3 `Effect.Tag` proxy accessor pattern.
+- **Services** use the `Context.Service<Self, Shape>()("id")` base class — e.g. `BlueprintFileSystem`
+  in `@projitect/core`. (There is no `ServiceMap` module in v4; `Context` is where `Service` lives.)
+  The concrete implementation layer is built where the service is wired (`cli-internals` constructs a
+  permission-gated `BlueprintFileSystem` per blueprint), not as a static `make` on the class. Do not
+  use the v3 `Effect.Tag` proxy accessor pattern.
+- **Plain function vs service vs combiner.** Reach for a service _last_: only when something needs
+  dependency injection, a scoped lifetime, or layer-provided wiring (`BlueprintFileSystem` is the one
+  example in this repo). A mergeable _value_ — config layers, ChangeSets — is a `Reducer` / `Combiner`
+  (see [Combiners and Reducers](#combiners-and-reducers--the-universal-mergefold)); everything else —
+  loader, planner, differ, applier, remover — is a plain Effect-returning function. Don't service-ify
+  pure logic.
 - **Errors** use `Schema.TaggedError` (not `Data.TaggedError`) so they serialize cleanly to JSON
   for `pjt inspect --json`. Every error declares a semantic `id` field
   (`pjt.<subsystem>.<kebab-case>`) and has a matching MDX page in `apps/website`.
@@ -443,6 +452,28 @@ blueprintFile ?? {}, cliArgs ?? {})` — with no pre-filtering. Check Effect's p
 before writing `make`: `Combiner.last` / `first`, `Combiner.min` / `max`, `Combiner.intercalate`,
 the `Order`-derived ones, and the per-module `*.Reducer` / `*.Combiner` instances.
 
+A **domain type** can be the monoid too, not just config. `ChangeSet` (a blueprint's planned
+operations) has an empty value and an associative `concat`, so it exports a `Reducer` — and composite
+blueprints fold their parts with `combineAll` instead of hand-splicing `operations` arrays:
+
+```ts
+// in the ChangeSet module — `Reducer` is aliased because the module also exports `const Reducer`
+import { Reducer as ReducerLib } from "effect"
+
+export const empty: ChangeSet = { operations: [] }
+export const concat = (self: ChangeSet, that: ChangeSet): ChangeSet => ({
+  operations: [...self.operations, ...that.operations],
+})
+export const Reducer: ReducerLib.Reducer<ChangeSet> = ReducerLib.make(concat, empty)
+
+// a composite blueprint (e.g. @projitect/blueprint-vitest) folds its parts:
+const changeSets = yield * Effect.forEach(parts, (b) => b.plan)
+return ChangeSet.Reducer.combineAll(changeSets) // not: push each .operations into an array
+```
+
+When a type has an identity and an associative combine, give it a `Reducer` on its own module — the
+same move as the config cascade, applied to domain data.
+
 ### Where utilities live
 
 - **`effect`** (the library) — the first place to look for generic data-manipulation primitives.
@@ -464,9 +495,8 @@ the `Order`-derived ones, and the per-module `*.Reducer` / `*.Combiner` instance
 | -------------- | ------------------------------------------------------------------------------------------------------ |
 | `StructX`      | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `truthy`, …) |
 | `PredicateX`   | `isNonEmptyString`, `isPlainObject` (no `Predicate.isRecord` in v4), `matchRefine`                     |
-| `NonNullableX` | `match` (nullable/non-nullable branches), `map`, `lift`, `nullableOrder`                               |
-| `OrderX`       | `rankedEnum` (sort enum-like values by explicit rank)                                                  |
-| `RecordX`      | `collectBy`, `deepMerge`, `canonicalize`, `deleteByPath`, `modifyIfExists`, …                          |
+| `NonNullableX` | `match` (nullable/non-nullable branches), `map`, `lift`                                                |
+| `RecordX`      | `collectBy`, `deepMerge`, `deepMergeReducer`, `canonicalize`, `deleteByPath`, `modifyIfExists`, …      |
 | `StringX`      | `surround`, `splitLines`, `replaceLineRange`, `insertBeforeLine`                                       |
 
 ### Illustrative patterns
@@ -548,7 +578,7 @@ const sorted = Array.sort(
 
 Specialized helpers — sorting enum-like values by explicit rank (`rankedEnum`), or wrapping an
 order to push nulls last (`nullableOrder`) — belong in an `OrderX` / `NonNullableX` module in
-`@projitect/core`; create them the first time they're needed rather than re-deriving inline.
+`@projitect/internal`; create them the first time they're needed rather than re-deriving inline.
 
 ### Composing and applying
 
