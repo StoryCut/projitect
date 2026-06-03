@@ -1,9 +1,10 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { Effect, Layer } from "effect"
-import { BlueprintFileSystem, Errors, type Permission } from "@projitect/core"
-import type { BlueprintFileSystemShape } from "@projitect/core"
-import { isPermitted, type FsOp } from "./permissions.js"
+import { BlueprintFileSystem, Errors } from "@projitect/core"
+import type { Permission, BlueprintFileSystemShape } from "@projitect/core"
+import { isPermitted } from "./permissions.js"
+import type { FsOp } from "./permissions.js"
 
 /**
  * Build the permission-gated `BlueprintFileSystem` Layer for one blueprint. The CLI provides a
@@ -17,7 +18,7 @@ import { isPermitted, type FsOp } from "./permissions.js"
  */
 export const makeRealLayer = (config: {
   readonly blueprintId: string
-  readonly permissions: ReadonlyArray<Permission.Permission>
+  readonly permissions: readonly Permission.Permission[]
   readonly projectRoot: string
 }): Layer.Layer<BlueprintFileSystem> => {
   const { blueprintId, permissions, projectRoot } = config

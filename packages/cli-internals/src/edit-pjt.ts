@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { Effect } from "effect"
 import { Errors } from "@projitect/core"
+import { StringX } from "@projitect/internal"
 
 const IMPORTS_START = "// pjt:imports start"
 const IMPORTS_END = "// pjt:imports end"
@@ -14,7 +15,7 @@ export interface SpliceParams {
   /** Import statement to splice (one line, no trailing newline). Deduped. */
   readonly importLine: string
   /** Blueprint call lines (one entry per line, no leading indent, no trailing newline). */
-  readonly callLines: ReadonlyArray<string>
+  readonly callLines: readonly string[]
 }
 
 /**
@@ -42,13 +43,13 @@ export const splice = (
         }),
     })
 
-    let next = yield* spliceImport({
+    const afterImport = yield* spliceImport({
       content: raw,
       blueprintFile: params.blueprintFile,
       importLine: params.importLine,
     })
-    next = yield* spliceCalls({
-      content: next,
+    const next = yield* spliceCalls({
+      content: afterImport,
       blueprintFile: params.blueprintFile,
       callLines: params.callLines,
     })
@@ -87,21 +88,23 @@ const spliceImport = (params: {
     }
     // Dedupe: skip if any line between the markers already equals the import
     const between = lines.slice(startIndex + 1, endIndex).map((l) => l.trim())
-    if (between.includes(importLine.trim())) return content
-    const before = lines.slice(0, endIndex)
-    const after = lines.slice(endIndex)
-    return [...before, importLine, ...after].join("\n")
+    if (between.includes(importLine.trim())) {
+      return content
+    }
+    return StringX.insertBeforeLine(content, endIndex, [importLine])
   })
 }
 
 const spliceCalls = (params: {
   readonly content: string
   readonly blueprintFile: string
-  readonly callLines: ReadonlyArray<string>
+  readonly callLines: readonly string[]
 }): Effect.Effect<string, Errors.AddMarkersMissing> => {
   const { content, blueprintFile, callLines } = params
   return Effect.gen(function* () {
-    if (callLines.length === 0) return content
+    if (callLines.length === 0) {
+      return content
+    }
     const lines = content.split("\n")
     const startIndex = lines.findIndex((l) => l.trim() === BLUEPRINTS_START)
     const endIndex = lines.findIndex((l) => l.trim() === BLUEPRINTS_END)
@@ -116,9 +119,7 @@ const spliceCalls = (params: {
       })
     }
     const indent = "    " // 4-space, matching the starter template
-    const newCalls = callLines.map((c) => `${indent}${c.replace(/^\s+/, "")}`)
-    const before = lines.slice(0, endIndex)
-    const after = lines.slice(endIndex)
-    return [...before, ...newCalls, ...after].join("\n")
+    const newCalls = callLines.map((c) => `${indent}${c.replace(/^\s+/u, "")}`)
+    return StringX.insertBeforeLine(content, endIndex, newCalls)
   })
 }

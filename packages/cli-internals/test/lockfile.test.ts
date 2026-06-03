@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { Effect } from "effect"
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import path from "node:path"
-import { blueprintIds, readLockfile, writeLockfile } from "../src/lockfile.js"
+import { Effect } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import type { PjtLock } from "@projitect/core"
+import { blueprintIds, readLockfile, writeLockfile } from "../src/lockfile.js"
 
 /**
  * Lockfile round-trip + error-path tests.
@@ -33,13 +33,13 @@ const lockfile = (overrides: Partial<PjtLock.PjtLock> = {}): PjtLock.PjtLock => 
   blueprints: {
     "pjt:a": {
       version: "1.0.0",
-      operations: [{ mode: "region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
+      operations: [{ _tag: "Region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
     },
     "pjt:b": {
       version: "2.0.0",
       operations: [
-        { mode: "merge", path: "package.json", ownedKeys: ["scripts.test"] },
-        { mode: "owned", path: "generated.ts", ownerId: "pjt:b" },
+        { _tag: "Merge", path: "package.json", ownedKeys: ["scripts.test"] },
+        { _tag: "Owned", path: "generated.ts", ownerId: "pjt:b" },
       ],
     },
   },
@@ -77,7 +77,7 @@ describe("readLockfile / writeLockfile round-trip", () => {
           version: "1",
           operations: [
             {
-              mode: "region",
+              _tag: "Region",
               path: "README.md",
               ownerId: "pjt:md",
               commentPrefix: "<!--",
@@ -101,11 +101,11 @@ describe("readLockfile / writeLockfile round-trip", () => {
           version: "1",
           operations: [
             {
-              mode: "region",
+              _tag: "Region",
               path: ".gitignore",
               ownerId: "pjt:old",
               commentPrefix: "#",
-              // no commentSuffix field
+              // No commentSuffix field
             },
           ],
         },
@@ -115,7 +115,7 @@ describe("readLockfile / writeLockfile round-trip", () => {
     const out = await Effect.runPromise(readLockfile({ projectRoot: cwd }))
     expect(out).not.toBeNull()
     expect(out?.blueprints["pjt:old"]?.operations[0]).toEqual({
-      mode: "region",
+      _tag: "Region",
       path: ".gitignore",
       ownerId: "pjt:old",
       commentPrefix: "#",
@@ -129,20 +129,20 @@ describe("readLockfile / writeLockfile round-trip", () => {
         "pjt:r": {
           version: "1",
           operations: [
-            { mode: "region", path: ".gitignore", ownerId: "pjt:r", commentPrefix: "#" },
+            { _tag: "Region", path: ".gitignore", ownerId: "pjt:r", commentPrefix: "#" },
           ],
         },
         "pjt:m": {
           version: "1",
-          operations: [{ mode: "merge", path: "package.json", ownedKeys: ["a", "b.c"] }],
+          operations: [{ _tag: "Merge", path: "package.json", ownedKeys: ["a", "b.c"] }],
         },
         "pjt:o": {
           version: "1",
-          operations: [{ mode: "owned", path: "x.ts", ownerId: "pjt:o" }],
+          operations: [{ _tag: "Owned", path: "x.ts", ownerId: "pjt:o" }],
         },
         "pjt:s": {
           version: "1",
-          operations: [{ mode: "seed", path: ".pjt.ts", ownerId: "pjt:s" }],
+          operations: [{ _tag: "Seed", path: ".pjt.ts", ownerId: "pjt:s" }],
         },
       },
     }
@@ -163,7 +163,7 @@ describe("readLockfile — error paths", () => {
   it("fails with pjt.lock.parse-failed when the JSON doesn't match the schema", async () => {
     await fs.writeFile(
       path.join(cwd, ".pjt.lock"),
-      JSON.stringify({ version: 1, blueprints: { x: { version: "1" /* missing operations */ } } }),
+      JSON.stringify({ version: 1, blueprints: { x: { version: "1" /* Missing operations */ } } }),
       "utf8",
     )
     const err = await runError(readLockfile({ projectRoot: cwd }))

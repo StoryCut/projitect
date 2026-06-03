@@ -1,49 +1,41 @@
-import { Effect } from "effect"
-import type { ChangeSet, Blueprint, PjtLock } from "@projitect/core"
-import { Errors } from "@projitect/core"
-import { makeRealLayer } from "./filesystem-impl.js"
-import type { DirectoryBlueprint } from "@projitect/blueprint"
+import { Array, Data, Effect, Match, Option, Record, Schema, pipe } from "effect"
+import { ChangeSet, Errors, PjtLock } from "@projitect/core"
+import type { Blueprint } from "@projitect/core"
+import { NonNullableX, PredicateX, RecordX, StructX } from "@projitect/internal"
 import { isDirectoryBlueprint } from "@projitect/blueprint"
+import type { DirectoryBlueprint } from "@projitect/blueprint"
+import { makeRealLayer } from "./filesystem-impl.js"
 
 // ---------------------------------------------------------------------------
 // File-level plan shape (after reducing all blueprints' ChangeSets per path)
 // ---------------------------------------------------------------------------
 
-export interface RegionPlanFile {
-  readonly kind: "region"
-  readonly path: string
-  readonly commentPrefix: string
-  /** Optional closing delimiter for HTML/MDX comments. Empty for `#`/`//`-style regions. */
-  readonly commentSuffix: string
-  readonly regions: ReadonlyArray<{ readonly ownerId: string; readonly content: string }>
-}
+export type FilePlan = Data.TaggedEnum<{
+  readonly Region: {
+    readonly path: string
+    readonly commentPrefix: string
+    /** Optional closing delimiter for HTML/MDX comments. Empty for `#`/`//`-style regions. */
+    readonly commentSuffix: string
+    readonly regions: readonly { readonly ownerId: string; readonly content: string }[]
+  }
+  readonly Merge: {
+    readonly path: string
+    readonly value: unknown
+    /** Dotted-key → ownerId. Conflicts on identical keys are caught at reduction time. */
+    readonly ownership: ReadonlyMap<string, string>
+  }
+  readonly Owned: { readonly path: string; readonly ownerId: string; readonly content: string }
+  readonly Seed: { readonly path: string; readonly ownerId: string; readonly content: string }
+}>
+export const FilePlan = Data.taggedEnum<FilePlan>()
 
-export interface MergePlanFile {
-  readonly kind: "merge"
-  readonly path: string
-  readonly value: unknown
-  /** Dotted-key → ownerId. Conflicts on identical keys are caught at reduction time. */
-  readonly ownership: ReadonlyMap<string, string>
-}
-
-export interface OwnedPlanFile {
-  readonly kind: "owned"
-  readonly path: string
-  readonly ownerId: string
-  readonly content: string
-}
-
-export interface SeedPlanFile {
-  readonly kind: "seed"
-  readonly path: string
-  readonly ownerId: string
-  readonly content: string
-}
-
-export type FilePlan = RegionPlanFile | MergePlanFile | OwnedPlanFile | SeedPlanFile
+export type RegionPlanFile = Extract<FilePlan, { readonly _tag: "Region" }>
+export type MergePlanFile = Extract<FilePlan, { readonly _tag: "Merge" }>
+export type OwnedPlanFile = Extract<FilePlan, { readonly _tag: "Owned" }>
+export type SeedPlanFile = Extract<FilePlan, { readonly _tag: "Seed" }>
 
 export interface ProjectPlan {
-  readonly files: ReadonlyArray<FilePlan>
+  readonly files: readonly FilePlan[]
 }
 
 /**
@@ -67,27 +59,19 @@ export interface UpgradeRecord {
 // Flatten the tree (directory wrapping, sequence implicit via array order)
 // ---------------------------------------------------------------------------
 
-type RawTree = ReadonlyArray<Blueprint.Blueprint | DirectoryBlueprint>
+type RawTree = readonly (Blueprint.Blueprint | DirectoryBlueprint)[]
 
 interface FlatBlueprint {
   readonly blueprint: Blueprint.Blueprint
   readonly directoryPrefix: string
 }
 
-const flattenTree = (
-  tree: RawTree,
-  prefix: string,
-  accumulator: Array<FlatBlueprint>,
-): Array<FlatBlueprint> => {
-  for (const node of tree) {
-    if (isDirectoryBlueprint(node)) {
-      flattenTree(node.children, prefix ? `${prefix}/${node.name}` : node.name, accumulator)
-    } else {
-      accumulator.push({ blueprint: node, directoryPrefix: prefix })
-    }
-  }
-  return accumulator
-}
+const flattenTree = (tree: RawTree, prefix: string): readonly FlatBlueprint[] =>
+  Array.flatMap(tree, (node) =>
+    isDirectoryBlueprint(node)
+      ? flattenTree(node.children, prefix === "" ? node.name : `${prefix}/${node.name}`)
+      : [{ blueprint: node, directoryPrefix: prefix }],
+  )
 
 // ---------------------------------------------------------------------------
 // Run each blueprint's plan Effect with its own permission-gated FS layer,
@@ -97,7 +81,9 @@ const flattenTree = (
 const rebasePath = (prefix: string, p: string): string => (prefix ? `${prefix}/${p}` : p)
 
 const rebaseOp = (prefix: string, op: ChangeSet.Operation): ChangeSet.Operation => {
-  if (!prefix) return op
+  if (!prefix) {
+    return op
+  }
   return { ...op, path: rebasePath(prefix, op.path) }
 }
 
@@ -119,28 +105,32 @@ export const buildPlan = (params: {
   Errors.ProjitectError
 > => {
   const { tree, projectRoot } = params
-  const flat = flattenTree(tree, "", [])
+  const flat = flattenTree(tree, "")
 
   return Effect.gen(function* () {
-    const attributed: Array<AttributedOp> = []
+    const attributed = yield* Effect.forEach(flat, ({ blueprint, directoryPrefix }) =>
+      blueprint.plan.pipe(
+        Effect.provide(
+          makeRealLayer({
+            blueprintId: blueprint.id,
+            permissions: blueprint.permissions,
+            projectRoot,
+          }),
+        ),
+        Effect.map((changeSet) =>
+          Array.map(
+            changeSet.operations,
+            (op): AttributedOp => ({
+              blueprintId: blueprint.id,
+              blueprintVersion: blueprint.version,
+              op: rebaseOp(directoryPrefix, op),
+            }),
+          ),
+        ),
+      ),
+    ).pipe(Effect.map(Array.flatten))
 
-    for (const { blueprint, directoryPrefix } of flat) {
-      const layer = makeRealLayer({
-        blueprintId: blueprint.id,
-        permissions: blueprint.permissions,
-        projectRoot,
-      })
-      const changeSet = yield* blueprint.plan.pipe(Effect.provide(layer))
-      for (const op of changeSet.operations) {
-        attributed.push({
-          blueprintId: blueprint.id,
-          blueprintVersion: blueprint.version,
-          op: rebaseOp(directoryPrefix, op),
-        })
-      }
-    }
-
-    const plan = yield* reduceOps(attributed.map((a) => a.op))
+    const plan = yield* reduceOps(Array.map(attributed, (a) => a.op))
     const byBlueprint = groupByBlueprint(attributed)
     return { plan, byBlueprint }
   })
@@ -158,200 +148,214 @@ export const diffLockfile = (params: {
   readonly previous: PjtLock.PjtLock | null
   readonly current: ByBlueprint
 }): {
-  readonly removals: ReadonlyArray<PjtLock.LockOperation>
-  readonly upgrades: ReadonlyArray<UpgradeRecord>
+  readonly removals: readonly PjtLock.LockOperation[]
+  readonly upgrades: readonly UpgradeRecord[]
 } => {
   const { previous, current } = params
-  if (previous === null) return { removals: [], upgrades: [] }
-
-  const removals: Array<PjtLock.LockOperation> = []
-  const upgrades: Array<UpgradeRecord> = []
-  for (const [id, previous_] of Object.entries(previous.blueprints)) {
-    const live = current[id]
-    if (live === undefined) {
-      removals.push(...previous_.operations)
-    } else if (live.version !== previous_.version) {
-      upgrades.push({ blueprintId: id, from: previous_.version, to: live.version })
-    }
-  }
-  return { removals, upgrades }
+  return NonNullableX.match(previous, {
+    whenNullable: () => ({
+      removals: Array.empty<PjtLock.LockOperation>(),
+      upgrades: Array.empty<UpgradeRecord>(),
+    }),
+    whenNotNullable: (lock) => {
+      const entries = Record.toEntries(lock.blueprints)
+      const removals = Array.flatMap(entries, ([id, prior]) =>
+        Option.isNone(Record.get(current, id))
+          ? prior.operations
+          : Array.empty<PjtLock.LockOperation>(),
+      )
+      const upgrades = Array.flatMap(entries, ([id, prior]) =>
+        Record.get(current, id).pipe(
+          Option.filter((live) => live.version !== prior.version),
+          Option.map((live) => [{ blueprintId: id, from: prior.version, to: live.version }]),
+          Option.getOrElse(() => Array.empty<UpgradeRecord>()),
+        ),
+      )
+      return { removals, upgrades }
+    },
+  })
 }
 
-const groupByBlueprint = (attributed: ReadonlyArray<AttributedOp>): ByBlueprint => {
-  const out: Record<string, PjtLock.BlueprintLockEntry> = {}
-  for (const { blueprintId, blueprintVersion, op } of attributed) {
-    const entry = out[blueprintId] ?? { version: blueprintVersion, operations: [] }
-    out[blueprintId] = {
-      version: blueprintVersion,
-      operations: [...entry.operations, toLockOp(op)],
-    }
-  }
-  return out
-}
+const groupByBlueprint = (attributed: readonly AttributedOp[]): ByBlueprint =>
+  Record.map(
+    Array.groupBy(attributed, (a) => a.blueprintId),
+    (group): PjtLock.BlueprintLockEntry => ({
+      version: Array.headNonEmpty(group).blueprintVersion,
+      operations: Array.map(group, (a) => toLockOp(a.op)),
+    }),
+  )
 
-const toLockOp = (op: ChangeSet.Operation): PjtLock.LockOperation => {
-  switch (op.mode) {
-    case "region": {
-      // Only record commentSuffix when non-empty — empty-string suffixes are noise in the
-      // lockfile, and absence decodes the same as empty per the schema.
-      return op.commentSuffix !== undefined && op.commentSuffix !== ""
-        ? {
-            mode: "region",
-            path: op.path,
-            ownerId: op.ownerId,
-            commentPrefix: op.commentPrefix,
-            commentSuffix: op.commentSuffix,
-          }
-        : {
-            mode: "region",
-            path: op.path,
-            ownerId: op.ownerId,
-            commentPrefix: op.commentPrefix,
-          }
-    }
-    case "merge": {
-      return { mode: "merge", path: op.path, ownedKeys: op.ownedKeys }
-    }
-    case "owned": {
-      return { mode: "owned", path: op.path, ownerId: op.ownerId }
-    }
-    case "seed": {
-      return { mode: "seed", path: op.path, ownerId: op.ownerId }
-    }
-  }
-}
+const toLockOp = (op: ChangeSet.Operation): PjtLock.LockOperation =>
+  Match.valueTags(op, {
+    Region: (region) =>
+      PjtLock.LockRegionOp.make({
+        path: region.path,
+        ownerId: region.ownerId,
+        commentPrefix: region.commentPrefix,
+        // Only record commentSuffix when non-empty — empty/absent decode the same per the schema.
+        ...StructX.defined(
+          "commentSuffix",
+          PredicateX.isNonEmptyString(region.commentSuffix) ? region.commentSuffix : undefined,
+        ),
+      }),
+    Merge: (merge) => PjtLock.LockMergeOp.make({ path: merge.path, ownedKeys: merge.ownedKeys }),
+    Owned: (owned) => PjtLock.LockOwnedOp.make({ path: owned.path, ownerId: owned.ownerId }),
+    Seed: (seed) => PjtLock.LockSeedOp.make({ path: seed.path, ownerId: seed.ownerId }),
+  })
 
 // ---------------------------------------------------------------------------
 // Reduce raw ops into a ProjectPlan, detecting conflicts as we go
 // ---------------------------------------------------------------------------
 
 const reduceOps = (
-  ops: ReadonlyArray<ChangeSet.Operation>,
+  ops: readonly ChangeSet.Operation[],
 ): Effect.Effect<ProjectPlan, Errors.PlanError> =>
-  Effect.gen(function* () {
-    const byPath = new Map<string, Array<ChangeSet.Operation>>()
-    for (const op of ops) {
-      const array = byPath.get(op.path) ?? []
-      array.push(op)
-      byPath.set(op.path, array)
-    }
+  pipe(
+    Array.groupBy(ops, (op) => op.path),
+    Record.toEntries,
+    Effect.forEach(([path, group]) => reduceGroup(path, group)),
+    Effect.map((files): ProjectPlan => ({ files })),
+  )
 
-    const files: Array<FilePlan> = []
-    for (const [filePath, opsForPath] of byPath) {
-      const first = opsForPath[0]!
-      const mode = first.mode
-
-      for (const op of opsForPath) {
-        if (op.mode !== mode) {
-          return yield* new Errors.PlanConflictOwned({
+/**
+ * Reduce one path's operations into a single FilePlan. Every op on a path must share an
+ * ownership mode (`_tag`); a mixed group is a `pjt.plan.conflict-owned`.
+ */
+const reduceGroup = (
+  path: string,
+  group: Array.NonEmptyReadonlyArray<ChangeSet.Operation>,
+): Effect.Effect<FilePlan, Errors.PlanError> => {
+  const head = Array.headNonEmpty(group)
+  return Array.findFirst(group, (op) => op._tag !== head._tag).pipe(
+    Option.match({
+      onSome: (offender) =>
+        Effect.fail(
+          new Errors.PlanConflictOwned({
             id: "pjt.plan.conflict-owned",
-            path: filePath,
-            ownerA: first.ownerId,
-            ownerB: op.ownerId,
-            message: `Blueprints ${first.ownerId} (${mode}) and ${op.ownerId} (${op.mode}) both target ${filePath} with incompatible modes`,
-          })
-        }
-      }
+            path,
+            ownerA: head.ownerId,
+            ownerB: offender.ownerId,
+            message: `Blueprints ${head.ownerId} (${head._tag}) and ${offender.ownerId} (${offender._tag}) both target ${path} with incompatible modes`,
+          }),
+        ),
+      onNone: () =>
+        Match.value(head).pipe(
+          Match.tag("Region", () =>
+            reduceRegion(path, Array.filter(group, Schema.is(ChangeSet.RegionOp))),
+          ),
+          Match.tag("Merge", () =>
+            reduceMerge(path, Array.filter(group, Schema.is(ChangeSet.MergeOp))),
+          ),
+          Match.tag("Owned", () =>
+            reduceSole("owned", path, Array.filter(group, Schema.is(ChangeSet.OwnedOp))),
+          ),
+          Match.tag("Seed", () =>
+            reduceSole("seed", path, Array.filter(group, Schema.is(ChangeSet.SeedOp))),
+          ),
+          Match.exhaustive,
+        ),
+    }),
+  )
+}
 
-      switch (mode) {
-        case "region": {
-          const regionOps = opsForPath as ReadonlyArray<ChangeSet.RegionOp>
-          const seen = new Set<string>()
-          const regions: Array<{ ownerId: string; content: string }> = []
-          let commentPrefix = regionOps[0]!.commentPrefix
-          let commentSuffix = regionOps[0]!.commentSuffix ?? ""
-          for (const op of regionOps) {
-            if (seen.has(op.ownerId)) {
-              return yield* new Errors.PlanConflictRegion({
-                id: "pjt.plan.conflict-region",
-                path: filePath,
-                ownerA: op.ownerId,
-                ownerB: op.ownerId,
-                message: `Multiple blueprints share ownerId ${op.ownerId} for region in ${filePath}`,
-              })
-            }
-            seen.add(op.ownerId)
-            // Last-write-wins on prefix/suffix mismatch — in practice all blueprints targeting
-            // the same file should use the same comment style. The lint preset surfaces the
-            // mistake at authoring time.
-            if (op.commentPrefix !== commentPrefix) commentPrefix = op.commentPrefix
-            const opSuffix = op.commentSuffix ?? ""
-            if (opSuffix !== commentSuffix) commentSuffix = opSuffix
-            regions.push({ ownerId: op.ownerId, content: op.content })
-          }
-          files.push({ kind: "region", path: filePath, commentPrefix, commentSuffix, regions })
-          break
-        }
-        case "merge": {
-          const mergeOps = opsForPath as ReadonlyArray<ChangeSet.MergeOp>
-          const ownership = new Map<string, string>()
-          let merged: unknown = {}
-          for (const op of mergeOps) {
-            for (const key of op.ownedKeys) {
-              const prior = ownership.get(key)
-              if (prior !== undefined && prior !== op.ownerId) {
-                return yield* new Errors.PlanConflictMerge({
-                  id: "pjt.plan.conflict-merge",
-                  path: filePath,
-                  key,
-                  ownerA: prior,
-                  ownerB: op.ownerId,
-                  message: `Blueprints ${prior} and ${op.ownerId} both claim key "${key}" in ${filePath}`,
-                })
-              }
-              ownership.set(key, op.ownerId)
-            }
-            merged = deepMerge(merged, op.value)
-          }
-          files.push({ kind: "merge", path: filePath, value: merged, ownership })
-          break
-        }
-        case "owned": {
-          if (opsForPath.length > 1) {
-            return yield* new Errors.PlanConflictOwned({
-              id: "pjt.plan.conflict-owned",
-              path: filePath,
-              ownerA: opsForPath[0]!.ownerId,
-              ownerB: opsForPath[1]!.ownerId,
-              message: `Multiple blueprints claim full ownership of ${filePath}`,
-            })
-          }
-          const op = first
-          files.push({ kind: "owned", path: filePath, ownerId: op.ownerId, content: op.content })
-          break
-        }
-        case "seed": {
-          if (opsForPath.length > 1) {
-            return yield* new Errors.PlanConflictOwned({
-              id: "pjt.plan.conflict-owned",
-              path: filePath,
-              ownerA: opsForPath[0]!.ownerId,
-              ownerB: opsForPath[1]!.ownerId,
-              message: `Multiple blueprints try to seed ${filePath}`,
-            })
-          }
-          const op = first
-          files.push({ kind: "seed", path: filePath, ownerId: op.ownerId, content: op.content })
-          break
-        }
-      }
-    }
+const duplicateOwner = (ops: readonly ChangeSet.RegionOp[]): Option.Option<string> =>
+  pipe(
+    Array.groupBy(ops, (op) => op.ownerId),
+    Record.toEntries,
+    Array.findFirst(([, claims]) => claims.length > 1),
+    Option.map(([ownerId]) => ownerId),
+  )
 
-    return { files }
+const reduceRegion = (
+  path: string,
+  ops: readonly ChangeSet.RegionOp[],
+): Effect.Effect<FilePlan, Errors.PlanError> =>
+  Option.match(duplicateOwner(ops), {
+    onSome: (ownerId) =>
+      Effect.fail(
+        new Errors.PlanConflictRegion({
+          id: "pjt.plan.conflict-region",
+          path,
+          ownerA: ownerId,
+          ownerB: ownerId,
+          message: `Multiple blueprints share ownerId ${ownerId} for region in ${path}`,
+        }),
+      ),
+    onNone: () => {
+      // Last-write-wins on comment style — all ops on one file should use the same anyway.
+      const style = Array.last(ops).pipe(
+        Option.map((op) => ({
+          commentPrefix: op.commentPrefix,
+          commentSuffix: op.commentSuffix ?? "",
+        })),
+        Option.getOrElse(() => ({ commentPrefix: "#", commentSuffix: "" })),
+      )
+      return Effect.succeed(
+        FilePlan.Region({
+          path,
+          commentPrefix: style.commentPrefix,
+          commentSuffix: style.commentSuffix,
+          regions: Array.map(ops, (op) => ({ ownerId: op.ownerId, content: op.content })),
+        }),
+      )
+    },
   })
 
-// ---------------------------------------------------------------------------
-// Minimal deep-merge for JSON values. Arrays are replaced (no concat); plain objects merge.
-// ---------------------------------------------------------------------------
+const reduceMerge = (
+  path: string,
+  ops: readonly ChangeSet.MergeOp[],
+): Effect.Effect<FilePlan, Errors.PlanError> =>
+  Effect.gen(function* () {
+    // Each dotted key may be claimed by exactly one owner across the merging blueprints.
+    const ownership = new Map<string, string>()
+    for (const op of ops) {
+      for (const key of op.ownedKeys) {
+        const prior = ownership.get(key)
+        if (prior !== undefined && prior !== op.ownerId) {
+          return yield* new Errors.PlanConflictMerge({
+            id: "pjt.plan.conflict-merge",
+            path,
+            key,
+            ownerA: prior,
+            ownerB: op.ownerId,
+            message: `Blueprints ${prior} and ${op.ownerId} both claim key "${key}" in ${path}`,
+          })
+        }
+        ownership.set(key, op.ownerId)
+      }
+    }
+    const value = Array.reduce(ops, {} as unknown, (merged, op) =>
+      RecordX.deepMerge(merged, op.value),
+    )
+    return FilePlan.Merge({ path, value, ownership })
+  })
 
-const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v)
-
-const deepMerge = (a: unknown, b: unknown): unknown => {
-  if (!isPlainObject(a) || !isPlainObject(b)) return b
-  const out: Record<string, unknown> = { ...a }
-  for (const [k, v] of Object.entries(b)) {
-    out[k] = k in a ? deepMerge(a[k], v) : v
+/** Owned and seed both demand a single owner per path. */
+const reduceSole = (
+  kind: "owned" | "seed",
+  path: string,
+  ops: readonly (ChangeSet.OwnedOp | ChangeSet.SeedOp)[],
+): Effect.Effect<FilePlan, Errors.PlanError> => {
+  const [first, second] = ops
+  if (first !== undefined && second !== undefined) {
+    return Effect.fail(
+      new Errors.PlanConflictOwned({
+        id: "pjt.plan.conflict-owned",
+        path,
+        ownerA: first.ownerId,
+        ownerB: second.ownerId,
+        message:
+          kind === "owned"
+            ? `Multiple blueprints claim full ownership of ${path}`
+            : `Multiple blueprints try to seed ${path}`,
+      }),
+    )
   }
-  return out
+  return first === undefined
+    ? Effect.die(new Error(`unreachable: empty ${kind} group for ${path}`))
+    : Effect.succeed(
+        kind === "owned"
+          ? FilePlan.Owned({ path, ownerId: first.ownerId, content: first.content })
+          : FilePlan.Seed({ path, ownerId: first.ownerId, content: first.content }),
+      )
 }

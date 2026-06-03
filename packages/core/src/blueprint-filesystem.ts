@@ -1,4 +1,5 @@
-import { Context, type Effect } from "effect"
+import { Context } from "effect"
+import type { Effect } from "effect"
 import type { FsPermissionDenied, FsReadFailed, FsWriteFailed } from "./errors/index.js"
 
 /**
@@ -24,7 +25,7 @@ export interface BlueprintFileSystemShape {
   readonly mkdir: (path: string) => Effect.Effect<void, FsWriteFailed | FsPermissionDenied>
   readonly listDir: (
     path: string,
-  ) => Effect.Effect<ReadonlyArray<string>, FsReadFailed | FsPermissionDenied>
+  ) => Effect.Effect<readonly string[], FsReadFailed | FsPermissionDenied>
 }
 
 export class BlueprintFileSystem extends Context.Service<

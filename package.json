@@ -42,6 +42,7 @@
     "@vitest/coverage-v8": "^4.0.0",
     "@vitest/eslint-plugin": "^1.6.0",
     "eslint": "^9.16.0",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-package-json": "^0.39.0",
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-unicorn": "^56.0.0",

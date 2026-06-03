@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
-import { findRegion, renderRegion, upsertRegion } from "../src/region.js"
 import type { Errors } from "@projitect/core"
+import { findRegion, renderRegion, upsertRegion } from "../src/region.js"
 
 /**
  * Region-marker round-trip tests. `region.ts` is the load-bearing primitive for every region-mode
@@ -66,7 +66,7 @@ describe("findRegion", () => {
         path: ".gitignore",
       }),
     )
-    expect(out.kind).toBe("absent")
+    expect(out._tag).toBe("Absent")
   })
 
   it("returns `found` with content between matched start/end markers", () => {
@@ -88,7 +88,7 @@ describe("findRegion", () => {
       }),
     )
     expect(out).toEqual({
-      kind: "found",
+      _tag: "Found",
       startLine: 1,
       endLine: 4,
       content: ".DS_Store\n.AppleDouble",
@@ -138,7 +138,7 @@ describe("findRegion", () => {
         path: ".gitignore",
       }),
     )
-    expect(out.kind).toBe("found")
+    expect(out._tag).toBe("Found")
   })
 
   it("uses the comment prefix verbatim — `//` markers don't match `#` ones", () => {
@@ -150,7 +150,7 @@ describe("findRegion", () => {
         path: "foo.ts",
       }),
     )
-    expect(out.kind).toBe("absent")
+    expect(out._tag).toBe("Absent")
   })
 
   it("isolates regions with distinct owner ids", () => {
@@ -168,8 +168,8 @@ describe("findRegion", () => {
     const b = runSync(
       findRegion({ fileContent: file, ownerId: "pjt:b", commentPrefix: "#", path: "x" }),
     )
-    expect(a.kind === "found" && a.content).toBe("aaa")
-    expect(b.kind === "found" && b.content).toBe("bbb")
+    expect(a._tag === "Found" && a.content).toBe("aaa")
+    expect(b._tag === "Found" && b.content).toBe("bbb")
   })
 })
 
@@ -183,7 +183,7 @@ describe("upsertRegion", () => {
   it("appends to an empty file with a trailing newline", () => {
     const out = upsertRegion({
       fileContent: "",
-      existing: { kind: "absent" },
+      existing: { _tag: "Absent" },
       rendered,
     })
     expect(out).toBe(`${rendered}\n`)
@@ -192,7 +192,7 @@ describe("upsertRegion", () => {
   it("appends to a file without trailing newline by adding one separator", () => {
     const out = upsertRegion({
       fileContent: "existing line",
-      existing: { kind: "absent" },
+      existing: { _tag: "Absent" },
       rendered,
     })
     expect(out).toBe(`existing line\n${rendered}\n`)
@@ -201,7 +201,7 @@ describe("upsertRegion", () => {
   it("appends to a file with trailing newline without doubling it", () => {
     const out = upsertRegion({
       fileContent: "existing\n",
-      existing: { kind: "absent" },
+      existing: { _tag: "Absent" },
       rendered,
     })
     expect(out).toBe(`existing\n${rendered}\n`)
@@ -225,7 +225,7 @@ describe("upsertRegion", () => {
     const file = "first line\n"
     const once = upsertRegion({
       fileContent: file,
-      existing: { kind: "absent" },
+      existing: { _tag: "Absent" },
       rendered,
     })
     const lookup = runSync(
@@ -283,7 +283,7 @@ describe("region markers with commentSuffix (HTML/MDX)", () => {
       }),
     )
     expect(out).toEqual({
-      kind: "found",
+      _tag: "Found",
       startLine: 2,
       endLine: 4,
       content: "Welcome to the project.",
@@ -298,11 +298,11 @@ describe("region markers with commentSuffix (HTML/MDX)", () => {
         fileContent: file,
         ownerId: "pjt:x",
         commentPrefix: "<!--",
-        // commentSuffix omitted → marker is `<!-- pjt:x start`, which doesn't match.
+        // CommentSuffix omitted → marker is `<!-- pjt:x start`, which doesn't match.
         path: "f.md",
       }),
     )
-    expect(out.kind).toBe("absent")
+    expect(out._tag).toBe("Absent")
   })
 
   it("round-trips HTML region through render + upsert without drift", () => {
@@ -313,7 +313,7 @@ describe("region markers with commentSuffix (HTML/MDX)", () => {
       content: "Always run `pnpm check-all` before merging.\n",
     })
     const file = "# AGENTS.md\n\nGeneral guidance.\n"
-    const once = upsertRegion({ fileContent: file, existing: { kind: "absent" }, rendered })
+    const once = upsertRegion({ fileContent: file, existing: { _tag: "Absent" }, rendered })
     const found = runSync(
       findRegion({
         fileContent: once,

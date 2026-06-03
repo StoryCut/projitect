@@ -1,6 +1,9 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { Effect } from "effect"
+import { Effect, Match } from "effect"
+import type { PjtLock, Errors } from "@projitect/core"
+import { RecordX } from "@projitect/internal"
+import { findRegion } from "./region.js"
 import type {
   FilePlan,
   ProjectPlan,
@@ -10,9 +13,6 @@ import type {
   SeedPlanFile,
   UpgradeRecord,
 } from "./plan.js"
-import type { PjtLock } from "@projitect/core"
-import { findRegion, renderRegion } from "./region.js"
-import type { Errors } from "@projitect/core"
 
 export interface FileDiff {
   readonly path: string
@@ -22,7 +22,7 @@ export interface FileDiff {
 }
 
 export interface PlanDiff {
-  readonly files: ReadonlyArray<FileDiff>
+  readonly files: readonly FileDiff[]
   readonly hasDrift: boolean
 }
 
@@ -42,14 +42,16 @@ export const diffPlan = (params: {
 }): Effect.Effect<PlanDiff, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { plan, projectRoot } = params
   return Effect.gen(function* () {
-    const files: Array<FileDiff> = []
+    const files: FileDiff[] = []
     let hasDrift = false
 
     for (const file of plan.files) {
       const full = path.resolve(projectRoot, file.path)
       const current = yield* Effect.promise(() => readIfExists(full))
       const diff = yield* diffFile({ file, current })
-      if (diff.status !== "ok") hasDrift = true
+      if (diff.status !== "ok") {
+        hasDrift = true
+      }
       files.push(diff)
     }
 
@@ -60,24 +62,13 @@ export const diffPlan = (params: {
 const diffFile = (params: {
   readonly file: FilePlan
   readonly current: string | null
-}): Effect.Effect<FileDiff, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
-  const { file, current } = params
-
-  switch (file.kind) {
-    case "region": {
-      return diffRegion(file, current)
-    }
-    case "merge": {
-      return Effect.succeed(diffMerge(file, current))
-    }
-    case "owned": {
-      return Effect.succeed(diffOwned(file, current))
-    }
-    case "seed": {
-      return Effect.succeed(diffSeed(file, current))
-    }
-  }
-}
+}): Effect.Effect<FileDiff, Errors.RegionMissingEnd | Errors.RegionDuplicate> =>
+  Match.valueTags(params.file, {
+    Region: (file) => diffRegion(file, params.current),
+    Merge: (file) => Effect.succeed(diffMerge(file, params.current)),
+    Owned: (file) => Effect.succeed(diffOwned(file, params.current)),
+    Seed: (file) => Effect.succeed(diffSeed(file, params.current)),
+  })
 
 const diffRegion = (
   file: RegionPlanFile,
@@ -91,7 +82,7 @@ const diffRegion = (
         summary: `+ create ${file.path} (${file.regions.length} region${file.regions.length === 1 ? "" : "s"})`,
       }
     }
-    const drifted: Array<string> = []
+    const drifted: string[] = []
     for (const region of file.regions) {
       const found = yield* findRegion({
         fileContent: current,
@@ -101,7 +92,7 @@ const diffRegion = (
         path: file.path,
       })
       const expected = region.content.trimEnd()
-      if (found.kind === "absent") {
+      if (found._tag === "Absent") {
         drifted.push(`missing region ${region.ownerId}`)
       } else if (found.content.trimEnd() !== expected) {
         drifted.push(`region ${region.ownerId} content drift`)
@@ -127,7 +118,7 @@ const diffMerge = (file: MergePlanFile, current: string | null): FileDiff => {
   }
   try {
     const parsed = JSON.parse(current) as unknown
-    const target = mergeIntoExisting(parsed, file.value)
+    const target = RecordX.deepMerge(parsed, file.value)
     if (canonicalJson(parsed) === canonicalJson(target)) {
       return { path: file.path, status: "ok", summary: `  ok ${file.path}` }
     }
@@ -162,43 +153,17 @@ const diffSeed = (file: SeedPlanFile, current: string | null): FileDiff => {
   return { path: file.path, status: "ok", summary: `  ok ${file.path} (seed, never enforced)` }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers shared with applier
-// ---------------------------------------------------------------------------
-
-export const mergeIntoExisting = (existing: unknown, intent: unknown): unknown => {
-  if (!isObject(existing)) return intent
-  if (!isObject(intent)) return intent
-  const out: Record<string, unknown> = { ...existing }
-  for (const [k, v] of Object.entries(intent)) {
-    out[k] = k in existing ? mergeIntoExisting(existing[k], v) : v
-  }
-  return out
-}
-
-const isObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v)
-
-const canonicalJson = (v: unknown): string => JSON.stringify(sortKeys(v))
-
-const sortKeys = (v: unknown): unknown => {
-  if (Array.isArray(v)) return v.map(sortKeys)
-  if (isObject(v)) {
-    const out: Record<string, unknown> = {}
-    for (const k of Object.keys(v).sort()) {
-      out[k] = sortKeys(v[k])
-    }
-    return out
-  }
-  return v
-}
+// Stable JSON string for structural comparison: deep key-sort, then stringify.
+const canonicalJson = (v: unknown): string => JSON.stringify(RecordX.canonicalize(v))
 
 // ---------------------------------------------------------------------------
 // Render a diff for the terminal
 // ---------------------------------------------------------------------------
 
 export const renderPlanDiff = (diff: PlanDiff): string => {
-  if (!diff.hasDrift) return "Project is in sync with blueprints. No changes needed."
+  if (!diff.hasDrift) {
+    return "Project is in sync with blueprints. No changes needed."
+  }
   const lines = diff.files.map((f) => f.summary)
   return lines.join("\n")
 }
@@ -209,11 +174,11 @@ export const renderPlanDiff = (diff: PlanDiff): string => {
  */
 export const renderInspectReport = (params: {
   readonly diff: PlanDiff
-  readonly removals: ReadonlyArray<PjtLock.LockOperation>
-  readonly upgrades: ReadonlyArray<UpgradeRecord>
+  readonly removals: readonly PjtLock.LockOperation[]
+  readonly upgrades: readonly UpgradeRecord[]
 }): string => {
   const { diff, removals, upgrades } = params
-  const lines: Array<string> = []
+  const lines: string[] = []
 
   for (const u of upgrades) {
     lines.push(`↑ upgrade ${u.blueprintId} ${u.from} → ${u.to}`)
@@ -225,26 +190,19 @@ export const renderInspectReport = (params: {
     lines.push(f.summary)
   }
 
-  if (lines.length === 0) return "Project is in sync with blueprints. No changes needed."
+  if (lines.length === 0) {
+    return "Project is in sync with blueprints. No changes needed."
+  }
   return lines.join("\n")
 }
 
-const removalSummary = (op: PjtLock.LockOperation): string => {
-  switch (op.mode) {
-    case "region": {
-      return `- remove ${op.ownerId} region from ${op.path}   (blueprint left .pjt.ts)`
-    }
-    case "merge": {
-      return `- remove merge keys ${op.ownedKeys.join(", ")} from ${op.path}   (blueprint left .pjt.ts)`
-    }
-    case "owned": {
-      return `- delete ${op.path}   (blueprint left .pjt.ts)`
-    }
-    case "seed": {
-      return `  (seed ${op.ownerId} for ${op.path} retained; blueprint left but seed mode is write-once)`
-    }
-  }
-}
-
-// suppress unused renderRegion import — applier consumes it via re-export
-void renderRegion
+const removalSummary = (op: PjtLock.LockOperation): string =>
+  Match.valueTags(op, {
+    Region: (region) =>
+      `- remove ${region.ownerId} region from ${region.path}   (blueprint left .pjt.ts)`,
+    Merge: (merge) =>
+      `- remove merge keys ${merge.ownedKeys.join(", ")} from ${merge.path}   (blueprint left .pjt.ts)`,
+    Owned: (owned) => `- delete ${owned.path}   (blueprint left .pjt.ts)`,
+    Seed: (seed) =>
+      `  (seed ${seed.ownerId} for ${seed.path} retained; blueprint left but seed mode is write-once)`,
+  })

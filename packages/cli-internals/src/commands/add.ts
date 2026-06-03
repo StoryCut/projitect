@@ -1,18 +1,14 @@
-import { Effect } from "effect"
+import { Effect, Match } from "effect"
 import type { Errors, ProjitectConfig } from "@projitect/core"
-import {
-  detect,
-  installDev as installDevelopment,
-  readProjitectMetadata,
-  type ProjitectPackageMetadata,
-} from "../pm.js"
+import { detect, installDev as installDevelopment, readProjitectMetadata } from "../pm.js"
+import type { ProjitectPackageMetadata } from "../pm.js"
 import { splice } from "../edit-pjt.js"
 
 export interface AddResult {
   readonly pm: string
   readonly pkg: string
   readonly metadata: ProjitectPackageMetadata | null
-  readonly sectionsAdded: ReadonlyArray<string>
+  readonly sectionsAdded: readonly string[]
   readonly splicedIntoBlueprintFile: boolean
 }
 
@@ -31,13 +27,13 @@ export interface AddResult {
  * out to the top of `add` and is satisfied by the bin shim's `NodePlatformLive`.
  */
 export type SectionStrategy<R = never> =
-  | { readonly kind: "all" }
-  | { readonly kind: "explicit"; readonly sections: ReadonlyArray<string> }
+  | { readonly _tag: "All" }
+  | { readonly _tag: "Explicit"; readonly sections: readonly string[] }
   | {
-      readonly kind: "ask"
+      readonly _tag: "Ask"
       readonly choose: (
         metadata: ProjitectPackageMetadata,
-      ) => Effect.Effect<ReadonlyArray<string>, Errors.ProjitectError, R>
+      ) => Effect.Effect<readonly string[], Errors.ProjitectError, R>
     }
 
 /**
@@ -104,31 +100,27 @@ export const add = <R = never>(params: {
 const resolveSections = <R>(params: {
   readonly metadata: ProjitectPackageMetadata
   readonly strategy: SectionStrategy<R>
-}): Effect.Effect<ReadonlyArray<string>, Errors.ProjitectError, R> => {
+}): Effect.Effect<readonly string[], Errors.ProjitectError, R> => {
   const { metadata, strategy } = params
   // Section strategy only matters for blueprint-sets. For `type: "blueprint"`, return empty —
   // `computeSplice` will emit a single non-templated call line.
-  if (metadata.type === "blueprint") return Effect.succeed([])
-  switch (strategy.kind) {
-    case "all": {
-      return Effect.succeed([])
-    }
-    case "explicit": {
-      return Effect.succeed(strategy.sections)
-    }
-    case "ask": {
-      return strategy.choose(metadata)
-    }
+  if (metadata.type === "blueprint") {
+    return Effect.succeed([])
   }
+  return Match.valueTags(strategy, {
+    All: () => Effect.succeed<readonly string[]>([]),
+    Explicit: (explicit) => Effect.succeed(explicit.sections),
+    Ask: (ask) => ask.choose(metadata),
+  })
 }
 
 const computeSplice = (params: {
   readonly metadata: ProjitectPackageMetadata
-  readonly requestedSections: ReadonlyArray<string>
+  readonly requestedSections: readonly string[]
 }): {
   readonly importLine: string
-  readonly callLines: ReadonlyArray<string>
-  readonly sectionsAdded: ReadonlyArray<string>
+  readonly callLines: readonly string[]
+  readonly sectionsAdded: readonly string[]
 } => {
   const { metadata, requestedSections } = params
   if (metadata.type === "blueprint") {
@@ -140,7 +132,7 @@ const computeSplice = (params: {
       sectionsAdded: [],
     }
   }
-  // blueprint-set
+  // Blueprint-set
   const allSections = metadata.sections ?? []
   const chosen =
     requestedSections.length > 0

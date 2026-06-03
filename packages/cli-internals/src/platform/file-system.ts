@@ -1,8 +1,8 @@
-import { Effect, FileSystem, Layer, Option, Stream } from "effect"
-import * as PlatformError from "effect/PlatformError"
 import * as nodeFs from "node:fs/promises"
 import nodePath from "node:path"
 import * as os from "node:os"
+import * as PlatformError from "effect/PlatformError"
+import { Effect, FileSystem, Layer, Option, Stream } from "effect"
 
 /**
  * Node-backed `FileSystem` Layer.
@@ -46,7 +46,7 @@ const dieNotImpl = <A>(method: string): Effect.Effect<A, PlatformError.PlatformE
 const make = FileSystem.make({
   access: (path, options) =>
     tryEffect("access", () =>
-      nodeFs.access(path, options?.readable ? nodeFs.constants.R_OK : undefined),
+      nodeFs.access(path, options?.readable === true ? nodeFs.constants.R_OK : undefined),
     ),
   copy: (fromPath, toPath, _options) =>
     tryEffect("copy", () => nodeFs.cp(fromPath, toPath, { recursive: true })),
@@ -99,9 +99,9 @@ const make = FileSystem.make({
             : "Other"
       return {
         type,
-        mtime: s.mtime ? Option.some(s.mtime) : Option.none(),
-        atime: s.atime ? Option.some(s.atime) : Option.none(),
-        birthtime: s.birthtime ? Option.some(s.birthtime) : Option.none(),
+        mtime: Option.some(s.mtime),
+        atime: Option.some(s.atime),
+        birthtime: Option.some(s.birthtime),
         dev: s.dev,
         ino: Option.some(s.ino),
         mode: s.mode,

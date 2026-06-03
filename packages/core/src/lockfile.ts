@@ -6,34 +6,28 @@ import { Schema } from "effect"
  * its source blueprint leaves the tree later. The actual content isn't stored; it's regenerated
  * from the blueprint at plan time.
  */
-export const LockRegionOp = Schema.Struct({
-  mode: Schema.Literal("region"),
+export const LockRegionOp = Schema.TaggedStruct("Region", {
   path: Schema.String,
   ownerId: Schema.String,
   commentPrefix: Schema.String,
   /**
-   * Optional — present for prefix/suffix-pair comment styles (HTML/MDX/XML). Absent on
-   * older lockfiles, which carried only single-prefix regions; readers treat the absence as
-   * the empty string. Bumping the lockfile version is not required because adding an optional
-   * field decodes backwards-compatibly.
+   * Optional closing delimiter for prefix/suffix-pair comment styles (HTML/MDX/XML). Absent for
+   * single-prefix styles (`#`, `//`); readers treat the absence as the empty string.
    */
   commentSuffix: Schema.optional(Schema.String),
 })
 
-export const LockMergeOp = Schema.Struct({
-  mode: Schema.Literal("merge"),
+export const LockMergeOp = Schema.TaggedStruct("Merge", {
   path: Schema.String,
   ownedKeys: Schema.Array(Schema.String),
 })
 
-export const LockOwnedOp = Schema.Struct({
-  mode: Schema.Literal("owned"),
+export const LockOwnedOp = Schema.TaggedStruct("Owned", {
   path: Schema.String,
   ownerId: Schema.String,
 })
 
-export const LockSeedOp = Schema.Struct({
-  mode: Schema.Literal("seed"),
+export const LockSeedOp = Schema.TaggedStruct("Seed", {
   path: Schema.String,
   ownerId: Schema.String,
 })

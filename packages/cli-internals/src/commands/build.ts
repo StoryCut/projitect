@@ -1,13 +1,16 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { Effect, type Terminal } from "effect"
+import { Effect } from "effect"
+import type { Terminal } from "effect"
 import { Prompt } from "effect/unstable/cli"
-import { Errors, type ProjitectConfig } from "@projitect/core"
-import { remodel, type RemodelResult } from "./remodel.js"
+import { Errors } from "@projitect/core"
+import type { ProjitectConfig } from "@projitect/core"
 import { ensureGitRepo, gitStatus } from "../git.js"
+import { remodel } from "./remodel.js"
+import type { RemodelResult } from "./remodel.js"
 
 export interface BuildResult {
-  readonly wiped: ReadonlyArray<string>
+  readonly wiped: readonly string[]
   readonly remodel: RemodelResult
 }
 
@@ -91,20 +94,17 @@ export const build = (params: {
     return { wiped, remodel: remodelResult }
   })
 
-const wipeTree = (
-  projectRoot: string,
-): Effect.Effect<ReadonlyArray<string>, Errors.FsWriteFailed> =>
+const wipeTree = (projectRoot: string): Effect.Effect<readonly string[], Errors.FsWriteFailed> =>
   Effect.tryPromise({
     try: async () => {
       const entries = await fs.readdir(projectRoot)
-      const removed: Array<string> = []
-      for (const name of entries) {
-        if (PRESERVED.has(name)) continue
-        const full = path.join(projectRoot, name)
-        await fs.rm(full, { recursive: true, force: true })
-        removed.push(name)
-      }
-      return removed
+      const toRemove = entries.filter((name) => !PRESERVED.has(name))
+      await Promise.all(
+        toRemove.map((name) =>
+          fs.rm(path.join(projectRoot, name), { recursive: true, force: true }),
+        ),
+      )
+      return toRemove
     },
     catch: (e) =>
       new Errors.FsWriteFailed({

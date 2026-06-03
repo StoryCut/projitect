@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
-import { ignoreSection, markdownSection } from "../src/sections.js"
 import { makeInMemoryLayer } from "@projitect/test-kit"
+import { ignoreSection, markdownSection } from "../src/sections.js"
 
 /**
  * Unit tests for the `ignoreSection` and `markdownSection` SDK helpers. Both are thin wrappers
@@ -28,7 +28,9 @@ describe("ignoreSection", () => {
     )
     expect(ops).toHaveLength(1)
     const op = ops[0]
-    if (op?.mode !== "region") throw new Error("expected region op")
+    if (op?._tag !== "Region") {
+      throw new Error("expected region op")
+    }
     expect(op.commentPrefix).toBe("#")
     expect(op.commentSuffix).toBeUndefined()
     expect(op.path).toBe(".eslintignore")
@@ -83,7 +85,9 @@ describe("markdownSection", () => {
     )
     expect(ops).toHaveLength(1)
     const op = ops[0]
-    if (op?.mode !== "region") throw new Error("expected region op")
+    if (op?._tag !== "Region") {
+      throw new Error("expected region op")
+    }
     expect(op.commentPrefix).toBe("<!--")
     expect(op.commentSuffix).toBe(" -->")
     expect(op.path).toBe("README.md")
@@ -112,7 +116,9 @@ describe("markdownSection", () => {
       }),
     )
     const op = ops[0]
-    if (op?.mode !== "region") throw new Error("expected region op")
+    if (op?._tag !== "Region") {
+      throw new Error("expected region op")
+    }
     expect(op.content).toBe(fence)
   })
 })
@@ -127,7 +133,7 @@ describe("ignoreSection and markdownSection are interchangeable with regionFile"
     const b = await planOps(
       markdownSection({ id: "b", version: "1", path: "README.md", content: "b\n" }),
     )
-    expect(a[0]?.mode === "region" && a[0].path).toBe(".gitignore")
-    expect(b[0]?.mode === "region" && b[0].path).toBe("README.md")
+    expect(a[0]?._tag === "Region" && a[0].path).toBe(".gitignore")
+    expect(b[0]?._tag === "Region" && b[0].path).toBe("README.md")
   })
 })

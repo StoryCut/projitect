@@ -1,3 +1,4 @@
+import { Array } from "effect"
 import type { Permission } from "@projitect/core"
 
 /**
@@ -9,19 +10,19 @@ import type { Permission } from "@projitect/core"
 const globToRegex = (glob: string): RegExp => {
   let pattern = ""
   for (let index = 0; index < glob.length; index++) {
-    const ch = glob[index]!
-    if (ch === "*" && glob[index + 1] === "*") {
-      pattern += ".*"
+    const ch = glob.charAt(index)
+    if (ch === "*" && glob.charAt(index + 1) === "*") {
+      pattern = `${pattern}.*`
       index++
     } else if (ch === "*") {
-      pattern += "[^/]*"
+      pattern = `${pattern}[^/]*`
     } else if (".+^${}()|[]\\".includes(ch)) {
-      pattern += "\\" + ch
+      pattern = `${pattern}\\${ch}`
     } else {
-      pattern += ch
+      pattern = pattern + ch
     }
   }
-  return new RegExp(`^${pattern}$`)
+  return new RegExp(`^${pattern}$`, "u")
 }
 
 const matchesGlob = (path: string, glob: string): boolean => globToRegex(glob).test(path)
@@ -38,16 +39,16 @@ const opCategory = (op: FsOp): "read" | "write" =>
  * same path — a blueprint that writes a file naturally needs to read it back for region updates.
  */
 export const isPermitted = (
-  permissions: ReadonlyArray<Permission.Permission>,
+  permissions: readonly Permission.Permission[],
   op: FsOp,
   path: string,
 ): boolean => {
   const category = opCategory(op)
-  for (const p of permissions) {
-    if (p.kind === "exec") continue
-    if (!matchesGlob(path, p.glob)) continue
-    if (p.kind === "write") return true
-    if (p.kind === "read" && category === "read") return true
-  }
-  return false
+  // A permission grants the op when its glob matches and it's a write (writes imply reads) or
+  // it's a read covering a read-category op.
+  return Array.some(
+    permissions,
+    (p) =>
+      p.kind !== "exec" && matchesGlob(path, p.glob) && (p.kind === "write" || category === "read"),
+  )
 }

@@ -2,8 +2,10 @@ import { promises as fs } from "node:fs"
 import { spawn } from "node:child_process"
 import path from "node:path"
 import { Effect } from "effect"
-import { Errors, type ProjitectConfig } from "@projitect/core"
-import { remodel, type RemodelResult } from "./remodel.js"
+import { Errors } from "@projitect/core"
+import type { ProjitectConfig } from "@projitect/core"
+import { remodel } from "./remodel.js"
+import type { RemodelResult } from "./remodel.js"
 
 export interface InitResult {
   readonly seededBlueprintFile: boolean
@@ -67,7 +69,9 @@ const ensureGit = (
         () => false,
       ),
     )
-    if (ok) return false
+    if (ok) {
+      return false
+    }
     if (!yes) {
       return yield* new Errors.InitGitMissing({
         id: "pjt.init.git-missing",
@@ -81,8 +85,11 @@ const ensureGit = (
           const child = spawn("git", ["init", "-q"], { cwd: projectRoot, stdio: "ignore" })
           child.on("error", reject)
           child.on("close", (code) => {
-            if (code === 0) resolve()
-            else reject(new Error(`git init exited with ${code}`))
+            if (code === 0) {
+              resolve()
+            } else {
+              reject(new Error(`git init exited with ${String(code)}`))
+            }
           })
         }),
     )
@@ -100,7 +107,9 @@ const ensurePackageJson = (
         () => false,
       ),
     )
-    if (ok) return false
+    if (ok) {
+      return false
+    }
     if (!yes) {
       return yield* new Errors.InitPackageJsonMissing({
         id: "pjt.init.package-json-missing",
@@ -145,7 +154,9 @@ const seedBlueprintFileIfAbsent = (
         () => false,
       ),
     )
-    if (exists) return false
+    if (exists) {
+      return false
+    }
 
     yield* Effect.tryPromise({
       try: () => fs.writeFile(full, STARTER_PJT_TS, "utf8"),

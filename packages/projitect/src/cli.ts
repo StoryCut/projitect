@@ -1,12 +1,7 @@
-import { Effect } from "effect"
-import {
-  pjt as pjtRaw,
-  isEffectTree,
-  type ProjitectFile,
-  type BlueprintTree,
-} from "@projitect/cli-internals"
-
 import { createRequire } from "node:module"
+import { Effect } from "effect"
+import { pjt as pjtRaw, isEffectTree } from "@projitect/cli-internals"
+import type { ProjitectFile, BlueprintTree } from "@projitect/cli-internals"
 import { projitectBlueprint } from "./projitect-blueprint.js"
 
 const require = createRequire(import.meta.url)
