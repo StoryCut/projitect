@@ -67,8 +67,9 @@ One tool, one config, one command. Adapted from StoryCut's and effect-clue's fla
 
 - `eslint-plugin-prettier/recommended` runs Prettier as an ESLint rule. Formatting drift surfaces as a `prettier/prettier` lint error — no separate `prettier --check` step.
 - For files ESLint doesn't parse (MDX, YAML, JSON5, CSS) the `pnpm format` script invokes Prettier directly. `lint-staged` covers them automatically on commit.
-- The Unicorn recommended preset is enabled with a small list of overrides for rules that clash with Effect-heavy code (`no-null`, `custom-error-definition`, `no-array-reduce`, etc.). See [eslint.config.js](./eslint.config.js) for the canonical list with rationale.
+- The rule set is ported from StoryCut's: `typescript-eslint` **strict + stylistic** type-checked presets, `unicorn`'s **`flat/all`** preset, `eslint-plugin-import` (syntactic rules only — the resolver-backed ones are redundant with tsc), and StoryCut's core-quality rules (`eqeqeq`, `no-else-return`, `prefer-template`, `strict-boolean-expressions`, …). Each comes with a small list of overrides for rules that clash with Effect-heavy code (`unicorn/no-null`, `no-array-reduce`, `prefer-json-parse-buffer`, etc.) or with NodeNext resolution (`import/no-useless-path-segments` is omitted — it strips the `/index.js` NodeNext requires). See [eslint.config.js](./eslint.config.js) for the canonical list with rationale.
 - `eslint-plugin-package-json` validates every `package.json` in the monorepo: required fields, npm-standard property order, alphabetized dependencies. Catches "would-publish-but-broken" mistakes alongside the `publish-dry-run` CI job.
+- Filenames are kebab-case (`unicorn/filename-case`), except the `*X` modules in `@projitect/internal`, which keep their PascalCase namespace names.
 
 Per-package sandbox enforcement at lint time (the "soft" half of the soft sandbox):
 
@@ -231,15 +232,15 @@ checks.
 ```ts
 import { Predicate, String, Number, Array } from "effect"
 
-if (Predicate.isNotNullable(value)) { ... }   // instead of: value != null
+if (Predicate.isNotNullish(value)) { ... }    // instead of: value != null
 if (Predicate.isString(value)) { ... }        // instead of: typeof value === "string"
 if (String.isNonEmpty(str)) { ... }           // instead of: str.length > 0
-if (Array.isNonEmptyArray(arr)) { ... }       // instead of: arr.length > 0
+if (Array.isArrayNonEmpty(arr)) { ... }       // instead of: arr.length > 0
 if (Number.isFinite(n)) { ... }
 ```
 
-A compound predicate worth reusing (e.g. an `isNonEmptyString` that combines `isNotNullable`,
-`isString`, and `String.isNonEmpty`) belongs in a `PredicateX` module in `@projitect/core` —
+A compound predicate worth reusing (e.g. an `isNonEmptyString` that combines `isNotNullish`,
+`isString`, and `String.isNonEmpty`) belongs in a `PredicateX` module in `@projitect/internal` —
 see [FP mindset](#fp-mindset) for where utilities live. Create it the first time a second call
 site wants it.
 
@@ -322,7 +323,8 @@ Result.match(planResult, {
 ```
 
 > v4 renamed `Either` → `Result`. The constructor names also changed: `Either.right(x)` is now
-> `Result.success(x)` and `Either.left(e)` is now `Result.failure(e)`. There is no `Either` alias.
+> `Result.succeed(x)` and `Either.left(e)` is now `Result.fail(e)` (with `Result.failVoid` for the
+> no-payload case). There is no `Either` alias.
 
 ### Quick reference
 
@@ -330,10 +332,10 @@ Result.match(planResult, {
 | --------------------------------- | ---------------------------------------- |
 | `if/else` chains                  | `Match.value` / `Match.valueTags`        |
 | `=== null`                        | `Predicate.isNull`                       |
-| `!= null`                         | `Predicate.isNotNullable`                |
+| `!= null`                         | `Predicate.isNotNullish`                 |
 | `=== undefined`                   | `Predicate.isUndefined`                  |
 | `str.length > 0`                  | `String.isNonEmpty(str)`                 |
-| `arr.length > 0`                  | `Array.isNonEmptyArray(arr)`             |
+| `arr.length > 0`                  | `Array.isArrayNonEmpty(arr)`             |
 | `{ key: maybeUndefined }`         | `StructX.defined("key", maybeUndefined)` |
 | Custom `_tag` discriminated union | `Result<A, E>` + `Result.match`          |
 
@@ -345,15 +347,19 @@ Result.match(planResult, {
 
 ## No type assertions
 
-The `as` keyword is **forbidden** outside of `as const`. ESLint enforces this with a
-`no-restricted-syntax` rule. When you reach for a cast, the right answer is one of:
+Avoid the `as` keyword (outside of `as const` and `satisfies`). There is no blanket lint ban —
+the `strict` type-checked preset's `@typescript-eslint/no-unnecessary-type-assertion` and
+`no-non-null-assertion` catch the redundant cases, and code review catches the rest. When you
+reach for a cast, the right answer is usually one of:
 
-- `Schema.decode(...)` — for runtime-validated narrowing
+- `Schema.decode*(...)` / `Schema.is(...)` — for runtime-validated narrowing
 - `Match.value(...)` with exhaustive cases — for discriminated unions
-- A `Predicate.is*` refinement function — for type guards
-- A `parseX(...): Effect<X, ParseError>` boundary function — for "I'm parsing user input"
+- A `Predicate.is*` refinement (or a `PredicateX` helper) — for type guards
+- A return-type annotation or `satisfies` — when you just need to pin a literal's type
 
-If none of those work, that's a sign the shape is wrong. Discuss before reaching for `as`.
+If none of those work, that's a sign the shape is wrong. The one sanctioned exception is the
+generic type-manipulation inside `@projitect/internal`'s `*X` utilities, where a contained cast at
+the boundary is sometimes unavoidable.
 
 ## FP mindset
 
@@ -402,23 +408,27 @@ already exists in a pipe and giving it a name.
 
 - **`effect`** (the library) — the first place to look for generic data-manipulation primitives.
   If `Array.foo` already does what you want, use it directly.
-- **`@projitect/core`** — the shared home for projitect-specific generic utilities. Core is the
-  runtime-pure base every other package can import, so Effect-extension `*X` modules live there
-  (`packages/core/src/internal/ArrayX.ts`, etc.). They must stay `node:*`-free — core's existing
-  sandbox lint rule enforces this — and they are **not** re-exported from core's public
-  `index.ts` barrel unless a consumer genuinely needs the public API, so they don't bloat the
-  published surface.
-- A utility used by only one package can start local to that package and graduate to
-  `@projitect/core` the moment a second package wants it.
+- **`@projitect/internal`** — the shared home for projitect's generic `*X` utilities. It is a
+  **private, never-published** package (`"private": true`) whose code is bundled into each
+  consuming package at build time, so the modules are written once and reachable from every
+  package without ever appearing on npm. Modules are PascalCase (`StructX`, `RecordX`, …),
+  imported as namespaces (`import { StructX } from "@projitect/internal"`), and adapted from
+  StoryCut's `lib/*X` suite. They stay `node:*`-free.
+- A utility used by only one package can still start local to that package and graduate to
+  `@projitect/internal` the moment a second package wants it.
 
 ### Check existing utilities first
 
-projitect has **no** generic `*X` utility modules yet. As they're extracted into `@projitect/core`,
-record them here so the next author checks before re-writing:
+`@projitect/internal` ships these modules — check here before writing a new one:
 
-| Module       | What it covers                         |
-| ------------ | -------------------------------------- |
-| _(none yet)_ | _grow this table as `*X` modules land_ |
+| Module         | What it covers                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `StructX`      | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `truthy`, …) |
+| `PredicateX`   | `isNonEmptyString`, `isPlainObject` (no `Predicate.isRecord` in v4), `matchRefine`                     |
+| `NonNullableX` | `match` (nullable/non-nullable branches), `map`, `lift`, `nullableOrder`                               |
+| `OrderX`       | `rankedEnum` (sort enum-like values by explicit rank)                                                  |
+| `RecordX`      | `collectBy`, `deepMerge`, `canonicalize`, `deleteByPath`, `modifyIfExists`, …                          |
+| `StringX`      | `surround`, `splitLines`, `replaceLineRange`, `insertBeforeLine`                                       |
 
 ### Illustrative patterns
 
@@ -463,8 +473,8 @@ import { Order } from "effect"
 
 // e.g. in the Blueprint module: deterministic apply order
 export const ApplyOrder: Order.Order<Blueprint> = Order.combine(
-  Order.mapInput(Order.number, (blueprint: Blueprint) => blueprint.priority),
-  Order.mapInput(Order.string, (blueprint: Blueprint) => blueprint.id),
+  Order.mapInput(Order.Number, (blueprint: Blueprint) => blueprint.priority),
+  Order.mapInput(Order.String, (blueprint: Blueprint) => blueprint.id),
 )
 
 export const ApplyOrderDesc: Order.Order<Blueprint> = Order.reverse(ApplyOrder)
@@ -482,7 +492,7 @@ constant:
 ```ts
 const sorted = Array.sort(
   ops,
-  Order.mapInput(Order.string, (op: ChangeSetOp) => op.path),
+  Order.mapInput(Order.String, (op: ChangeSetOp) => op.path),
 )
 ```
 

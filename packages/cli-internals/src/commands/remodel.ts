@@ -1,7 +1,7 @@
 import { Effect } from "effect"
-import type { Errors, PjtLock } from "@projitect/core"
-import { type ProjitectConfig } from "@projitect/core"
-import { loadBlueprintFile, isEffectTree, type BlueprintTree } from "../loader.js"
+import type { Errors, PjtLock, ProjitectConfig } from "@projitect/core"
+import { loadBlueprintFile, isEffectTree } from "../loader.js"
+import type { BlueprintTree } from "../loader.js"
 import { buildPlan, diffLockfile } from "../plan.js"
 import { applyPlan } from "../applier.js"
 import { applyRemovals } from "../remover.js"
@@ -9,8 +9,8 @@ import { makeRealLayer } from "../filesystem-impl.js"
 import { readLockfile, writeLockfile } from "../lockfile.js"
 
 export interface RemodelResult {
-  readonly written: ReadonlyArray<string>
-  readonly removed: ReadonlyArray<string>
+  readonly written: readonly string[]
+  readonly removed: readonly string[]
 }
 
 /**

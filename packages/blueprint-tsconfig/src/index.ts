@@ -33,7 +33,7 @@ export interface TsconfigOptions {
    * `lib` entries. Defaults to `["ES2023"]` (matches `target`). Use `dom: true` instead of
    * adding `"DOM"` here — the helper handles the right pairing.
    */
-  readonly lib?: ReadonlyArray<string>
+  readonly lib?: readonly string[]
   /**
    * Include `"DOM"` + `"DOM.Iterable"` in `lib`. Defaults to `false` (Node-only). Flip to `true`
    * for browser code.

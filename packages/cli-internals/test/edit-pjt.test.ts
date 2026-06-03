@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { Effect } from "effect"
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import path from "node:path"
+import { Effect } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { splice } from "../src/edit-pjt.js"
 
 /**
@@ -95,7 +95,7 @@ describe("splice — happy paths", () => {
     )
 
     const after = await readPjtTs()
-    const importCount = (after.match(/import \{ x \} from "y"/g) ?? []).length
+    const importCount = (after.match(/import \{ x \} from "y"/gu) ?? []).length
     expect(importCount).toBe(1)
   })
 
@@ -128,9 +128,9 @@ describe("splice — happy paths", () => {
     )
 
     const after = await readPjtTs()
-    // import got added
+    // Import got added
     expect(after).toContain('import "side-effect"')
-    // but the blueprints block is still empty
+    // But the blueprints block is still empty
     expect(after).toContain("// pjt:blueprints start\n    // pjt:blueprints end")
   })
 
@@ -203,7 +203,7 @@ describe("splice — error paths", () => {
   it("treats inverted marker order (end before start) as missing", async () => {
     await writePjtTs(
       [
-        "// pjt:imports end", // intentionally inverted
+        "// pjt:imports end", // Intentionally inverted
         "// pjt:imports start",
         "",
         "export default pjt({",

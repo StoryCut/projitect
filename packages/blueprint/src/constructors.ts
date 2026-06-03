@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import type { Blueprint, Permission, Errors, BlueprintFileSystem } from "@projitect/core"
 import { ChangeSet } from "@projitect/core"
+import { StructX } from "@projitect/internal"
 
 /**
  * Spec for a region-mode blueprint: replace or insert the marked section in a shared text file.
@@ -18,7 +19,7 @@ export interface RegionFileSpec {
    */
   readonly commentSuffix?: string
   readonly content: string
-  readonly extraPermissions?: ReadonlyArray<Permission.Permission>
+  readonly extraPermissions?: readonly Permission.Permission[]
 }
 
 /**
@@ -32,7 +33,7 @@ export interface RegionFileSpec {
 export const regionFile = (spec: RegionFileSpec): Blueprint.Blueprint => ({
   id: spec.id,
   version: spec.version,
-  ...(spec.description !== undefined && { description: spec.description }),
+  ...StructX.defined("description", spec.description),
   permissions: [
     { kind: "write", glob: spec.path },
     { kind: "read", glob: spec.path },
@@ -40,11 +41,11 @@ export const regionFile = (spec: RegionFileSpec): Blueprint.Blueprint => ({
   ],
   plan: Effect.succeed(
     ChangeSet.of({
-      mode: "region",
+      _tag: "Region",
       ownerId: spec.id,
       path: spec.path,
       commentPrefix: spec.commentPrefix ?? "#",
-      ...(spec.commentSuffix !== undefined && { commentSuffix: spec.commentSuffix }),
+      ...StructX.defined("commentSuffix", spec.commentSuffix),
       content: spec.content,
     }),
   ),
@@ -60,9 +61,9 @@ export interface JsonMergeSpec {
   readonly version: string
   readonly description?: string
   readonly path: string
-  readonly ownedKeys: ReadonlyArray<string>
+  readonly ownedKeys: readonly string[]
   readonly value: unknown
-  readonly extraPermissions?: ReadonlyArray<Permission.Permission>
+  readonly extraPermissions?: readonly Permission.Permission[]
 }
 
 /**
@@ -71,7 +72,7 @@ export interface JsonMergeSpec {
 export const jsonMerge = (spec: JsonMergeSpec): Blueprint.Blueprint => ({
   id: spec.id,
   version: spec.version,
-  ...(spec.description !== undefined && { description: spec.description }),
+  ...StructX.defined("description", spec.description),
   permissions: [
     { kind: "write", glob: spec.path },
     { kind: "read", glob: spec.path },
@@ -79,7 +80,7 @@ export const jsonMerge = (spec: JsonMergeSpec): Blueprint.Blueprint => ({
   ],
   plan: Effect.succeed(
     ChangeSet.of({
-      mode: "merge",
+      _tag: "Merge",
       ownerId: spec.id,
       path: spec.path,
       ownedKeys: spec.ownedKeys,
@@ -98,17 +99,17 @@ export interface OwnFileSpec {
   readonly description?: string
   readonly path: string
   readonly content: string
-  readonly extraPermissions?: ReadonlyArray<Permission.Permission>
+  readonly extraPermissions?: readonly Permission.Permission[]
 }
 
 export const ownFile = (spec: OwnFileSpec): Blueprint.Blueprint => ({
   id: spec.id,
   version: spec.version,
-  ...(spec.description !== undefined && { description: spec.description }),
+  ...StructX.defined("description", spec.description),
   permissions: [{ kind: "write", glob: spec.path }, ...(spec.extraPermissions ?? [])],
   plan: Effect.succeed(
     ChangeSet.of({
-      mode: "owned",
+      _tag: "Owned",
       ownerId: spec.id,
       path: spec.path,
       content: spec.content,
@@ -126,17 +127,17 @@ export interface SeedFileSpec {
   readonly description?: string
   readonly path: string
   readonly content: string
-  readonly extraPermissions?: ReadonlyArray<Permission.Permission>
+  readonly extraPermissions?: readonly Permission.Permission[]
 }
 
 export const seedFile = (spec: SeedFileSpec): Blueprint.Blueprint => ({
   id: spec.id,
   version: spec.version,
-  ...(spec.description !== undefined && { description: spec.description }),
+  ...StructX.defined("description", spec.description),
   permissions: [{ kind: "write", glob: spec.path }, ...(spec.extraPermissions ?? [])],
   plan: Effect.succeed(
     ChangeSet.of({
-      mode: "seed",
+      _tag: "Seed",
       ownerId: spec.id,
       path: spec.path,
       content: spec.content,
@@ -152,14 +153,14 @@ export interface ComputedSpec {
   readonly id: string
   readonly version: string
   readonly description?: string
-  readonly permissions: ReadonlyArray<Permission.Permission>
+  readonly permissions: readonly Permission.Permission[]
   readonly plan: Effect.Effect<ChangeSet.ChangeSet, Errors.BlueprintError, BlueprintFileSystem>
 }
 
 export const computed = (spec: ComputedSpec): Blueprint.Blueprint => ({
   id: spec.id,
   version: spec.version,
-  ...(spec.description !== undefined && { description: spec.description }),
+  ...StructX.defined("description", spec.description),
   permissions: spec.permissions,
   plan: spec.plan,
 })

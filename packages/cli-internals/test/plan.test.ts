@@ -1,10 +1,10 @@
+import * as os from "node:os"
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
-import * as os from "node:os"
 import { directory } from "@projitect/blueprint"
-import type { Blueprint as _Blueprint, ChangeSet } from "@projitect/core"
-import type { PjtLock } from "@projitect/core"
-import { buildPlan, diffLockfile, type ByBlueprint } from "../src/plan.js"
+import type { Blueprint as _Blueprint, ChangeSet, PjtLock } from "@projitect/core"
+import { buildPlan, diffLockfile } from "../src/plan.js"
+import type { ByBlueprint } from "../src/plan.js"
 
 /**
  * `plan.ts` is the engine room: it walks the blueprint tree, runs each blueprint's plan Effect to
@@ -31,7 +31,7 @@ const ROOT = os.tmpdir()
 const makeBlueprint = (params: {
   id: string
   version?: string
-  ops: ReadonlyArray<ChangeSet.Operation>
+  ops: readonly ChangeSet.Operation[]
 }): _Blueprint.Blueprint => ({
   id: params.id,
   version: params.version ?? "1.0.0",
@@ -48,7 +48,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:a",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:a",
             path: ".gitignore",
             commentPrefix: "#",
@@ -60,7 +60,7 @@ describe("buildPlan — happy paths", () => {
     const { plan, byBlueprint } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     expect(plan.files).toHaveLength(1)
     expect(plan.files[0]).toMatchObject({
-      kind: "region",
+      _tag: "Region",
       path: ".gitignore",
       commentPrefix: "#",
       regions: [{ ownerId: "pjt:a", content: ".DS_Store\n" }],
@@ -68,7 +68,7 @@ describe("buildPlan — happy paths", () => {
     expect(byBlueprint).toEqual({
       "pjt:a": {
         version: "1.0.0",
-        operations: [{ mode: "region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
+        operations: [{ _tag: "Region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
       },
     })
   })
@@ -79,7 +79,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:a",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:a",
             path: ".gitignore",
             commentPrefix: "#",
@@ -91,7 +91,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:b",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:b",
             path: ".gitignore",
             commentPrefix: "#",
@@ -103,7 +103,7 @@ describe("buildPlan — happy paths", () => {
     const { plan } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     expect(plan.files).toHaveLength(1)
     expect(plan.files[0]).toMatchObject({
-      kind: "region",
+      _tag: "Region",
       regions: [
         { ownerId: "pjt:a", content: "a\n" },
         { ownerId: "pjt:b", content: "b\n" },
@@ -117,7 +117,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:a",
         ops: [
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:a",
             path: "package.json",
             ownedKeys: ["scripts.a"],
@@ -129,7 +129,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:b",
         ops: [
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:b",
             path: "package.json",
             ownedKeys: ["scripts.b"],
@@ -141,8 +141,9 @@ describe("buildPlan — happy paths", () => {
     const { plan } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     expect(plan.files).toHaveLength(1)
     const file = plan.files[0]
-    if (file?.kind !== "merge")
-      throw new Error(`expected merge FilePlan, got ${String(file?.kind)}`)
+    if (file?._tag !== "Merge") {
+      throw new Error(`expected merge FilePlan, got ${String(file?._tag)}`)
+    }
     expect(file.value).toEqual({
       scripts: { a: "true", b: "true" },
       name: "project",
@@ -160,14 +161,14 @@ describe("buildPlan — happy paths", () => {
         version: "2.3.4",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:multi",
             path: ".gitignore",
             commentPrefix: "#",
             content: "x\n",
           },
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:multi",
             path: "package.json",
             ownedKeys: ["scripts.x"],
@@ -180,8 +181,8 @@ describe("buildPlan — happy paths", () => {
     expect(byBlueprint["pjt:multi"]).toEqual({
       version: "2.3.4",
       operations: [
-        { mode: "region", path: ".gitignore", ownerId: "pjt:multi", commentPrefix: "#" },
-        { mode: "merge", path: "package.json", ownedKeys: ["scripts.x"] },
+        { _tag: "Region", path: ".gitignore", ownerId: "pjt:multi", commentPrefix: "#" },
+        { _tag: "Merge", path: "package.json", ownedKeys: ["scripts.x"] },
       ],
     })
   })
@@ -192,7 +193,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:readme:intro",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:readme:intro",
             path: "README.md",
             commentPrefix: "<!--",
@@ -204,14 +205,14 @@ describe("buildPlan — happy paths", () => {
     ]
     const { plan, byBlueprint } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     expect(plan.files[0]).toMatchObject({
-      kind: "region",
+      _tag: "Region",
       path: "README.md",
       commentPrefix: "<!--",
       commentSuffix: " -->",
     })
-    // toLockOp records the suffix so the remover can re-find the region on disk later.
+    // ToLockOp records the suffix so the remover can re-find the region on disk later.
     expect(byBlueprint["pjt:readme:intro"]?.operations[0]).toEqual({
-      mode: "region",
+      _tag: "Region",
       path: "README.md",
       ownerId: "pjt:readme:intro",
       commentPrefix: "<!--",
@@ -225,7 +226,7 @@ describe("buildPlan — happy paths", () => {
         id: "pjt:hash",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:hash",
             path: ".gitignore",
             commentPrefix: "#",
@@ -237,7 +238,7 @@ describe("buildPlan — happy paths", () => {
     const { byBlueprint } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     const op = byBlueprint["pjt:hash"]?.operations[0]
     expect(op).toEqual({
-      mode: "region",
+      _tag: "Region",
       path: ".gitignore",
       ownerId: "pjt:hash",
       commentPrefix: "#",
@@ -251,19 +252,19 @@ describe("buildPlan — happy paths", () => {
         directory("web", [
           makeBlueprint({
             id: "pjt:scoped",
-            ops: [{ mode: "owned", ownerId: "pjt:scoped", path: "tsconfig.json", content: "{}\n" }],
+            ops: [{ _tag: "Owned", ownerId: "pjt:scoped", path: "tsconfig.json", content: "{}\n" }],
           }),
         ]),
       ]),
     ]
     const { plan, byBlueprint } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     expect(plan.files[0]).toMatchObject({
-      kind: "owned",
+      _tag: "Owned",
       path: "apps/web/tsconfig.json",
     })
     // The lockfile entry must also carry the rebased path; otherwise removals miss the file.
     expect(byBlueprint["pjt:scoped"]?.operations[0]).toEqual({
-      mode: "owned",
+      _tag: "Owned",
       path: "apps/web/tsconfig.json",
       ownerId: "pjt:scoped",
     })
@@ -275,13 +276,13 @@ describe("buildPlan — conflict detection", () => {
     const tree = [
       makeBlueprint({
         id: "pjt:a",
-        ops: [{ mode: "owned", ownerId: "pjt:a", path: "x.txt", content: "a" }],
+        ops: [{ _tag: "Owned", ownerId: "pjt:a", path: "x.txt", content: "a" }],
       }),
       makeBlueprint({
         id: "pjt:b",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:b",
             path: "x.txt",
             commentPrefix: "#",
@@ -300,7 +301,7 @@ describe("buildPlan — conflict detection", () => {
         id: "pjt:a",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:dup",
             path: ".gitignore",
             commentPrefix: "#",
@@ -312,7 +313,7 @@ describe("buildPlan — conflict detection", () => {
         id: "pjt:b",
         ops: [
           {
-            mode: "region",
+            _tag: "Region",
             ownerId: "pjt:dup",
             path: ".gitignore",
             commentPrefix: "#",
@@ -331,7 +332,7 @@ describe("buildPlan — conflict detection", () => {
         id: "pjt:a",
         ops: [
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:a",
             path: "package.json",
             ownedKeys: ["scripts.test"],
@@ -343,7 +344,7 @@ describe("buildPlan — conflict detection", () => {
         id: "pjt:b",
         ops: [
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:b",
             path: "package.json",
             ownedKeys: ["scripts.test"],
@@ -360,11 +361,11 @@ describe("buildPlan — conflict detection", () => {
     const tree = [
       makeBlueprint({
         id: "pjt:a",
-        ops: [{ mode: "owned", ownerId: "pjt:a", path: "f.txt", content: "a" }],
+        ops: [{ _tag: "Owned", ownerId: "pjt:a", path: "f.txt", content: "a" }],
       }),
       makeBlueprint({
         id: "pjt:b",
-        ops: [{ mode: "owned", ownerId: "pjt:b", path: "f.txt", content: "b" }],
+        ops: [{ _tag: "Owned", ownerId: "pjt:b", path: "f.txt", content: "b" }],
       }),
     ]
     const err = runError(buildPlan({ tree, projectRoot: ROOT }))
@@ -375,11 +376,11 @@ describe("buildPlan — conflict detection", () => {
     const tree = [
       makeBlueprint({
         id: "pjt:a",
-        ops: [{ mode: "seed", ownerId: "pjt:a", path: ".pjt.ts", content: "a" }],
+        ops: [{ _tag: "Seed", ownerId: "pjt:a", path: ".pjt.ts", content: "a" }],
       }),
       makeBlueprint({
         id: "pjt:b",
-        ops: [{ mode: "seed", ownerId: "pjt:b", path: ".pjt.ts", content: "b" }],
+        ops: [{ _tag: "Seed", ownerId: "pjt:b", path: ".pjt.ts", content: "b" }],
       }),
     ]
     const err = runError(buildPlan({ tree, projectRoot: ROOT }))
@@ -393,14 +394,14 @@ describe("buildPlan — conflict detection", () => {
         id: "pjt:a",
         ops: [
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:a",
             path: "package.json",
             ownedKeys: ["scripts.test"],
             value: { scripts: { test: "first" } },
           },
           {
-            mode: "merge",
+            _tag: "Merge",
             ownerId: "pjt:a",
             path: "package.json",
             ownedKeys: ["scripts.test"],
@@ -412,7 +413,7 @@ describe("buildPlan — conflict detection", () => {
     const { plan } = await Effect.runPromise(buildPlan({ tree, projectRoot: ROOT }))
     // Last-write wins on deep-merge for self-claims.
     expect(plan.files[0]).toMatchObject({
-      kind: "merge",
+      _tag: "Merge",
       value: { scripts: { test: "second" } },
     })
   })
@@ -436,21 +437,21 @@ describe("diffLockfile", () => {
     const previous = lockOf({
       "pjt:a": {
         version: "1.0.0",
-        operations: [{ mode: "region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
+        operations: [{ _tag: "Region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
       },
       "pjt:b": {
         version: "1.0.0",
-        operations: [{ mode: "owned", path: "x.ts", ownerId: "pjt:b" }],
+        operations: [{ _tag: "Owned", path: "x.ts", ownerId: "pjt:b" }],
       },
     })
     const current: ByBlueprint = {
       "pjt:a": {
         version: "1.0.0",
-        operations: [{ mode: "region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
+        operations: [{ _tag: "Region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" }],
       },
     }
     const out = diffLockfile({ previous, current })
-    expect(out.removals).toEqual([{ mode: "owned", path: "x.ts", ownerId: "pjt:b" }])
+    expect(out.removals).toEqual([{ _tag: "Owned", path: "x.ts", ownerId: "pjt:b" }])
     expect(out.upgrades).toEqual([])
   })
 
@@ -458,13 +459,13 @@ describe("diffLockfile", () => {
     const previous = lockOf({
       "pjt:a": {
         version: "0.0.0",
-        operations: [{ mode: "owned", path: "x.ts", ownerId: "pjt:a" }],
+        operations: [{ _tag: "Owned", path: "x.ts", ownerId: "pjt:a" }],
       },
     })
     const current: ByBlueprint = {
       "pjt:a": {
         version: "1.0.0",
-        operations: [{ mode: "owned", path: "x.ts", ownerId: "pjt:a" }],
+        operations: [{ _tag: "Owned", path: "x.ts", ownerId: "pjt:a" }],
       },
     }
     const out = diffLockfile({ previous, current })
@@ -476,21 +477,21 @@ describe("diffLockfile", () => {
     const previous = lockOf({
       "pjt:left": {
         version: "1.0.0",
-        operations: [{ mode: "owned", path: "left.ts", ownerId: "pjt:left" }],
+        operations: [{ _tag: "Owned", path: "left.ts", ownerId: "pjt:left" }],
       },
       "pjt:stay": {
         version: "0.9.0",
-        operations: [{ mode: "owned", path: "stay.ts", ownerId: "pjt:stay" }],
+        operations: [{ _tag: "Owned", path: "stay.ts", ownerId: "pjt:stay" }],
       },
     })
     const current: ByBlueprint = {
       "pjt:stay": {
         version: "1.0.0",
-        operations: [{ mode: "owned", path: "stay.ts", ownerId: "pjt:stay" }],
+        operations: [{ _tag: "Owned", path: "stay.ts", ownerId: "pjt:stay" }],
       },
     }
     const out = diffLockfile({ previous, current })
-    expect(out.removals).toEqual([{ mode: "owned", path: "left.ts", ownerId: "pjt:left" }])
+    expect(out.removals).toEqual([{ _tag: "Owned", path: "left.ts", ownerId: "pjt:left" }])
     expect(out.upgrades).toEqual([{ blueprintId: "pjt:stay", from: "0.9.0", to: "1.0.0" }])
   })
 })

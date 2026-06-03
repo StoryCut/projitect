@@ -4,6 +4,7 @@ import unicorn from "eslint-plugin-unicorn"
 import packageJson from "eslint-plugin-package-json"
 import eslintComments from "@eslint-community/eslint-plugin-eslint-comments/configs"
 import vitestPlugin from "@vitest/eslint-plugin"
+import importPlugin from "eslint-plugin-import"
 import prettierRecommended from "eslint-plugin-prettier/recommended"
 
 /**
@@ -29,6 +30,9 @@ export default tseslint.config(
       "**/bin/**",
       "**/.husky/**",
       "**/.changeset/*.md",
+      // Contributor tooling (kanban skill scripts), not published library source — see the
+      // "Scope: contributor tooling" note in AGENTS.md. Not held to the library's strict rules.
+      ".claude/**",
       "prettier.config.js",
       "vitest.config.ts",
       "eslint.config.js",
@@ -38,14 +42,17 @@ export default tseslint.config(
 
   // ===== Base presets (JS-wide; type-checked rules scoped to TS below) =====
   js.configs.recommended,
-  unicorn.configs["flat/recommended"],
+  unicorn.configs["flat/all"],
   eslintComments.recommended,
 
   // ===== Type-checked TS rules — scoped to TS files only so they don't trip on JSON =====
-  ...tseslint.configs.recommendedTypeChecked.map((cfg) => ({
-    ...cfg,
-    files: ["**/*.{ts,tsx,mts,cts}"],
-  })),
+  // Adapted from StoryCut: strict + stylistic type-checked presets (not just recommended).
+  ...[...tseslint.configs.strictTypeChecked, ...tseslint.configs.stylisticTypeChecked].map(
+    (cfg) => ({
+      ...cfg,
+      files: ["**/*.{ts,tsx,mts,cts}"],
+    }),
+  ),
 
   // Prettier integration. Last so it disables conflicting style rules from earlier presets.
   prettierRecommended,
@@ -54,6 +61,7 @@ export default tseslint.config(
   // parser via eslint-plugin-package-json below) =====
   {
     files: ["**/*.{ts,tsx,mts,cts,js,mjs,cjs,jsx}"],
+    plugins: { import: importPlugin },
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -69,10 +77,116 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      // Adapted from StoryCut: stronger boolean / template-literal discipline.
+      "@typescript-eslint/strict-boolean-expressions": "error",
+      "@typescript-eslint/restrict-template-expressions": [
+        "error",
+        {
+          allowNumber: true,
+          allowBoolean: true,
+          allowNever: false,
+          allowNullish: false,
+          allowRegExp: false,
+        },
+      ],
 
-      // Unicorn overrides — silence rules that don't fit our style.
+      // ===== Core quality rules (adapted from StoryCut; React-specific rules omitted) =====
+      "no-warning-comments": "error",
+      "no-console": "error",
+      "no-useless-rename": "error",
+      yoda: ["error", "never"],
+      "require-unicode-regexp": "error",
+      radix: ["error", "always"],
+      "prefer-template": "error",
+      "prefer-spread": "error",
+      "prefer-rest-params": "error",
+      "prefer-regex-literals": "error",
+      "prefer-promise-reject-errors": "error",
+      "prefer-object-spread": "error",
+      "prefer-object-has-own": "error",
+      "prefer-numeric-literals": "error",
+      "prefer-named-capture-group": "error",
+      "prefer-const": ["error", { ignoreReadBeforeAssign: true }],
+      "prefer-arrow-callback": ["error", { allowNamedFunctions: true }],
+      "operator-assignment": ["error", "never"],
+      "logical-assignment-operators": ["error", "never"],
+      "one-var": ["error", "never"],
+      "object-shorthand": ["error", "always"],
+      "no-void": "error",
+      "no-var": "error",
+      "no-useless-return": "error",
+      "no-useless-constructor": "error",
+      "no-useless-concat": "error",
+      "no-useless-computed-key": "error",
+      "no-useless-call": "error",
+      "no-unused-expressions": "error",
+      "no-unneeded-ternary": "error",
+      "no-throw-literal": "error",
+      "no-sequences": "error",
+      "no-script-url": "error",
+      "no-return-assign": "error",
+      "no-proto": "error",
+      "no-object-constructor": "error",
+      "no-new-wrappers": "error",
+      "no-new-func": "error",
+      "no-new": "error",
+      "no-negated-condition": "error",
+      "no-multi-assign": "error",
+      "no-loop-func": "error",
+      "no-lonely-if": "error",
+      "no-lone-blocks": "error",
+      "no-labels": "error",
+      "no-iterator": "error",
+      "no-invalid-this": "error",
+      "no-implied-eval": "error",
+      "no-implicit-globals": "error",
+      "no-implicit-coercion": "error",
+      "no-extra-bind": "error",
+      "no-extend-native": "error",
+      "no-eval": "error",
+      "no-eq-null": "error",
+      "no-empty-function": "error",
+      "no-else-return": ["error", { allowElseIf: false }],
+      "no-bitwise": "error",
+      "no-array-constructor": "error",
+      "new-cap": ["error", { capIsNew: false }],
+      "guard-for-in": "error",
+      "func-style": ["error", "declaration", { allowArrowFunctions: true }],
+      "func-names": ["error", "always", { generators: "never" }],
+      "func-name-matching": "error",
+      eqeqeq: ["error", "always"],
+      // Type-aware variant: respects `noPropertyAccessFromIndexSignature` (bracket access for
+      // index-signature props stays required).
+      "dot-notation": "off",
+      "@typescript-eslint/dot-notation": ["error", { allowIndexSignaturePropertyAccess: true }],
+      "default-case-last": "error",
+      "default-case": "error",
+      curly: ["error", "all"],
+      "consistent-this": ["error", "self"],
+      "capitalized-comments": ["error", "always", { ignoreConsecutiveComments: true }],
+      camelcase: ["error", { properties: "never" }],
+      "arrow-body-style": ["error", "as-needed"],
+      "require-atomic-updates": "error",
+      "no-unreachable-loop": "error",
+      "no-unmodified-loop-condition": "error",
+      "no-template-curly-in-string": "error",
+      "no-self-compare": "error",
+      "no-promise-executor-return": "error",
+      "no-constructor-return": "error",
+      "no-await-in-loop": "error",
+      "array-callback-return": "error",
+
+      // Unicorn overrides — silence rules that don't fit our style (matched to StoryCut's set,
+      // now that we run the `flat/all` preset).
       // Effect uses `null` as a meaningful absence (vs `Option.none()`); allowed.
       "unicorn/no-null": "off",
+      // `newFoo` / `forFoo` identifiers are common and harmless.
+      "unicorn/no-keyword-prefix": "off",
+      // Its autofix drops the encoding arg, but TS's `JSON.parse` rejects a Buffer argument.
+      "unicorn/prefer-json-parse-buffer": "off",
+      "unicorn/consistent-existence-index-check": "off",
+      "unicorn/no-array-sort": "off",
+      "unicorn/throw-new-error": "off",
       // Some `Effect.gen` returns benefit from `undefined` explicitly.
       "unicorn/no-useless-undefined": [
         "error",
@@ -110,6 +224,30 @@ export default tseslint.config(
 
       // ESLint comments
       "@eslint-community/eslint-comments/no-unused-disable": "error",
+
+      // ===== Import hygiene (adapted from StoryCut) — syntactic rules only; tsc already
+      // catches unresolved / missing-dependency imports, so we skip the resolver-backed rules. =====
+      "import/first": "error",
+      "import/no-duplicates": "error",
+      "import/newline-after-import": "error",
+      // NOTE: StoryCut also runs `import/no-useless-path-segments`, but it strips the explicit
+      // `/index.js` that this repo's NodeNext resolution requires — so it's omitted here.
+      "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
+      "import/order": ["error", { "newlines-between": "never" }],
+      // Ban `<package>/index` imports (e.g. `effect/index`): they resolve locally because the
+      // @effect/language-service patch strips `/index`, but break under an unpatched tsc/bundler.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: String.raw`^(?!\.).+/index$`,
+              message:
+                "Import the package root (e.g. `effect`), not its `/index` path — the @effect/language-service patch hides this locally but it breaks elsewhere.",
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -165,6 +303,21 @@ export default tseslint.config(
             },
           ],
         },
+      ],
+    },
+  },
+
+  // ===== @projitect/internal: the *X utility modules keep their PascalCase names =====
+  //
+  // The Effect-extension modules (`StructX`, `RecordX`, …) are named in PascalCase by
+  // convention — the namespace and the file match, and AGENTS.md refers to them that way.
+  // Allow PascalCase filenames here; kebab-case still covers `index.ts`.
+  {
+    files: ["packages/internal/**/*.ts"],
+    rules: {
+      "unicorn/filename-case": [
+        "error",
+        { cases: { kebabCase: true, pascalCase: true } },
       ],
     },
   },

@@ -1,6 +1,6 @@
+import * as readline from "node:readline/promises"
 import { Effect, Layer, Terminal } from "effect"
 import * as PlatformError from "effect/PlatformError"
-import * as readline from "node:readline/promises"
 
 /**
  * Node-backed `Terminal` Layer.
@@ -13,8 +13,11 @@ import * as readline from "node:readline/promises"
  *   that would call it is wizard mode. The Effect returned fails clearly if exercised.
  */
 const make = Terminal.make({
+  // @types/node types columns/rows as non-nullable, but they're undefined on non-TTY stdout.
+  /* eslint-disable @typescript-eslint/no-unnecessary-condition */
   columns: Effect.sync(() => process.stdout.columns ?? 80),
   rows: Effect.sync(() => process.stdout.rows ?? 24),
+  /* eslint-enable @typescript-eslint/no-unnecessary-condition */
   display: (text) =>
     Effect.try({
       try: () => {

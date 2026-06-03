@@ -1,5 +1,6 @@
 import { Effect } from "effect"
-import { ChangeSet, type Blueprint } from "@projitect/core"
+import { ChangeSet } from "@projitect/core"
+import type { Blueprint } from "@projitect/core"
 
 /**
  * The projitect blueprint. Automatically prepended to every user's blueprint tree by the `pjt()`
@@ -35,7 +36,7 @@ export const projitectBlueprint = (versions: {
   plan: Effect.succeed(
     ChangeSet.of(
       {
-        mode: "merge",
+        _tag: "Merge",
         ownerId: "pjt:projitect:bootstrap",
         path: "package.json",
         ownedKeys: ["scripts.pjt", "devDependencies.projitect", "devDependencies.effect"],
@@ -48,7 +49,7 @@ export const projitectBlueprint = (versions: {
         },
       },
       {
-        mode: "region",
+        _tag: "Region",
         ownerId: "pjt:projitect:imports",
         path: ".pjt.ts",
         commentPrefix: "//",

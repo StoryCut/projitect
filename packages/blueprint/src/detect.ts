@@ -18,10 +18,18 @@ export const detectPackageManager: Effect.Effect<
   BlueprintFileSystem
 > = Effect.gen(function* () {
   const fs = yield* BlueprintFileSystem
-  if (yield* fs.exists("pnpm-lock.yaml")) return "pnpm" as const
-  if (yield* fs.exists("bun.lockb")) return "bun" as const
-  if (yield* fs.exists("yarn.lock")) return "yarn" as const
-  if (yield* fs.exists("package-lock.json")) return "npm" as const
+  if (yield* fs.exists("pnpm-lock.yaml")) {
+    return "pnpm" as const
+  }
+  if (yield* fs.exists("bun.lockb")) {
+    return "bun" as const
+  }
+  if (yield* fs.exists("yarn.lock")) {
+    return "yarn" as const
+  }
+  if (yield* fs.exists("package-lock.json")) {
+    return "npm" as const
+  }
   return "npm" as const
 })
 

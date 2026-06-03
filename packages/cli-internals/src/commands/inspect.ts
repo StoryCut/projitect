@@ -1,9 +1,11 @@
 import { Effect } from "effect"
-import type { Errors, PjtLock } from "@projitect/core"
-import { type ProjitectConfig } from "@projitect/core"
-import { loadBlueprintFile, isEffectTree, type BlueprintTree } from "../loader.js"
-import { buildPlan, diffLockfile, type UpgradeRecord } from "../plan.js"
-import { diffPlan, renderInspectReport, type FileDiff } from "../differ.js"
+import type { Errors, PjtLock, ProjitectConfig } from "@projitect/core"
+import { loadBlueprintFile, isEffectTree } from "../loader.js"
+import type { BlueprintTree } from "../loader.js"
+import { buildPlan, diffLockfile } from "../plan.js"
+import type { UpgradeRecord } from "../plan.js"
+import { diffPlan, renderInspectReport } from "../differ.js"
+import type { FileDiff } from "../differ.js"
 import { makeRealLayer } from "../filesystem-impl.js"
 import { readLockfile } from "../lockfile.js"
 
@@ -15,9 +17,9 @@ import { readLockfile } from "../lockfile.js"
 export interface InspectResult {
   readonly hasDrift: boolean
   readonly output: string
-  readonly files: ReadonlyArray<FileDiff>
-  readonly removals: ReadonlyArray<PjtLock.LockOperation>
-  readonly upgrades: ReadonlyArray<UpgradeRecord>
+  readonly files: readonly FileDiff[]
+  readonly removals: readonly PjtLock.LockOperation[]
+  readonly upgrades: readonly UpgradeRecord[]
 }
 
 /**

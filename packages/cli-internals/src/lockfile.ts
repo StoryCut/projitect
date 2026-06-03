@@ -24,7 +24,9 @@ export const readLockfile = (params: {
         () => null,
       ),
     )
-    if (raw === null) return null
+    if (raw === null) {
+      return null
+    }
 
     const parsed = yield* Effect.try({
       try: () => JSON.parse(raw) as unknown,

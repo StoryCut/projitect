@@ -1,16 +1,10 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { Effect } from "effect"
-import type {
-  ProjectPlan,
-  RegionPlanFile,
-  MergePlanFile,
-  OwnedPlanFile,
-  SeedPlanFile,
-} from "./plan.js"
-import { findRegion, renderRegion, upsertRegion } from "./region.js"
-import { mergeIntoExisting } from "./differ.js"
+import { Effect, Match } from "effect"
+import { RecordX } from "@projitect/internal"
 import type { Errors } from "@projitect/core"
+import type { FilePlan, ProjectPlan, RegionPlanFile, MergePlanFile } from "./plan.js"
+import { findRegion, renderRegion, upsertRegion } from "./region.js"
 
 const readIfExists = (full: string): Promise<string | null> =>
   fs.readFile(full, "utf8").then(
@@ -28,16 +22,20 @@ const writeFile = (full: string, content: string): Promise<void> =>
 export const applyPlan = (params: {
   readonly plan: ProjectPlan
   readonly projectRoot: string
-}): Effect.Effect<ReadonlyArray<string>, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
+}): Effect.Effect<readonly string[], Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { plan, projectRoot } = params
   return Effect.gen(function* () {
-    const written: Array<string> = []
+    const written: string[] = []
     for (const file of plan.files) {
       const full = path.resolve(projectRoot, file.path)
       const current = yield* Effect.promise(() => readIfExists(full))
       const next = yield* nextContent({ file, current })
-      if (next === null) continue // seed-mode no-op
-      if (next === current) continue // already in sync
+      if (next === null) {
+        continue
+      } // Seed-mode no-op
+      if (next === current) {
+        continue
+      } // Already in sync
       yield* Effect.promise(() => writeFile(full, next))
       written.push(file.path)
     }
@@ -46,25 +44,15 @@ export const applyPlan = (params: {
 }
 
 const nextContent = (params: {
-  readonly file: RegionPlanFile | MergePlanFile | OwnedPlanFile | SeedPlanFile
+  readonly file: FilePlan
   readonly current: string | null
-}): Effect.Effect<string | null, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
-  const { file, current } = params
-  switch (file.kind) {
-    case "region": {
-      return nextRegion(file, current)
-    }
-    case "merge": {
-      return Effect.succeed(nextMerge(file, current))
-    }
-    case "owned": {
-      return Effect.succeed(file.content)
-    }
-    case "seed": {
-      return Effect.succeed(current === null ? file.content : null)
-    }
-  }
-}
+}): Effect.Effect<string | null, Errors.RegionMissingEnd | Errors.RegionDuplicate> =>
+  Match.valueTags(params.file, {
+    Region: (file) => nextRegion(file, params.current),
+    Merge: (file) => Effect.succeed(nextMerge(file, params.current)),
+    Owned: (file) => Effect.succeed(file.content),
+    Seed: (file) => Effect.succeed(params.current === null ? file.content : null),
+  })
 
 const nextRegion = (
   file: RegionPlanFile,
@@ -93,7 +81,7 @@ const nextRegion = (
 
 const nextMerge = (file: MergePlanFile, current: string | null): string => {
   const existing = current === null ? {} : (safeParseJson(current) ?? {})
-  const merged = mergeIntoExisting(existing, file.value)
+  const merged = RecordX.deepMerge(existing, file.value)
   return `${JSON.stringify(merged, null, 2)}\n`
 }
 

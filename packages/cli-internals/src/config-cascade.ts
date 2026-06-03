@@ -1,4 +1,6 @@
+import { Array, Predicate } from "effect"
 import { ProjitectConfig } from "@projitect/core"
+import { StructX } from "@projitect/internal"
 
 /** Partial config with mutable properties — for building up an override layer locally. */
 export type WritablePartialConfig = {
@@ -20,9 +22,7 @@ export const resolveConfig = (layers: {
   readonly cliArgs?: WritablePartialConfig
 }): ProjitectConfig.ProjitectConfig =>
   ProjitectConfig.resolve(
-    ...[layers.env, layers.blueprintFile, layers.cliArgs].filter(
-      (l): l is WritablePartialConfig => l !== undefined,
-    ),
+    ...Array.filter([layers.env, layers.blueprintFile, layers.cliArgs], Predicate.isNotUndefined),
   )
 
 /**
@@ -31,30 +31,32 @@ export const resolveConfig = (layers: {
  */
 export const parseEnv = (
   env: Readonly<Record<string, string | undefined>>,
-): WritablePartialConfig => {
-  const out: WritablePartialConfig = {}
-  const projectRoot = env["PJT_PROJECT_ROOT"]
-  if (projectRoot !== undefined) out.projectRoot = projectRoot
-  const blueprintFile = env["PJT_BLUEPRINT_FILE"]
-  if (blueprintFile !== undefined) out.blueprintFile = blueprintFile
-  const requireCleanGit = parseBool(env["PJT_REQUIRE_CLEAN_GIT"])
-  if (requireCleanGit !== undefined) out.requireCleanGit = requireCleanGit
-  const jsonOutput = parseBool(env["PJT_JSON_OUTPUT"])
-  if (jsonOutput !== undefined) out.jsonOutput = jsonOutput
-  const verbosity = parseNumber(env["PJT_VERBOSITY"])
-  if (verbosity !== undefined) out.verbosity = verbosity
-  return out
-}
+): WritablePartialConfig =>
+  StructX.filterDefined({
+    projectRoot: env["PJT_PROJECT_ROOT"],
+    blueprintFile: env["PJT_BLUEPRINT_FILE"],
+    requireCleanGit: parseBool(env["PJT_REQUIRE_CLEAN_GIT"]),
+    jsonOutput: parseBool(env["PJT_JSON_OUTPUT"]),
+    verbosity: parseNumber(env["PJT_VERBOSITY"]),
+  })
 
 const parseBool = (v: string | undefined): boolean | undefined => {
-  if (v === undefined) return undefined
-  if (v === "1" || v.toLowerCase() === "true") return true
-  if (v === "0" || v.toLowerCase() === "false") return false
+  if (v === undefined) {
+    return undefined
+  }
+  if (v === "1" || v.toLowerCase() === "true") {
+    return true
+  }
+  if (v === "0" || v.toLowerCase() === "false") {
+    return false
+  }
   return undefined
 }
 
 const parseNumber = (v: string | undefined): number | undefined => {
-  if (v === undefined) return undefined
+  if (v === undefined) {
+    return undefined
+  }
   const n = Number(v)
   return Number.isFinite(n) ? n : undefined
 }

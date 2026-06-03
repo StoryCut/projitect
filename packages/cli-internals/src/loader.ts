@@ -1,9 +1,10 @@
 import path from "node:path"
 import { promises as fs } from "node:fs"
 import { pathToFileURL } from "node:url"
-import { Effect } from "effect"
-import { Errors, type BlueprintFileSystem } from "@projitect/core"
-import type { Blueprint } from "@projitect/core"
+import { Array, Effect, Match, Predicate } from "effect"
+import { Errors } from "@projitect/core"
+import type { BlueprintFileSystem, Blueprint } from "@projitect/core"
+import { PredicateX, StructX } from "@projitect/internal"
 import type { DirectoryBlueprint } from "@projitect/blueprint"
 
 /**
@@ -14,7 +15,7 @@ import type { DirectoryBlueprint } from "@projitect/blueprint"
  * The Effect form may fail with any `BlueprintError` and may require `BlueprintFileSystem` —
  * the CLI provides a "config-time" FS layer with broad read permissions before invoking it.
  */
-export type BlueprintTree = ReadonlyArray<Blueprint.Blueprint | DirectoryBlueprint>
+export type BlueprintTree = readonly (Blueprint.Blueprint | DirectoryBlueprint)[]
 
 export interface ProjitectFile {
   readonly _tag: "ProjitectConfig"
@@ -38,7 +39,7 @@ export const pjt = (input: {
 }): ProjitectFile => ({
   _tag: "ProjitectConfig",
   blueprints: input.blueprints,
-  ...(input.config !== undefined && { config: input.config }),
+  ...StructX.defined("config", input.config),
 })
 
 /** Type guard: did the user pass an Effect, or a literal array? */
@@ -79,7 +80,7 @@ export const loadBlueprintFile = (params: {
       })
     }
     const module_ = yield* Effect.tryPromise({
-      try: () => import(pathToFileURL(full).href) as Promise<{ default?: unknown }>,
+      try: (): Promise<{ readonly default?: unknown }> => import(pathToFileURL(full).href),
       catch: (e) =>
         new Errors.LoaderImportFailed({
           id: "pjt.loader.import-failed",
@@ -102,15 +103,13 @@ export const loadBlueprintFile = (params: {
 }
 
 const isProjitectFile = (v: unknown): v is ProjitectFile =>
-  typeof v === "object" && v !== null && (v as { _tag?: unknown })._tag === "ProjitectConfig"
+  PredicateX.isPlainObject(v) && v["_tag"] === "ProjitectConfig"
 
 const describe = (v: unknown): string =>
-  v === undefined
-    ? "undefined"
-    : v === null
-      ? "null"
-      : Array.isArray(v)
-        ? "Array"
-        : typeof v === "object"
-          ? 'object without `_tag: "ProjitectConfig"`'
-          : typeof v
+  Match.value(v).pipe(
+    Match.when(Predicate.isUndefined, () => "undefined"),
+    Match.when(Predicate.isNull, () => "null"),
+    Match.when(Array.isArray, () => "Array"),
+    Match.when(PredicateX.isPlainObject, () => 'object without `_tag: "ProjitectConfig"`'),
+    Match.orElse((value) => typeof value),
+  )

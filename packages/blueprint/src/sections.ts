@@ -19,6 +19,7 @@
  */
 
 import type { Blueprint, Permission } from "@projitect/core"
+import { StructX } from "@projitect/internal"
 import { regionFile } from "./constructors.js"
 
 export interface SectionSpec {
@@ -27,7 +28,7 @@ export interface SectionSpec {
   readonly description?: string
   readonly path: string
   readonly content: string
-  readonly extraPermissions?: ReadonlyArray<Permission.Permission>
+  readonly extraPermissions?: readonly Permission.Permission[]
 }
 
 /**
@@ -56,12 +57,12 @@ export const markdownSection = (spec: SectionSpec): Blueprint.Blueprint =>
   regionFile({
     id: spec.id,
     version: spec.version,
-    ...(spec.description !== undefined && { description: spec.description }),
+    ...StructX.defined("description", spec.description),
     path: spec.path,
     commentPrefix: "<!--",
     commentSuffix: " -->",
     content: spec.content,
-    ...(spec.extraPermissions !== undefined && { extraPermissions: spec.extraPermissions }),
+    ...StructX.defined("extraPermissions", spec.extraPermissions),
   })
 
 /**
@@ -90,9 +91,9 @@ export const ignoreSection = (spec: SectionSpec): Blueprint.Blueprint =>
   regionFile({
     id: spec.id,
     version: spec.version,
-    ...(spec.description !== undefined && { description: spec.description }),
+    ...StructX.defined("description", spec.description),
     path: spec.path,
     commentPrefix: "#",
     content: spec.content,
-    ...(spec.extraPermissions !== undefined && { extraPermissions: spec.extraPermissions }),
+    ...StructX.defined("extraPermissions", spec.extraPermissions),
   })

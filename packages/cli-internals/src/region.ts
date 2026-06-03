@@ -1,4 +1,5 @@
-import { Effect } from "effect"
+import { Data, Effect, String } from "effect"
+import { StringX } from "@projitect/internal"
 import { Errors } from "@projitect/core"
 
 /**
@@ -11,18 +12,16 @@ const START = (prefix: string, owner: string, suffix = ""): string =>
 const END = (prefix: string, owner: string, suffix = ""): string =>
   `${prefix} ${owner} end${suffix}`
 
-interface RegionFound {
-  readonly kind: "found"
-  readonly startLine: number
-  readonly endLine: number
-  readonly content: string
-}
-
-interface RegionAbsent {
-  readonly kind: "absent"
-}
-
-export type RegionLookup = RegionFound | RegionAbsent
+export type RegionLookup = Data.TaggedEnum<{
+  readonly Found: {
+    readonly startLine: number
+    readonly endLine: number
+    readonly content: string
+  }
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Data.taggedEnum's no-field member shape
+  readonly Absent: {}
+}>
+export const RegionLookup = Data.taggedEnum<RegionLookup>()
 
 /**
  * Find the existing region for `ownerId` inside `fileContent`. Returns its line range and
@@ -52,7 +51,7 @@ export const findRegion = (params: {
     let duplicateStart = false
 
     for (const [index, line_] of lines.entries()) {
-      const line = line_?.trimEnd()
+      const line = line_.trimEnd()
       if (line === startMarker) {
         if (startLine === -1) {
           startLine = index
@@ -75,7 +74,9 @@ export const findRegion = (params: {
       )
     }
 
-    if (startLine === -1) return Effect.succeed({ kind: "absent" })
+    if (startLine === -1) {
+      return Effect.succeed(RegionLookup.Absent())
+    }
 
     if (endLine === -1 || endLine < startLine) {
       return Effect.fail(
@@ -89,12 +90,13 @@ export const findRegion = (params: {
       )
     }
 
-    return Effect.succeed({
-      kind: "found",
-      startLine,
-      endLine,
-      content: lines.slice(startLine + 1, endLine).join("\n"),
-    })
+    return Effect.succeed(
+      RegionLookup.Found({
+        startLine,
+        endLine,
+        content: lines.slice(startLine + 1, endLine).join("\n"),
+      }),
+    )
   })
 }
 
@@ -125,14 +127,13 @@ export const upsertRegion = (params: {
   readonly rendered: string
 }): string => {
   const { fileContent, existing, rendered } = params
-  if (existing.kind === "absent") {
-    if (fileContent.length === 0) return `${rendered}\n`
+  if (existing._tag === "Absent") {
+    if (String.isEmpty(fileContent)) {
+      return `${rendered}\n`
+    }
     return fileContent.endsWith("\n")
       ? `${fileContent}${rendered}\n`
       : `${fileContent}\n${rendered}\n`
   }
-  const lines = fileContent.split("\n")
-  const before = lines.slice(0, existing.startLine)
-  const after = lines.slice(existing.endLine + 1)
-  return [...before, rendered, ...after].join("\n")
+  return StringX.replaceLineRange(fileContent, existing.startLine, existing.endLine, [rendered])
 }

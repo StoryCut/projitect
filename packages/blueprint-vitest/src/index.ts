@@ -124,7 +124,7 @@ export const vitest = (options: VitestOptions = {}): Blueprint.Blueprint => {
       { kind: "write", glob: ".gitignore" },
     ],
     plan: Effect.gen(function* () {
-      const operations: Array<ChangeSet.Operation> = []
+      const operations: ChangeSet.Operation[] = []
       const mergeOps = (yield* packageJsonMerge.plan).operations
       const configOps = (yield* vitestConfig.plan).operations
       operations.push(...mergeOps, ...configOps)
@@ -143,7 +143,7 @@ const renderVitestConfig = (params: {
   readonly coverage: "v8" | null
   readonly environment: "node" | "jsdom"
 }): string => {
-  const lines: Array<string> = [
+  const lines: string[] = [
     'import { defineConfig } from "vitest/config"',
     "",
     "/**",

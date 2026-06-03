@@ -1,14 +1,15 @@
-import { Effect, Option, Terminal } from "effect"
+import { Effect, Match, Option, Terminal } from "effect"
 import { Argument, Command, Flag, Prompt } from "effect/unstable/cli"
 import type { Errors, ProjitectConfig } from "@projitect/core"
+import type { ProjitectPackageMetadata } from "../pm.js"
+import { parseEnv, resolveConfig } from "../config-cascade.js"
 import { inspect, renderInspectJson } from "./inspect.js"
 import { remodel } from "./remodel.js"
 import { build } from "./build.js"
 import { init } from "./init.js"
 import { explain } from "./explain.js"
-import { add, type SectionStrategy } from "./add.js"
-import type { ProjitectPackageMetadata } from "../pm.js"
-import { parseEnv, resolveConfig } from "../config-cascade.js"
+import { add } from "./add.js"
+import type { SectionStrategy } from "./add.js"
 
 /**
  * Per-handler error renderer. Catches our typed `ProjitectError` union and writes a
@@ -18,17 +19,17 @@ import { parseEnv, resolveConfig } from "../config-cascade.js"
  */
 const reportError = (error: Errors.ProjitectError): Effect.Effect<void, never, Terminal.Terminal> =>
   Effect.gen(function* () {
-    const id = (error as { id?: string }).id ?? "unknown"
-    const message = (error as { message?: string }).message ?? String(error)
-    yield* display(`Error [${id}]: ${message}\n`)
-    yield* display(`  See https://projitect.dev/errors/${id} or run \`pjt explain ${id}\`\n`)
+    yield* display(`Error [${error.id}]: ${error.message}\n`)
+    yield* display(
+      `  See https://projitect.dev/errors/${error.id} or run \`pjt explain ${error.id}\`\n`,
+    )
     process.exitCode = 1
   })
 
 const display = (text: string): Effect.Effect<void, never, Terminal.Terminal> =>
   Effect.gen(function* () {
     const terminal = yield* Terminal.Terminal
-    // best-effort write; PlatformError on display is non-actionable from a handler
+    // Best-effort write; PlatformError on display is non-actionable from a handler
     yield* Effect.ignore(terminal.display(text))
   })
 
@@ -47,13 +48,15 @@ const configFromEnv = (): ProjitectConfig.ProjitectConfig =>
  */
 const chooseSectionsInteractive = (
   metadata: ProjitectPackageMetadata,
-): Effect.Effect<ReadonlyArray<string>, never, Prompt.Environment> => {
+): Effect.Effect<readonly string[], never, Prompt.Environment> => {
   const sections = metadata.sections ?? []
-  if (sections.length === 0) return Effect.succeed([])
+  if (sections.length === 0) {
+    return Effect.succeed([])
+  }
   return Prompt.multiSelect({
     message: "Pick sections to add (space to toggle, enter to confirm):",
     choices: sections.map((name) => ({ title: name, value: name })),
-  }).pipe(Effect.catchTag("QuitError", () => Effect.succeed([] as ReadonlyArray<string>)))
+  }).pipe(Effect.catchTag("QuitError", () => Effect.succeed([] as readonly string[])))
 }
 
 // ---------------------------------------------------------------------------
@@ -78,11 +81,19 @@ const initCmd = Command.make(
           onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
         }),
       )
-      if (result === null) return
-      const lines: Array<string> = []
-      if (result.bootstrappedGit) lines.push("Initialized git repo (.git/)")
-      if (result.bootstrappedPackageJson) lines.push("Created package.json")
-      if (result.seededBlueprintFile) lines.push(`Created ${config.blueprintFile}`)
+      if (result === null) {
+        return
+      }
+      const lines: string[] = []
+      if (result.bootstrappedGit) {
+        lines.push("Initialized git repo (.git/)")
+      }
+      if (result.bootstrappedPackageJson) {
+        lines.push("Created package.json")
+      }
+      if (result.seededBlueprintFile) {
+        lines.push(`Created ${config.blueprintFile}`)
+      }
       if (result.remodel.written.length > 0) {
         lines.push(
           `Wrote ${result.remodel.written.length} file${result.remodel.written.length === 1 ? "" : "s"}:`,
@@ -110,8 +121,10 @@ const remodelCmd = Command.make("remodel", {}, () =>
         onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
       }),
     )
-    if (result === null) return
-    const parts: Array<string> = []
+    if (result === null) {
+      return
+    }
+    const parts: string[] = []
     if (result.written.length > 0) {
       parts.push(
         `Wrote ${result.written.length} file${result.written.length === 1 ? "" : "s"}:`,
@@ -124,7 +137,9 @@ const remodelCmd = Command.make("remodel", {}, () =>
         ...result.removed.map((p) => `  ${p}`),
       )
     }
-    if (parts.length === 0) parts.push("Project already in sync. No changes written.")
+    if (parts.length === 0) {
+      parts.push("Project already in sync. No changes written.")
+    }
     yield* display(`${parts.join("\n")}\n`)
   }),
 ).pipe(
@@ -155,10 +170,14 @@ const inspectCmd = Command.make(
           onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
         }),
       )
-      if (result === null) return
+      if (result === null) {
+        return
+      }
       const rendered = input.json ? renderInspectJson(result) : `${result.output}\n`
       yield* display(rendered)
-      if (result.hasDrift) process.exitCode = 1
+      if (result.hasDrift) {
+        process.exitCode = 1
+      }
     }),
 ).pipe(
   Command.withDescription(
@@ -194,19 +213,21 @@ const buildCmd = Command.make(
       }).pipe(
         Effect.matchEffect({
           onSuccess: (r) => Effect.succeed(r),
-          onFailure: (error) => {
-            // QuitError from Prompt = user pressed Ctrl-C; treat as graceful cancel.
-            const known = (error as { id?: string }).id
-            if (!known) {
-              process.exitCode = 130
-              return display("Cancelled.\n").pipe(Effect.as(null))
-            }
-            return reportError(error as Errors.ProjitectError).pipe(Effect.as(null))
-          },
+          onFailure: (error) =>
+            Match.value(error).pipe(
+              // QuitError from Prompt = user pressed Ctrl-C; treat as graceful cancel.
+              Match.tag("QuitError", () => {
+                process.exitCode = 130
+                return display("Cancelled.\n").pipe(Effect.as(null))
+              }),
+              Match.orElse((projitectError) => reportError(projitectError).pipe(Effect.as(null))),
+            ),
         }),
       )
-      if (result === null) return
-      const lines: Array<string> = []
+      if (result === null) {
+        return
+      }
+      const lines: string[] = []
       if (result.wiped.length === 0 && result.remodel.written.length === 0) {
         lines.push("Cancelled. No changes made.")
       } else {
@@ -261,7 +282,7 @@ const addCmd = Command.make(
     Effect.gen(function* () {
       const config = configFromEnv()
       const explicitSections = Option.match(input.section, {
-        onNone: () => null as ReadonlyArray<string> | null,
+        onNone: () => null as readonly string[] | null,
         onSome: (raw) =>
           raw
             .split(",")
@@ -275,10 +296,10 @@ const addCmd = Command.make(
       // the requirement propagates out through `add`; Command.run provides the platform.
       const strategy: SectionStrategy<Prompt.Environment> =
         explicitSections === null
-          ? process.stdin.isTTY === true
-            ? { kind: "ask", choose: chooseSectionsInteractive }
-            : { kind: "all" }
-          : { kind: "explicit", sections: explicitSections }
+          ? process.stdin.isTTY
+            ? { _tag: "Ask", choose: chooseSectionsInteractive }
+            : { _tag: "All" }
+          : { _tag: "Explicit", sections: explicitSections }
 
       const result = yield* add({ config, pkg: input.pkg, strategy }).pipe(
         Effect.matchEffect({
@@ -286,7 +307,9 @@ const addCmd = Command.make(
           onFailure: (error: Errors.ProjitectError) => reportError(error).pipe(Effect.as(null)),
         }),
       )
-      if (result === null) return
+      if (result === null) {
+        return
+      }
       const lines = [`Installed ${result.pkg} via ${result.pm}.`]
       if (result.splicedIntoBlueprintFile) {
         if (result.sectionsAdded.length > 0) {

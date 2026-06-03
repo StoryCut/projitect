@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { Effect } from "effect"
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import path from "node:path"
+import { Effect } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { applyRemovals } from "../src/remover.js"
 
 /**
@@ -44,7 +44,7 @@ const exists = (relative: string) =>
     () => false,
   )
 
-const run = <A>(effect: Effect.Effect<A, never>): Promise<A> => Effect.runPromise(effect)
+const run = <A>(effect: Effect.Effect<A>): Promise<A> => Effect.runPromise(effect)
 
 describe("applyRemovals — region", () => {
   it("removes the marker pair + body, preserving surrounding content", async () => {
@@ -66,7 +66,7 @@ describe("applyRemovals — region", () => {
         projectRoot: cwd,
         removals: [
           {
-            mode: "region",
+            _tag: "Region",
             path: ".gitignore",
             ownerId: "pjt:gitignore:macos",
             commentPrefix: "#",
@@ -83,7 +83,7 @@ describe("applyRemovals — region", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "region", path: "nope.txt", ownerId: "pjt:x", commentPrefix: "#" }],
+        removals: [{ _tag: "Region", path: "nope.txt", ownerId: "pjt:x", commentPrefix: "#" }],
       }),
     )
     expect(touched).toEqual([])
@@ -94,7 +94,7 @@ describe("applyRemovals — region", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "region", path: ".gitignore", ownerId: "pjt:gone", commentPrefix: "#" }],
+        removals: [{ _tag: "Region", path: ".gitignore", ownerId: "pjt:gone", commentPrefix: "#" }],
       }),
     )
     expect(touched).toEqual([])
@@ -122,7 +122,7 @@ describe("applyRemovals — merge", () => {
         projectRoot: cwd,
         removals: [
           {
-            mode: "merge",
+            _tag: "Merge",
             path: "package.json",
             ownedKeys: ["scripts.pjt", "devDependencies.projitect"],
           },
@@ -148,7 +148,7 @@ describe("applyRemovals — merge", () => {
     await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
+        removals: [{ _tag: "Merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
       }),
     )
 
@@ -161,7 +161,7 @@ describe("applyRemovals — merge", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
+        removals: [{ _tag: "Merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
       }),
     )
     expect(touched).toEqual([])
@@ -172,7 +172,7 @@ describe("applyRemovals — merge", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
+        removals: [{ _tag: "Merge", path: "package.json", ownedKeys: ["scripts.pjt"] }],
       }),
     )
     expect(touched).toEqual([])
@@ -186,7 +186,7 @@ describe("applyRemovals — owned", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "owned", path: "generated.ts", ownerId: "pjt:gen" }],
+        removals: [{ _tag: "Owned", path: "generated.ts", ownerId: "pjt:gen" }],
       }),
     )
     expect(touched).toEqual(["generated.ts"])
@@ -197,7 +197,7 @@ describe("applyRemovals — owned", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "owned", path: "already-gone.ts", ownerId: "pjt:gen" }],
+        removals: [{ _tag: "Owned", path: "already-gone.ts", ownerId: "pjt:gen" }],
       }),
     )
     expect(touched).toEqual(["already-gone.ts"])
@@ -210,7 +210,7 @@ describe("applyRemovals — seed", () => {
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
-        removals: [{ mode: "seed", path: ".pjt.ts", ownerId: "pjt:projitect:seed" }],
+        removals: [{ _tag: "Seed", path: ".pjt.ts", ownerId: "pjt:projitect:seed" }],
       }),
     )
     expect(touched).toEqual([])
@@ -221,14 +221,14 @@ describe("applyRemovals — seed", () => {
 describe("applyRemovals — touched-paths return value", () => {
   it("lists only the paths that were actually mutated", async () => {
     await writeFile(".gitignore", ["# pjt:a start", "x", "# pjt:a end", ""].join("\n"))
-    // intentionally NOT creating package.json
+    // Intentionally NOT creating package.json
 
     const touched = await run(
       applyRemovals({
         projectRoot: cwd,
         removals: [
-          { mode: "region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" },
-          { mode: "merge", path: "package.json", ownedKeys: ["scripts.x"] },
+          { _tag: "Region", path: ".gitignore", ownerId: "pjt:a", commentPrefix: "#" },
+          { _tag: "Merge", path: "package.json", ownedKeys: ["scripts.x"] },
         ],
       }),
     )

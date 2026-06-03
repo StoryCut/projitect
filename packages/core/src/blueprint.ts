@@ -21,8 +21,8 @@ export interface Blueprint {
   /** Human-readable, one-line description shown in `pjt inspect` output. */
   readonly description?: string
   /** Declared capabilities. The CLI rejects FS operations not covered by this set. */
-  readonly permissions: ReadonlyArray<Permission>
+  readonly permissions: readonly Permission[]
   /** The Effect that produces this blueprint's change set when planned. */
   readonly plan: Effect.Effect<ChangeSet, BlueprintError, BlueprintFileSystem>
 }
-/* trivial whitespace test */
+/* Trivial whitespace test */

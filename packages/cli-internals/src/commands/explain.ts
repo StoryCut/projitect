@@ -1,5 +1,7 @@
-import { Effect } from "effect"
+import { Effect, Option, Schema } from "effect"
 import { Errors } from "@projitect/core"
+
+const ErrorId = Schema.Literals(Errors.ERROR_IDS)
 
 /**
  * `pjt explain <id>` — print a short description of an error id, with a link to the docs page.
@@ -7,15 +9,13 @@ import { Errors } from "@projitect/core"
  * without a network call.
  */
 export const explain = (params: { readonly errorId: string }): Effect.Effect<string> =>
-  Effect.sync(() => {
-    const known = Errors.ERROR_IDS.includes(params.errorId as Errors.ErrorId)
-    if (!known) {
-      return `Unknown error id: ${params.errorId}\nSee https://projitect.dev/errors for the full registry.`
-    }
-    const url = Errors.docsUrl(params.errorId as Errors.ErrorId)
-    const blurb = ERROR_BLURBS[params.errorId as Errors.ErrorId]
-    return `${params.errorId}\n${blurb}\nMore at: ${url}`
-  })
+  Effect.sync(() =>
+    Option.match(Schema.decodeUnknownOption(ErrorId)(params.errorId), {
+      onNone: () =>
+        `Unknown error id: ${params.errorId}\nSee https://projitect.dev/errors for the full registry.`,
+      onSome: (id) => `${id}\n${ERROR_BLURBS[id]}\nMore at: ${Errors.docsUrl(id)}`,
+    }),
+  )
 
 const ERROR_BLURBS: Readonly<Record<Errors.ErrorId, string>> = {
   "pjt.fs.permission-denied":

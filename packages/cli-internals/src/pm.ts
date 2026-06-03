@@ -1,12 +1,13 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { spawn } from "node:child_process"
-import { Effect } from "effect"
+import { Array, Effect, Match, Predicate } from "effect"
 import { Errors } from "@projitect/core"
+import { PredicateX, StructX } from "@projitect/internal"
 
 export type PackageManager = "pnpm" | "npm" | "yarn" | "bun"
 
-const LOCKFILES: ReadonlyArray<readonly [string, PackageManager]> = [
+const LOCKFILES: readonly (readonly [string, PackageManager])[] = [
   ["pnpm-lock.yaml", "pnpm"],
   ["bun.lockb", "bun"],
   ["yarn.lock", "yarn"],
@@ -29,7 +30,9 @@ export const detect = (params: {
           () => false,
         ),
       )
-      if (exists) return pm
+      if (exists) {
+        return pm
+      }
     }
     return "npm"
   })
@@ -53,8 +56,11 @@ export const installDev = (params: {
         })
         child.on("error", reject)
         child.on("close", (code) => {
-          if (code === 0) resolve()
-          else reject(new Error(`${params.pm} ${args.join(" ")} exited with ${code}`))
+          if (code === 0) {
+            resolve()
+          } else {
+            reject(new Error(`${params.pm} ${args.join(" ")} exited with ${String(code)}`))
+          }
         })
       }),
     catch: (e) =>
@@ -68,22 +74,13 @@ export const installDev = (params: {
   })
 }
 
-const installArgs = (pm: PackageManager, pkg: string): ReadonlyArray<string> => {
-  switch (pm) {
-    case "pnpm": {
-      return ["add", "-D", pkg]
-    }
-    case "yarn": {
-      return ["add", "-D", pkg]
-    }
-    case "bun": {
-      return ["add", "-d", pkg]
-    }
-    case "npm": {
-      return ["install", "-D", pkg]
-    }
-  }
-}
+const installArgs = (pm: PackageManager, pkg: string): readonly string[] =>
+  Match.value(pm).pipe(
+    Match.whenOr("pnpm", "yarn", () => ["add", "-D", pkg]),
+    Match.when("bun", () => ["add", "-d", pkg]),
+    Match.when("npm", () => ["install", "-D", pkg]),
+    Match.exhaustive,
+  )
 
 /**
  * The shape of the `"projitect"` field in a blueprint package's `package.json`. Defines how
@@ -102,7 +99,7 @@ export interface ProjitectPackageMetadata {
   /** For `type: "blueprint-set"` only — substitute `{section}` with each chosen name. */
   readonly callTemplate?: string
   /** For `type: "blueprint-set"` only — the list of available section names. */
-  readonly sections?: ReadonlyArray<string>
+  readonly sections?: readonly string[]
 }
 
 /**
@@ -117,28 +114,36 @@ export const readProjitectMetadata = (params: {
   Effect.promise(async () => {
     const pkgJsonPath = path.join(params.projectRoot, "node_modules", params.pkg, "package.json")
     try {
-      const raw = await fs.readFile(pkgJsonPath, "utf8")
-      const parsed = JSON.parse(raw) as { projitect?: unknown }
-      const meta = parsed.projitect
-      if (typeof meta !== "object" || meta === null) return null
-      const m = meta as Record<string, unknown>
-      const type = m["type"]
-      const importStmt = m["import"]
-      if (type !== "blueprint" && type !== "blueprint-set") return null
-      if (typeof importStmt !== "string") return null
-      const call = m["call"]
-      const callTemplate = m["callTemplate"]
-      const sections = m["sections"]
-      const out: ProjitectPackageMetadata = {
+      const parsed: unknown = JSON.parse(await fs.readFile(pkgJsonPath, "utf8"))
+      if (!PredicateX.isPlainObject(parsed)) {
+        return null
+      }
+      const meta = parsed["projitect"]
+      if (!PredicateX.isPlainObject(meta)) {
+        return null
+      }
+      const type = meta["type"]
+      const importStmt = meta["import"]
+      if (type !== "blueprint" && type !== "blueprint-set") {
+        return null
+      }
+      if (!Predicate.isString(importStmt)) {
+        return null
+      }
+      const sections = meta["sections"]
+      return {
         type,
         import: importStmt,
-        ...(typeof call === "string" && { call }),
-        ...(typeof callTemplate === "string" && { callTemplate }),
-        ...(Array.isArray(sections) && {
-          sections: sections.filter((s): s is string => typeof s === "string"),
-        }),
+        ...StructX.defined("call", Predicate.isString(meta["call"]) ? meta["call"] : undefined),
+        ...StructX.defined(
+          "callTemplate",
+          Predicate.isString(meta["callTemplate"]) ? meta["callTemplate"] : undefined,
+        ),
+        ...StructX.defined(
+          "sections",
+          Array.isArray(sections) ? Array.filter(sections, Predicate.isString) : undefined,
+        ),
       }
-      return out
     } catch {
       return null
     }

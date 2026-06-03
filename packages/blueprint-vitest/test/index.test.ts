@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
-import { vitest } from "../src/index.js"
 import { makeInMemoryLayer } from "@projitect/test-kit"
+import { vitest } from "../src/index.js"
 
 /**
  * Unit tests for `@projitect/blueprint-vitest` — the composite blueprint that wires vitest into
@@ -21,14 +21,16 @@ describe("vitest() — default options", () => {
   it("emits exactly three operations: merge, owned, region (coverage default = v8)", async () => {
     const { operations } = await runPlan(vitest())
     expect(operations).toHaveLength(3)
-    expect(operations.map((o) => o.mode).toSorted()).toEqual(["merge", "owned", "region"])
+    expect(operations.map((o) => o._tag).toSorted()).toEqual(["Merge", "Owned", "Region"])
   })
 
   it("owns the canonical four package.json keys via merge mode", async () => {
     const { operations } = await runPlan(vitest())
-    const merge = operations.find((o) => o.mode === "merge")
+    const merge = operations.find((o) => o._tag === "Merge")
     expect(merge?.path).toBe("package.json")
-    if (merge?.mode !== "merge") throw new Error("expected merge op")
+    if (merge?._tag !== "Merge") {
+      throw new Error("expected merge op")
+    }
     expect([...merge.ownedKeys].toSorted()).toEqual([
       "devDependencies.@vitest/coverage-v8",
       "devDependencies.vitest",
@@ -39,8 +41,10 @@ describe("vitest() — default options", () => {
 
   it("ships sensible script defaults in the merge value", async () => {
     const { operations } = await runPlan(vitest())
-    const merge = operations.find((o) => o.mode === "merge")
-    if (merge?.mode !== "merge") throw new Error("expected merge op")
+    const merge = operations.find((o) => o._tag === "Merge")
+    if (merge?._tag !== "Merge") {
+      throw new Error("expected merge op")
+    }
     expect(merge.value).toMatchObject({
       scripts: { test: "vitest run", "test:watch": "vitest" },
     })
@@ -48,9 +52,11 @@ describe("vitest() — default options", () => {
 
   it("renders a vitest.config.ts that compiles to a valid module shape", async () => {
     const { operations } = await runPlan(vitest())
-    const owned = operations.find((o) => o.mode === "owned")
+    const owned = operations.find((o) => o._tag === "Owned")
     expect(owned?.path).toBe("vitest.config.ts")
-    if (owned?.mode !== "owned") throw new Error("expected owned op")
+    if (owned?._tag !== "Owned") {
+      throw new Error("expected owned op")
+    }
     expect(owned.content).toContain('import { defineConfig } from "vitest/config"')
     expect(owned.content).toContain("export default defineConfig({")
     expect(owned.content).toContain('environment: "node"')
@@ -60,9 +66,11 @@ describe("vitest() — default options", () => {
 
   it("adds `coverage/` to .gitignore via a region op", async () => {
     const { operations } = await runPlan(vitest())
-    const region = operations.find((o) => o.mode === "region")
+    const region = operations.find((o) => o._tag === "Region")
     expect(region?.path).toBe(".gitignore")
-    if (region?.mode !== "region") throw new Error("expected region op")
+    if (region?._tag !== "Region") {
+      throw new Error("expected region op")
+    }
     expect(region.commentPrefix).toBe("#")
     expect(region.content).toBe("coverage/\n")
     expect(region.ownerId).toBe("pjt:vitest")
@@ -82,14 +90,18 @@ describe("vitest() — coverage: null", () => {
   it("drops the coverage devDep, the coverage section in the config, and the .gitignore region", async () => {
     const { operations } = await runPlan(vitest({ coverage: null }))
     expect(operations).toHaveLength(2)
-    expect(operations.map((o) => o.mode).toSorted()).toEqual(["merge", "owned"])
+    expect(operations.map((o) => o._tag).toSorted()).toEqual(["Merge", "Owned"])
 
-    const merge = operations.find((o) => o.mode === "merge")
-    if (merge?.mode !== "merge") throw new Error("expected merge op")
+    const merge = operations.find((o) => o._tag === "Merge")
+    if (merge?._tag !== "Merge") {
+      throw new Error("expected merge op")
+    }
     expect(merge.ownedKeys).not.toContain("devDependencies.@vitest/coverage-v8")
 
-    const owned = operations.find((o) => o.mode === "owned")
-    if (owned?.mode !== "owned") throw new Error("expected owned op")
+    const owned = operations.find((o) => o._tag === "Owned")
+    if (owned?._tag !== "Owned") {
+      throw new Error("expected owned op")
+    }
     expect(owned.content).not.toContain('provider: "v8"')
   })
 })
@@ -97,8 +109,10 @@ describe("vitest() — coverage: null", () => {
 describe("vitest() — custom scriptName", () => {
   it("renames both script keys in tandem (foo + foo:watch)", async () => {
     const { operations } = await runPlan(vitest({ scriptName: "spec" }))
-    const merge = operations.find((o) => o.mode === "merge")
-    if (merge?.mode !== "merge") throw new Error("expected merge op")
+    const merge = operations.find((o) => o._tag === "Merge")
+    if (merge?._tag !== "Merge") {
+      throw new Error("expected merge op")
+    }
     expect([...merge.ownedKeys].toSorted()).toContain("scripts.spec")
     expect([...merge.ownedKeys].toSorted()).toContain("scripts.spec:watch")
     expect(merge.value).toMatchObject({
@@ -110,8 +124,10 @@ describe("vitest() — custom scriptName", () => {
 describe("vitest() — jsdom environment", () => {
   it("flips the environment in the rendered config", async () => {
     const { operations } = await runPlan(vitest({ environment: "jsdom" }))
-    const owned = operations.find((o) => o.mode === "owned")
-    if (owned?.mode !== "owned") throw new Error("expected owned op")
+    const owned = operations.find((o) => o._tag === "Owned")
+    if (owned?._tag !== "Owned") {
+      throw new Error("expected owned op")
+    }
     expect(owned.content).toContain('environment: "jsdom"')
   })
 })

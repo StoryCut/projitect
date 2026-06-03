@@ -22,7 +22,7 @@ export const isGitRepo = (projectRoot: string): Effect.Effect<boolean> =>
  */
 export interface GitStatus {
   readonly clean: boolean
-  readonly lines: ReadonlyArray<string>
+  readonly lines: readonly string[]
 }
 
 /**
@@ -40,15 +40,15 @@ export const gitStatus = (params: {
         let stdout = ""
         let stderr = ""
         child.stdout.on("data", (chunk: Buffer) => {
-          stdout += chunk.toString("utf8")
+          stdout = stdout + chunk.toString("utf8")
         })
         child.stderr.on("data", (chunk: Buffer) => {
-          stderr += chunk.toString("utf8")
+          stderr = stderr + chunk.toString("utf8")
         })
         child.on("error", reject)
         child.on("close", (code) => {
           if (code !== 0) {
-            reject(new Error(`git status exited with ${code}: ${stderr.trim()}`))
+            reject(new Error(`git status exited with ${String(code)}: ${stderr.trim()}`))
             return
           }
           const lines = stdout
@@ -76,7 +76,9 @@ export const ensureGitRepo = (params: {
 }): Effect.Effect<void, Errors.GitNotARepo> =>
   Effect.gen(function* () {
     const ok = yield* isGitRepo(params.projectRoot)
-    if (ok) return
+    if (ok) {
+      return
+    }
     return yield* new Errors.GitNotARepo({
       id: "pjt.git.not-a-repo",
       projectRoot: params.projectRoot,

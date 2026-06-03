@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { Effect } from "effect"
 import { promises as fs } from "node:fs"
 import * as os from "node:os"
 import path from "node:path"
-import { diffPlan, mergeIntoExisting, renderInspectReport, renderPlanDiff } from "../src/differ.js"
+import { Effect } from "effect"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { diffPlan, renderInspectReport, renderPlanDiff } from "../src/differ.js"
 import type { ProjectPlan } from "../src/plan.js"
 
 /**
@@ -43,7 +43,7 @@ describe("diffPlan — region kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "region",
+          _tag: "Region",
           path: ".gitignore",
           commentPrefix: "#",
           regions: [{ ownerId: "pjt:a", content: ".DS_Store\n" }],
@@ -61,7 +61,7 @@ describe("diffPlan — region kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "region",
+          _tag: "Region",
           path: ".gitignore",
           commentPrefix: "#",
           regions: [{ ownerId: "pjt:a", content: ".DS_Store" }],
@@ -78,7 +78,7 @@ describe("diffPlan — region kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "region",
+          _tag: "Region",
           path: ".gitignore",
           commentPrefix: "#",
           regions: [{ ownerId: "pjt:a", content: ".DS_Store" }],
@@ -95,7 +95,7 @@ describe("diffPlan — region kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "region",
+          _tag: "Region",
           path: ".gitignore",
           commentPrefix: "#",
           regions: [{ ownerId: "pjt:a", content: ".DS_Store" }],
@@ -113,7 +113,7 @@ describe("diffPlan — merge kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "merge",
+          _tag: "Merge",
           path: "package.json",
           value: { scripts: { pjt: "pjt" } },
           ownership: new Map([["scripts.pjt", "pjt:projitect"]]),
@@ -132,7 +132,7 @@ describe("diffPlan — merge kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "merge",
+          _tag: "Merge",
           path: "package.json",
           value: { scripts: { pjt: "pjt" } },
           ownership: new Map([["scripts.pjt", "pjt:projitect"]]),
@@ -151,7 +151,7 @@ describe("diffPlan — merge kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "merge",
+          _tag: "Merge",
           path: "package.json",
           value: { scripts: { pjt: "pjt" } },
           ownership: new Map([["scripts.pjt", "pjt:projitect"]]),
@@ -168,7 +168,7 @@ describe("diffPlan — merge kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "merge",
+          _tag: "Merge",
           path: "package.json",
           value: {},
           ownership: new Map(),
@@ -185,7 +185,7 @@ describe("diffPlan — owned kind", () => {
     const plan: ProjectPlan = {
       files: [
         {
-          kind: "owned",
+          _tag: "Owned",
           path: "generated.ts",
           ownerId: "pjt:gen",
           content: "// generated\n",
@@ -212,7 +212,7 @@ describe("diffPlan — owned kind", () => {
 describe("diffPlan — seed kind", () => {
   it("reports create when absent; ok even when content differs (write-once contract)", async () => {
     const plan: ProjectPlan = {
-      files: [{ kind: "seed", path: ".pjt.ts", ownerId: "pjt:seed", content: "original" }],
+      files: [{ _tag: "Seed", path: ".pjt.ts", ownerId: "pjt:seed", content: "original" }],
     }
     let out = await runPlan(plan)
     expect(out.files[0]?.status).toBe("create")
@@ -224,27 +224,7 @@ describe("diffPlan — seed kind", () => {
   })
 })
 
-describe("mergeIntoExisting", () => {
-  it("deep-merges plain objects, last-write-wins on overlapping keys", () => {
-    const out = mergeIntoExisting(
-      { scripts: { a: "first", b: "second" }, name: "x" },
-      { scripts: { a: "OVERWRITTEN" } },
-    )
-    expect(out).toEqual({
-      scripts: { a: "OVERWRITTEN", b: "second" },
-      name: "x",
-    })
-  })
-
-  it("replaces arrays — does not concat", () => {
-    const out = mergeIntoExisting({ keywords: ["a", "b"] }, { keywords: ["c"] })
-    expect(out).toEqual({ keywords: ["c"] })
-  })
-
-  it("returns the intent when the existing value isn't an object", () => {
-    expect(mergeIntoExisting("not-an-object", { a: 1 })).toEqual({ a: 1 })
-  })
-})
+// Deep-merge behavior is covered by @projitect/internal's RecordX.deepMerge tests.
 
 describe("renderPlanDiff", () => {
   it("short-circuits to a single 'in sync' line when nothing drifts", () => {
@@ -271,7 +251,7 @@ describe("renderInspectReport", () => {
         files: [{ path: "a", status: "modify", summary: "~ modify a" }],
         hasDrift: true,
       },
-      removals: [{ mode: "region", path: ".gitignore", ownerId: "pjt:left", commentPrefix: "#" }],
+      removals: [{ _tag: "Region", path: ".gitignore", ownerId: "pjt:left", commentPrefix: "#" }],
       upgrades: [{ blueprintId: "pjt:stay", from: "0.1.0", to: "0.2.0" }],
     })
     const lines = out.split("\n")
@@ -293,10 +273,10 @@ describe("renderInspectReport", () => {
     const out = renderInspectReport({
       diff: { files: [], hasDrift: false },
       removals: [
-        { mode: "region", path: ".gitignore", ownerId: "pjt:r", commentPrefix: "#" },
-        { mode: "merge", path: "package.json", ownedKeys: ["scripts.x", "scripts.y"] },
-        { mode: "owned", path: "gen.ts", ownerId: "pjt:o" },
-        { mode: "seed", path: ".pjt.ts", ownerId: "pjt:s" },
+        { _tag: "Region", path: ".gitignore", ownerId: "pjt:r", commentPrefix: "#" },
+        { _tag: "Merge", path: "package.json", ownedKeys: ["scripts.x", "scripts.y"] },
+        { _tag: "Owned", path: "gen.ts", ownerId: "pjt:o" },
+        { _tag: "Seed", path: ".pjt.ts", ownerId: "pjt:s" },
       ],
       upgrades: [],
     })
