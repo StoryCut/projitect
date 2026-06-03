@@ -178,16 +178,16 @@ This codebase is **Effect-native**. We use `effect@beta` (currently `4.0.0-beta.
   (see [Combiners and Reducers](#combiners-and-reducers--the-universal-mergefold)); everything else —
   loader, planner, differ, applier, remover — is a plain Effect-returning function. Don't service-ify
   pure logic.
-- **Errors** use `Schema.TaggedError` (not `Data.TaggedError`) so they serialize cleanly to JSON
+- **Errors** use `Schema.TaggedErrorClass` (not `Data.TaggedError`) so they serialize cleanly to JSON
   for `pjt inspect --json`. Every error declares a semantic `id` field
   (`pjt.<subsystem>.<kebab-case>`) and has a matching MDX page in `apps/website`.
 - **Layer composition** memoizes across `Effect.provide` calls by default in v4. Opt out with
   `{ local: true }` only when you have a specific reason.
 - **Control flow** uses pattern matching, not `if/else` chains — see [Effect patterns](#effect-patterns) for the full set of conventions (Match, predicates, `dual`, data-first vs `pipe`, `Result`).
-- **Conditional construction** uses `Effect.if`, `Effect.when`, `Effect.unless`, `Effect.forEach`,
-  `Effect.all`. We do not ship our own `sequence`/`when`/`unless` blueprint combinators because
-  Effect already has them. (This bans duplicating Effect's _control-flow_ combinators; generic
-  _data-shape_ utilities are a separate matter — see [FP mindset](#fp-mindset).)
+- **Conditional construction** uses `Effect.when`, `Effect.forEach`, `Effect.all`, and `Match` for
+  branching. We do not ship our own sequencing/conditional blueprint combinators because Effect
+  already has them. (This bans duplicating Effect's _control-flow_ combinators; generic _data-shape_
+  utilities are a separate matter — see [FP mindset](#fp-mindset).)
 - **Schema** v4 uses `.check(Schema.isInt(), Schema.isGreaterThan(0))` not
   `.pipe(Schema.int(), Schema.positive())`. Mind the migration on snippets copied from older docs.
 
@@ -245,7 +245,6 @@ if (Predicate.isNotNullish(value)) { ... }    // instead of: value != null
 if (Predicate.isString(value)) { ... }        // instead of: typeof value === "string"
 if (String.isNonEmpty(str)) { ... }           // instead of: str.length > 0
 if (Array.isArrayNonEmpty(arr)) { ... }       // instead of: arr.length > 0
-if (Number.isFinite(n)) { ... }
 ```
 
 A compound predicate worth reusing (e.g. an `isNonEmptyString` that combines `isNotNullish`,
@@ -423,7 +422,7 @@ any length, including empty). They are the universal merge pattern, so you never
 
 Two wins follow:
 
-1. **You don't reinvent the merge.** `Reducer.combineAll(items)` replaces a hand-rolled
+1. **You don't reinvent the merge.** A reducer's `.combineAll(items)` method replaces a hand-rolled
    `items.reduce((acc, x) => …, seed)` — the combine logic is named once, in one place, and reused.
 2. **It forces the data shape to fit the pattern.** Defining a `Reducer<A>` makes you answer "what
    is the identity?" and "how do two combine?", and answering those usually pushes the type toward
@@ -546,7 +545,7 @@ export const ApplyOrder: Order.Order<Blueprint> = Order.combine(
   Order.mapInput(Order.String, (blueprint: Blueprint) => blueprint.id),
 )
 
-export const ApplyOrderDesc: Order.Order<Blueprint> = Order.reverse(ApplyOrder)
+export const ApplyOrderDesc: Order.Order<Blueprint> = Order.flip(ApplyOrder)
 ```
 
 **Naming convention:** PascalCase with a descriptive strategy name (`ApplyOrder`, `IdOrder`). Add an
@@ -572,7 +571,7 @@ const sorted = Array.sort(
 | `Order.mapInput(baseOrder, extractField)` | Sort objects by a specific field            |
 | `Order.combine(primary, secondary)`       | Multi-key sort (two orders)                 |
 | `Order.combineAll([order1, order2, ...])` | Multi-key sort (more than two orders)       |
-| `Order.reverse(order)`                    | Flip ascending to descending                |
+| `Order.flip(order)`                       | Flip ascending to descending                |
 | `Array.sort(array, order)`                | Sort an array by a single order             |
 | `Array.sortBy(order1, order2, ...)`       | Sort an array by multiple orders (combined) |
 
@@ -584,13 +583,13 @@ order to push nulls last (`nullableOrder`) — belong in an `OrderX` / `NonNulla
 
 ```ts
 // Reverse a field-derived order
-export const NewestFirst: Order.Order<Snapshot> = Order.reverse(
+export const NewestFirst: Order.Order<Snapshot> = Order.flip(
   Order.mapInput(Order.Date, (snapshot: Snapshot) => snapshot.takenAt),
 )
 
 // Apply
 const sorted = Array.sort(snapshots, NewestFirst)
-const multi = Array.sortBy(blueprints, ApplyOrder, IdOrder)
+const multi = Array.sortBy(ApplyOrder, IdOrder)(blueprints)
 ```
 
 ## Blueprint authoring rules
@@ -655,7 +654,7 @@ See `docs/concepts/ownership-modes` on the marketing site for examples.
 
 Errors live in `packages/core/src/errors/`. To add a new one:
 
-1. Define a new `Schema.TaggedError` class with an `id` field
+1. Define a new `Schema.TaggedErrorClass` class with an `id` field
 2. Export it from `packages/core/src/errors/index.ts`
 3. Add `apps/website/src/content/docs/errors/<id>.mdx` with **What**, **Why**, **How to fix**
 4. `pnpm --filter website check:errors` will catch step 3 if you forget

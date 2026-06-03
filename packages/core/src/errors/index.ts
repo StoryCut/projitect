@@ -5,7 +5,7 @@ import { Schema } from "effect"
  * the id + URL when an error reaches the terminal; `pjt explain <id>` opens the local docs page;
  * `apps/website/check:errors` fails CI if any id lacks a docs entry.
  *
- * Errors use `Schema.TaggedError` so they serialize cleanly into the `--json` output mode.
+ * Errors use `Schema.TaggedErrorClass` so they serialize cleanly into the `--json` output mode.
  */
 
 // ---------------------------------------------------------------------------
