@@ -40,14 +40,15 @@ export const regionFile = (spec: RegionFileSpec): Blueprint.Blueprint => ({
     ...(spec.extraPermissions ?? []),
   ],
   plan: Effect.succeed(
-    ChangeSet.of({
-      _tag: "Region",
-      ownerId: spec.id,
-      path: spec.path,
-      commentPrefix: spec.commentPrefix ?? "#",
-      ...StructX.defined("commentSuffix", spec.commentSuffix),
-      content: spec.content,
-    }),
+    ChangeSet.of(
+      ChangeSet.RegionOp.make({
+        ownerId: spec.id,
+        path: spec.path,
+        commentPrefix: spec.commentPrefix ?? "#",
+        ...StructX.defined("commentSuffix", spec.commentSuffix),
+        content: spec.content,
+      }),
+    ),
   ),
 })
 
@@ -79,13 +80,14 @@ export const jsonMerge = (spec: JsonMergeSpec): Blueprint.Blueprint => ({
     ...(spec.extraPermissions ?? []),
   ],
   plan: Effect.succeed(
-    ChangeSet.of({
-      _tag: "Merge",
-      ownerId: spec.id,
-      path: spec.path,
-      ownedKeys: spec.ownedKeys,
-      value: spec.value,
-    }),
+    ChangeSet.of(
+      ChangeSet.MergeOp.make({
+        ownerId: spec.id,
+        path: spec.path,
+        ownedKeys: spec.ownedKeys,
+        value: spec.value,
+      }),
+    ),
   ),
 })
 
@@ -108,12 +110,13 @@ export const ownFile = (spec: OwnFileSpec): Blueprint.Blueprint => ({
   ...StructX.defined("description", spec.description),
   permissions: [{ kind: "write", glob: spec.path }, ...(spec.extraPermissions ?? [])],
   plan: Effect.succeed(
-    ChangeSet.of({
-      _tag: "Owned",
-      ownerId: spec.id,
-      path: spec.path,
-      content: spec.content,
-    }),
+    ChangeSet.of(
+      ChangeSet.OwnedOp.make({
+        ownerId: spec.id,
+        path: spec.path,
+        content: spec.content,
+      }),
+    ),
   ),
 })
 
@@ -136,12 +139,13 @@ export const seedFile = (spec: SeedFileSpec): Blueprint.Blueprint => ({
   ...StructX.defined("description", spec.description),
   permissions: [{ kind: "write", glob: spec.path }, ...(spec.extraPermissions ?? [])],
   plan: Effect.succeed(
-    ChangeSet.of({
-      _tag: "Seed",
-      ownerId: spec.id,
-      path: spec.path,
-      content: spec.content,
-    }),
+    ChangeSet.of(
+      ChangeSet.SeedOp.make({
+        ownerId: spec.id,
+        path: spec.path,
+        content: spec.content,
+      }),
+    ),
   ),
 })
 

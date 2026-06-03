@@ -35,8 +35,7 @@ export const projitectBlueprint = (versions: {
   ],
   plan: Effect.succeed(
     ChangeSet.of(
-      {
-        _tag: "Merge",
+      ChangeSet.MergeOp.make({
         ownerId: "pjt:projitect:bootstrap",
         path: "package.json",
         ownedKeys: ["scripts.pjt", "devDependencies.projitect", "devDependencies.effect"],
@@ -47,14 +46,13 @@ export const projitectBlueprint = (versions: {
             effect: versions.effect,
           },
         },
-      },
-      {
-        _tag: "Region",
+      }),
+      ChangeSet.RegionOp.make({
         ownerId: "pjt:projitect:imports",
         path: ".pjt.ts",
         commentPrefix: "//",
         content: 'import { pjt } from "projitect/cli"\n',
-      },
+      }),
     ),
   ),
 })

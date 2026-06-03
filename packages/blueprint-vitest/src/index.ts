@@ -20,7 +20,7 @@
 
 import { Effect } from "effect"
 import { regionFile, jsonMerge, ownFile } from "@projitect/blueprint"
-import type { Blueprint, ChangeSet } from "@projitect/core"
+import type { Blueprint } from "@projitect/core"
 import { ChangeSet as CS } from "@projitect/core"
 
 const PACKAGE_VERSION = "0.0.0"
@@ -124,15 +124,13 @@ export const vitest = (options: VitestOptions = {}): Blueprint.Blueprint => {
       { kind: "write", glob: ".gitignore" },
     ],
     plan: Effect.gen(function* () {
-      const operations: ChangeSet.Operation[] = []
-      const mergeOps = (yield* packageJsonMerge.plan).operations
-      const configOps = (yield* vitestConfig.plan).operations
-      operations.push(...mergeOps, ...configOps)
-      if (gitignoreCoverage !== null) {
-        const gitignoreOps = (yield* gitignoreCoverage.plan).operations
-        operations.push(...gitignoreOps)
-      }
-      return CS.of(...operations)
+      const parts = [
+        packageJsonMerge,
+        vitestConfig,
+        ...(gitignoreCoverage === null ? [] : [gitignoreCoverage]),
+      ]
+      const changeSets = yield* Effect.forEach(parts, (b) => b.plan)
+      return CS.Reducer.combineAll(changeSets)
     }),
   }
 
