@@ -375,11 +375,12 @@ accumulator, or complex conditional chain — is the primary way new utilities a
 Before writing inline transformation logic, ask in order:
 
 1. Does **Effect** already cover this? `Array`, `Option`, `Record`, `Predicate`, `String`,
-   `Number`, `Order`, `Result`, `Match`, `Struct`, `Tuple`, `HashMap`, `HashSet`, etc. The Effect
-   modules are wide and well-tested — most "manipulate this data shape" needs already exist there.
+   `Number`, `Order`, `Result`, `Match`, `Struct`, `Tuple`, `Combiner`, `Reducer`, `HashMap`,
+   `HashSet`, etc. The Effect modules are wide and well-tested — most "manipulate this data shape"
+   needs already exist there.
    When you're unsure what's available, check the [Effect docs](https://effect.website/).
-2. Does a generic utility already exist in `@projitect/core`? As they accrue, the `*X` modules
-   (`ArrayX`, `OptionX`, …) extend the corresponding Effect module with patterns we repeat.
+2. Does a generic utility already exist in `@projitect/internal`? The `*X` modules
+   (`StructX`, `RecordX`, …) extend the corresponding Effect module with patterns we repeat.
 3. Can the logic be expressed as a generic utility another call site could reuse?
 
 If yes to any: use or extract it. The calling code stays focused on intent while the utility
@@ -390,8 +391,8 @@ recognizable transformation, that cluster is a utility waiting to be named:
 
 1. **Name it in the abstract** — strip the domain nouns and describe what the steps do to the data
    shape (e.g. "filter to present items, then group by key").
-2. **Check Effect and `@projitect/core`** — does an equivalent already exist? If so, replace the
-   cluster with it.
+2. **Check Effect and `@projitect/internal`** — does an equivalent already exist? If so, replace
+   the cluster with it.
 3. **If not, extract it** — implement a generic, `dual`-compatible function in the appropriate
    `*X` module, replace the inline steps with a single call, and add exhaustive tests.
 
@@ -403,6 +404,44 @@ already exists in a pipe and giving it a name.
 > _control-flow_ combinators (Effect already has them). This section is about _data-shape_
 > utilities — `ArrayX.categorize`, a compound `PredicateX`, a `StructX` field builder — which are
 > encouraged, not banned.
+
+### Combiners and Reducers — the universal merge/fold
+
+When you're **combining N things into one** — merging config layers, concatenating outputs, folding
+a list into a summary, picking a winner — reach for Effect's `Combiner` (a semigroup: "how do two
+combine?") and `Reducer` (a monoid: a `Combiner` plus an identity, so you can fold a collection of
+any length, including empty). They are the universal merge pattern, so you never hand-roll the fold.
+
+Two wins follow:
+
+1. **You don't reinvent the merge.** `Reducer.combineAll(items)` replaces a hand-rolled
+   `items.reduce((acc, x) => …, seed)` — the combine logic is named once, in one place, and reused.
+2. **It forces the data shape to fit the pattern.** Defining a `Reducer<A>` makes you answer "what
+   is the identity?" and "how do two combine?", and answering those usually pushes the type toward
+   something cleaner, shorter, and more adaptable. An identity element in particular turns "absent"
+   into a no-op instead of a special case — no `filter(isPresent)` before folding.
+
+The config cascade is the canonical example. `defaults → env → .pjt.ts → CLI args`, later wins, is
+exactly a right-biased struct `Reducer` whose identity is the empty config `{}`:
+
+```ts
+import { Reducer } from "effect"
+
+// later's defined keys win; `{}` is the identity (combining with it changes nothing)
+export const Overrides: Reducer.Reducer<Partial<ProjitectConfig>> = Reducer.make<
+  Partial<ProjitectConfig>
+>((earlier, later) => ({ ...earlier, ...later }), {})
+
+export const resolve = (...layers: readonly Partial<ProjitectConfig>[]): ProjitectConfig => ({
+  ...defaults,
+  ...Overrides.combineAll(layers),
+})
+```
+
+Because `{}` is the identity, callers fold a missing layer as a no-op — `resolve(env ?? {},
+blueprintFile ?? {}, cliArgs ?? {})` — with no pre-filtering. Check Effect's pre-built combiners
+before writing `make`: `Combiner.last` / `first`, `Combiner.min` / `max`, `Combiner.intercalate`,
+the `Order`-derived ones, and the per-module `*.Reducer` / `*.Combiner` instances.
 
 ### Where utilities live
 

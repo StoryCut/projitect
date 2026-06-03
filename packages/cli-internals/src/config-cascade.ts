@@ -1,4 +1,3 @@
-import { Array, Predicate } from "effect"
 import { ProjitectConfig } from "@projitect/core"
 import { StructX } from "@projitect/internal"
 
@@ -21,9 +20,8 @@ export const resolveConfig = (layers: {
   readonly blueprintFile?: WritablePartialConfig
   readonly cliArgs?: WritablePartialConfig
 }): ProjitectConfig.ProjitectConfig =>
-  ProjitectConfig.resolve(
-    ...Array.filter([layers.env, layers.blueprintFile, layers.cliArgs], Predicate.isNotUndefined),
-  )
+  // Absent layers map to `{}` — the cascade reducer's identity, so they fold as a no-op.
+  ProjitectConfig.resolve(layers.env ?? {}, layers.blueprintFile ?? {}, layers.cliArgs ?? {})
 
 /**
  * Parse the relevant `PJT_*` environment variables into a partial config. Unknown vars are
