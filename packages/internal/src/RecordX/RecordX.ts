@@ -1,4 +1,4 @@
-import { Array, Option, Order, Predicate, Record, pipe } from "effect"
+import { Array, Option, Order, Predicate, Record, Reducer, pipe } from "effect"
 import { dual } from "effect/Function"
 import { PredicateX } from "../PredicateX/index.js"
 
@@ -111,6 +111,14 @@ export const deepMerge = (a: unknown, b: unknown): unknown => {
     return accumulator
   })
 }
+
+/**
+ * {@link deepMerge} as a `Reducer` (monoid). Identity is `{}`; `deepMergeReducer.combineAll(layers)`
+ * deep-merges object-valued layers left-to-right — the universal "merge N JSON objects into one"
+ * fold, replacing a hand-rolled `Array.reduce(layers, {}, deepMerge)`. The `{}` identity is exact
+ * for the object-valued inputs these folds carry.
+ */
+export const deepMergeReducer: Reducer.Reducer<unknown> = Reducer.make<unknown>(deepMerge, {})
 
 /**
  * Canonicalize a JSON value by recursively sorting object keys (arrays keep their order). Two

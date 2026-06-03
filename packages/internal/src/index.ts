@@ -6,7 +6,6 @@
  */
 export * from "./StructX/index.js"
 export * from "./PredicateX/index.js"
-export * from "./OrderX/index.js"
 export * from "./NonNullableX/index.js"
 export * from "./StringX/index.js"
 export * from "./RecordX/index.js"

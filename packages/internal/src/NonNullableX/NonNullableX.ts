@@ -1,5 +1,4 @@
-import type { Order, Ordering } from "effect"
-import { Number as EffectNumber, Match, Predicate } from "effect"
+import { Predicate } from "effect"
 import { dual } from "effect/Function"
 
 /**
@@ -71,36 +70,3 @@ export const lift =
 
     return map(a)
   }
-
-/**
- * Wrap an `Order<A>` to handle `null` by pushing it to one side: `"value-null"` sorts nulls
- * last, `"null-value"` sorts them first.
- */
-export const nullableOrder = dual<
-  (behavior: "value-null" | "null-value") => <A>(order: Order.Order<A>) => Order.Order<A | null>,
-  <A>(order: Order.Order<A>, behavior: "value-null" | "null-value") => Order.Order<A | null>
->(2, <A>(order: Order.Order<A>, behavior: "value-null" | "null-value"): Order.Order<A | null> => {
-  const { nullableSortCategory, valueSortCategory } = Match.value(behavior).pipe(
-    Match.when("value-null", () => ({
-      nullableSortCategory: 1,
-      valueSortCategory: 0,
-    })),
-    Match.when("null-value", () => ({
-      nullableSortCategory: 0,
-      valueSortCategory: 1,
-    })),
-    Match.exhaustive,
-  )
-
-  return (a: A | null, b: A | null): Ordering.Ordering => {
-    if (Predicate.isNotNullish(a) && Predicate.isNotNullish(b)) {
-      return order(a, b)
-    }
-
-    const aCategory = Predicate.isNotNullish(a) ? valueSortCategory : nullableSortCategory
-
-    const bCategory = Predicate.isNotNullish(b) ? valueSortCategory : nullableSortCategory
-
-    return EffectNumber.sign(aCategory - bCategory)
-  }
-})

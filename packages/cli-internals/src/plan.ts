@@ -301,12 +301,15 @@ const reduceRegion = (
     },
   })
 
-const reduceMerge = (
+/**
+ * Fold the merge ops' `ownedKeys` into a `key → ownerId` map, failing if two distinct owners claim
+ * the same key — the conflict-checked keyed merge behind merge-mode ownership.
+ */
+const reconcileOwnership = (
   path: string,
   ops: readonly ChangeSet.MergeOp[],
-): Effect.Effect<FilePlan, Errors.PlanError> =>
+): Effect.Effect<ReadonlyMap<string, string>, Errors.PlanConflictMerge> =>
   Effect.gen(function* () {
-    // Each dotted key may be claimed by exactly one owner across the merging blueprints.
     const ownership = new Map<string, string>()
     for (const op of ops) {
       for (const key of op.ownedKeys) {
@@ -324,9 +327,16 @@ const reduceMerge = (
         ownership.set(key, op.ownerId)
       }
     }
-    const value = Array.reduce(ops, {} as unknown, (merged, op) =>
-      RecordX.deepMerge(merged, op.value),
-    )
+    return ownership
+  })
+
+const reduceMerge = (
+  path: string,
+  ops: readonly ChangeSet.MergeOp[],
+): Effect.Effect<FilePlan, Errors.PlanError> =>
+  Effect.gen(function* () {
+    const ownership = yield* reconcileOwnership(path, ops)
+    const value = RecordX.deepMergeReducer.combineAll(Array.map(ops, (op) => op.value))
     return FilePlan.Merge({ path, value, ownership })
   })
 

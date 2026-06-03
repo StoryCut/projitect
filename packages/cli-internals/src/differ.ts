@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { Effect, Match } from "effect"
+import { Array, Effect, Match } from "effect"
 import type { PjtLock, Errors } from "@projitect/core"
 import { RecordX } from "@projitect/internal"
 import { findRegion } from "./region.js"
@@ -42,19 +42,12 @@ export const diffPlan = (params: {
 }): Effect.Effect<PlanDiff, Errors.RegionMissingEnd | Errors.RegionDuplicate> => {
   const { plan, projectRoot } = params
   return Effect.gen(function* () {
-    const files: FileDiff[] = []
-    let hasDrift = false
-
-    for (const file of plan.files) {
-      const full = path.resolve(projectRoot, file.path)
-      const current = yield* Effect.promise(() => readIfExists(full))
-      const diff = yield* diffFile({ file, current })
-      if (diff.status !== "ok") {
-        hasDrift = true
-      }
-      files.push(diff)
-    }
-
+    const files = yield* Effect.forEach(plan.files, (file) =>
+      Effect.promise(() => readIfExists(path.resolve(projectRoot, file.path))).pipe(
+        Effect.flatMap((current) => diffFile({ file, current })),
+      ),
+    )
+    const hasDrift = Array.some(files, (file) => file.status !== "ok")
     return { files, hasDrift }
   })
 }
@@ -178,18 +171,11 @@ export const renderInspectReport = (params: {
   readonly upgrades: readonly UpgradeRecord[]
 }): string => {
   const { diff, removals, upgrades } = params
-  const lines: string[] = []
-
-  for (const u of upgrades) {
-    lines.push(`↑ upgrade ${u.blueprintId} ${u.from} → ${u.to}`)
-  }
-  for (const r of removals) {
-    lines.push(removalSummary(r))
-  }
-  for (const f of diff.files) {
-    lines.push(f.summary)
-  }
-
+  const lines = Array.flatten([
+    Array.map(upgrades, (u) => `↑ upgrade ${u.blueprintId} ${u.from} → ${u.to}`),
+    Array.map(removals, removalSummary),
+    Array.map(diff.files, (f) => f.summary),
+  ])
   if (lines.length === 0) {
     return "Project is in sync with blueprints. No changes needed."
   }
