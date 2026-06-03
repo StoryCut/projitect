@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Reducer as ReducerLib, Schema } from "effect"
 import { dual } from "effect/Function"
 
 /**
@@ -73,3 +73,14 @@ export const concat: {
 )
 
 export const of = (...ops: readonly Operation[]): ChangeSet => ({ operations: ops })
+
+/**
+ * `ChangeSet` is a monoid: {@link empty} is the identity and {@link concat} combines associatively
+ * (operation arrays append). Exposed as a `Reducer` so composite blueprints fold their parts'
+ * ChangeSets with `ChangeSet.Reducer.combineAll(parts)` — the same universal merge pattern the
+ * config cascade uses — instead of hand-rolling the concat.
+ */
+export const Reducer: ReducerLib.Reducer<ChangeSet> = ReducerLib.make(
+  (self: ChangeSet, that: ChangeSet) => concat(self, that),
+  empty,
+)

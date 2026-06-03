@@ -50,6 +50,22 @@ describe("RecordX.deepMerge", () => {
   })
 })
 
+describe("RecordX.deepMergeReducer", () => {
+  it("folds object layers left-to-right via deep merge (later wins on leaf conflicts)", () => {
+    expect(
+      RecordX.deepMergeReducer.combineAll([{ a: { x: 1 } }, { a: { y: 2 }, b: 3 }, { b: 4 }]),
+    ).toEqual({ a: { x: 1, y: 2 }, b: 4 })
+  })
+
+  it("returns the identity {} for an empty list", () => {
+    expect(RecordX.deepMergeReducer.combineAll([])).toEqual({})
+  })
+
+  it("returns the single layer unchanged for a one-element list", () => {
+    expect(RecordX.deepMergeReducer.combineAll([{ a: 1 }])).toEqual({ a: 1 })
+  })
+})
+
 describe("RecordX.canonicalize", () => {
   it("recursively sorts object keys", () => {
     expect(JSON.stringify(RecordX.canonicalize({ b: 1, a: { d: 1, c: 2 } }))).toBe(

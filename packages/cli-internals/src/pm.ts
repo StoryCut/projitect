@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { spawn } from "node:child_process"
-import { Array, Effect, Match, Predicate } from "effect"
+import { Array, Effect, Match, Option, Predicate } from "effect"
 import { Errors } from "@projitect/core"
 import { PredicateX, StructX } from "@projitect/internal"
 
@@ -22,20 +22,20 @@ const LOCKFILES: readonly (readonly [string, PackageManager])[] = [
 export const detect = (params: {
   readonly projectRoot: string
 }): Effect.Effect<PackageManager, Errors.PmNotDetected> =>
-  Effect.gen(function* () {
-    for (const [filename, pm] of LOCKFILES) {
-      const exists = yield* Effect.promise(() =>
+  Effect.map(
+    Effect.findFirst(LOCKFILES, ([filename]) =>
+      Effect.promise(() =>
         fs.access(path.join(params.projectRoot, filename)).then(
           () => true,
           () => false,
         ),
-      )
-      if (exists) {
-        return pm
-      }
-    }
-    return "npm"
-  })
+      ),
+    ),
+    Option.match({
+      onSome: ([, pm]) => pm,
+      onNone: (): PackageManager => "npm",
+    }),
+  )
 
 /**
  * Run `<pm> add -D <pkg>` in `projectRoot`. Wraps spawn failures (non-zero exit, PM not

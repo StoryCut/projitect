@@ -25,4 +25,3 @@ export interface Blueprint {
   /** The Effect that produces this blueprint's change set when planned. */
   readonly plan: Effect.Effect<ChangeSet, BlueprintError, BlueprintFileSystem>
 }
-/* Trivial whitespace test */
