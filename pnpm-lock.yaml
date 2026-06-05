@@ -108,8 +108,8 @@ importers:
         specifier: ^22.10.0
         version: 22.19.19
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       projitect:
         specifier: workspace:*
         version: link:../../packages/projitect
@@ -129,8 +129,8 @@ importers:
         specifier: workspace:*
         version: link:../test-kit
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -144,8 +144,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -162,8 +162,8 @@ importers:
         specifier: workspace:*
         version: link:../test-kit
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -180,8 +180,8 @@ importers:
         specifier: workspace:*
         version: link:../test-kit
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -201,8 +201,8 @@ importers:
         specifier: ^22.10.0
         version: 22.19.19
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -210,8 +210,8 @@ importers:
   packages/core:
     devDependencies:
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -219,8 +219,8 @@ importers:
   packages/internal:
     devDependencies:
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -244,8 +244,8 @@ importers:
         specifier: ^22.10.0
         version: 22.19.19
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -256,8 +256,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       effect:
-        specifier: ^4.0.0-beta.70
-        version: 4.0.0-beta.70
+        specifier: 4.0.0-beta.74
+        version: 4.0.0-beta.74
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -3816,10 +3816,10 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  effect@4.0.0-beta.70:
+  effect@4.0.0-beta.74:
     resolution:
       {
-        integrity: sha512-8AwGTRiNriirHGEYHrOS0E9fzdhIqCdZjiHP1YXmNo2UyPGS43ILsymsSHT7V0DJS+8dvlKq2RxnrDBUhDNZHg==,
+        integrity: sha512-Yx+Kh12U+i2FmjwEfKs+ePFmpMd43RPD1oGqc/VraSS9bYzvF0Ff3PojwEFEVEewp8xc92Uxu28gTspU4qyvHA==,
       }
 
   electron-to-chromium@1.5.361:
@@ -10092,7 +10092,7 @@ snapshots:
       es-errors: 1.3.0
       gopd: 1.2.0
 
-  effect@4.0.0-beta.70:
+  effect@4.0.0-beta.74:
     dependencies:
       "@standard-schema/spec": 1.1.0
       fast-check: 4.8.0

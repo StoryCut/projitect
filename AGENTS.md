@@ -165,7 +165,7 @@ Snapshot npm publishes on PR branches are a tracked follow-up.
 
 ## Effect v4 conventions
 
-This codebase is **Effect-native**. We use `effect@beta` (currently `4.0.0-beta.70`).
+This codebase is **Effect-native**. We use `effect@beta`, pinned to the exact `4.0.0-beta.74`.
 
 - **Services** use the `Context.Service<Self, Shape>()("id")` base class — e.g. `BlueprintFileSystem`
   in `@projitect/core`. (There is no `ServiceMap` module in v4; `Context` is where `Service` lives.)
