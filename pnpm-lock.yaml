@@ -118,13 +118,14 @@ importers:
         version: 5.9.3
 
   packages/blueprint:
+    dependencies:
+      "@nunofyobiz/effect-extras":
+        specifier: 1.0.0
+        version: 1.0.0(effect@4.0.0-beta.74)
     devDependencies:
       "@projitect/core":
         specifier: workspace:*
         version: link:../core
-      "@projitect/internal":
-        specifier: workspace:*
-        version: link:../internal
       "@projitect/test-kit":
         specifier: workspace:*
         version: link:../test-kit
@@ -187,6 +188,10 @@ importers:
         version: 5.9.3
 
   packages/cli-internals:
+    dependencies:
+      "@nunofyobiz/effect-extras":
+        specifier: 1.0.0
+        version: 1.0.0(effect@4.0.0-beta.74)
     devDependencies:
       "@projitect/blueprint":
         specifier: workspace:*
@@ -1751,6 +1756,15 @@ packages:
         integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==,
       }
     engines: { node: ">= 8" }
+
+  "@nunofyobiz/effect-extras@1.0.0":
+    resolution:
+      {
+        integrity: sha512-KTnJB4Vfu1v3rWBscC9e2MmfbJ8tTZu/vH81Og58SRw8BwdcopTm9Ok50jhGh+CnvTDDg23hZk9pf+4jx288dA==,
+      }
+    engines: { node: ">=22" }
+    peerDependencies:
+      effect: 4.0.0-beta.74
 
   "@oslojs/encoding@1.1.0":
     resolution:
@@ -8956,6 +8970,10 @@ snapshots:
     dependencies:
       "@nodelib/fs.scandir": 2.1.5
       fastq: 1.20.1
+
+  "@nunofyobiz/effect-extras@1.0.0(effect@4.0.0-beta.74)":
+    dependencies:
+      effect: 4.0.0-beta.74
 
   "@oslojs/encoding@1.1.0": {}
 

@@ -2,8 +2,9 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { spawn } from "node:child_process"
 import { Array, Effect, Match, Option, Predicate } from "effect"
+import { StructX } from "@nunofyobiz/effect-extras"
 import { Errors } from "@projitect/core"
-import { PredicateX, StructX } from "@projitect/internal"
+import { PredicateX } from "@projitect/internal"
 
 export type PackageManager = "pnpm" | "npm" | "yarn" | "bun"
 

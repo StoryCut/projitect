@@ -578,6 +578,24 @@ _As a maintainer, I want the 4 Dependabot alerts on the default branch resolved,
 
 ---
 
+## Epic: Shared utilities
+
+projitect's generic `*X` utilities live in the published `@nunofyobiz/effect-extras`. A slim
+`@projitect/internal` still holds the projitect-specific extras that haven't been upstreamed yet —
+the goal is to upstream them and delete it.
+
+### UTIL-1 — Upstream the remaining projitect-specific `*X` helpers
+
+_As a maintainer, I want the JSON-tree and line-editing helpers in `@projitect/internal` moved into `@nunofyobiz/effect-extras`, so that the slim private package can be deleted and every generic `*X` utility comes from one published source._
+
+- [ ] Open a PR on `@nunofyobiz/effect-extras` adding `PredicateX.isPlainObject`; `RecordX.deepMerge` / `deepMergeReducer` / `canonicalize` / `deleteByPath`; `StringX.replaceLineRange` / `insertBeforeLine` — each with exhaustive tests
+- [ ] After it publishes, bump `@nunofyobiz/effect-extras` here and repoint the surviving `@projitect/internal` imports (`cli-internals`: loader / pm / plan / differ / applier / remover / region / edit-pjt) to the package
+- [ ] Delete the `@projitect/internal` package (src, tests, root + `cli-internals` tsconfig refs, knip entry, eslint filename exception) and drop its `devDependency` from `cli-internals`
+- [ ] `check-all` + smoke green; AGENTS.md "Where utilities live" / "Check existing utilities first" drop the `@projitect/internal` residue
+  > Size: M
+
+---
+
 ## Shipped (v0 → v0.3)
 
 A record of what's already in code, checked off. Detail lives in git history on `main`; this is

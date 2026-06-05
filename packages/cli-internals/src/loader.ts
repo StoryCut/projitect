@@ -2,9 +2,10 @@ import path from "node:path"
 import { promises as fs } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { Array, Effect, Match, Predicate } from "effect"
+import { StructX } from "@nunofyobiz/effect-extras"
 import { Errors } from "@projitect/core"
 import type { BlueprintFileSystem, Blueprint } from "@projitect/core"
-import { PredicateX, StructX } from "@projitect/internal"
+import { PredicateX } from "@projitect/internal"
 import type { DirectoryBlueprint } from "@projitect/blueprint"
 
 /**

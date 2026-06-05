@@ -2,30 +2,6 @@ import { describe, expect, it } from "vitest"
 import { Option } from "effect"
 import { RecordX } from "../src/index.js"
 
-describe("RecordX.collectBy", () => {
-  it("collects an iterable into a record keyed by identify", () => {
-    const result = RecordX.collectBy(
-      [
-        { id: "a", n: 1 },
-        { id: "b", n: 2 },
-      ],
-      (x) => x.id,
-    )
-    expect(result).toEqual({ a: { id: "a", n: 1 }, b: { id: "b", n: 2 } })
-  })
-
-  it("last value wins on key collision", () => {
-    const result = RecordX.collectBy(
-      [
-        { id: "a", n: 1 },
-        { id: "a", n: 3 },
-      ],
-      (x) => x.id,
-    )
-    expect(result).toEqual({ a: { id: "a", n: 3 } })
-  })
-})
-
 describe("RecordX.deepMerge", () => {
   it("merges plain objects recursively", () => {
     expect(RecordX.deepMerge({ a: { x: 1 }, b: 2 }, { a: { y: 3 }, c: 4 })).toEqual({
@@ -104,17 +80,5 @@ describe("RecordX.deleteByPath", () => {
     const input = { a: { b: 1, c: 2 } }
     RecordX.deleteByPath(input, ["a", "b"])
     expect(input).toEqual({ a: { b: 1, c: 2 } })
-  })
-})
-
-describe("RecordX.modifyIfExists", () => {
-  const record: Record<string, number> = { a: 1 }
-
-  it("modifies an existing key", () => {
-    expect(RecordX.modifyIfExists(record, "a", (n) => n + 1)).toEqual({ a: 2 })
-  })
-
-  it("leaves the record unchanged when the key is absent", () => {
-    expect(RecordX.modifyIfExists(record, "b", (n) => n + 1)).toEqual({ a: 1 })
   })
 })

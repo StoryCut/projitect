@@ -69,7 +69,7 @@ One tool, one config, one command. Adapted from StoryCut's and effect-clue's fla
 - For files ESLint doesn't parse (MDX, YAML, JSON5, CSS) the `pnpm format` script invokes Prettier directly. `lint-staged` covers them automatically on commit.
 - The rule set is ported from StoryCut's: `typescript-eslint` **strict + stylistic** type-checked presets, `unicorn`'s **`flat/all`** preset, `eslint-plugin-import` (syntactic rules only — the resolver-backed ones are redundant with tsc), and StoryCut's core-quality rules (`eqeqeq`, `no-else-return`, `prefer-template`, `strict-boolean-expressions`, …). Each comes with a small list of overrides for rules that clash with Effect-heavy code (`unicorn/no-null`, `no-array-reduce`, `prefer-json-parse-buffer`, etc.) or with NodeNext resolution (`import/no-useless-path-segments` is omitted — it strips the `/index.js` NodeNext requires). See [eslint.config.js](./eslint.config.js) for the canonical list with rationale.
 - `eslint-plugin-package-json` validates every `package.json` in the monorepo: required fields, npm-standard property order, alphabetized dependencies. Catches "would-publish-but-broken" mistakes alongside the `publish-dry-run` CI job.
-- Filenames are kebab-case (`unicorn/filename-case`), except the `*X` modules in `@projitect/internal`, which keep their PascalCase namespace names.
+- Filenames are kebab-case (`unicorn/filename-case`), except the `*X` modules in `@projitect/internal` — the projitect-specific residue of the `*X` suite, whose generic modules now live in `@nunofyobiz/effect-extras` — which keep their PascalCase namespace names.
 
 Per-package sandbox enforcement at lint time (the "soft" half of the soft sandbox):
 
@@ -247,10 +247,10 @@ if (String.isNonEmpty(str)) { ... }           // instead of: str.length > 0
 if (Array.isArrayNonEmpty(arr)) { ... }       // instead of: arr.length > 0
 ```
 
-A compound predicate worth reusing (e.g. an `isNonEmptyString` that combines `isNotNullish`,
-`isString`, and `String.isNonEmpty`) belongs in a `PredicateX` module in `@projitect/internal` —
-see [FP mindset](#fp-mindset) for where utilities live. Create it the first time a second call
-site wants it.
+A compound predicate worth reusing (e.g. `isNonEmptyString`, which combines `isNotNullish`,
+`isString`, and `String.isNonEmpty`) lives in `@nunofyobiz/effect-extras`'s `PredicateX` — import
+it from there rather than re-deriving it. See [FP mindset](#fp-mindset) for the full hierarchy of
+where utilities live.
 
 ### Dual functions
 
@@ -349,9 +349,10 @@ Result.match(planResult, {
 
 > `tsconfig.base.json` sets `exactOptionalPropertyTypes: true` (required by Effect Schema), so
 > spreading `{ key: undefined }` into an object whose key is `key?: T` is a type error — the
-> property must be _absent_, not present-but-undefined. A `StructX` module in `@projitect/core`
-> (conditional object-field construction: `defined`, `filterDefined`, `some`) is the canonical
-> fix; create it the first time this friction appears. See [FP mindset](#fp-mindset).
+> property must be _absent_, not present-but-undefined. `@nunofyobiz/effect-extras`'s `StructX`
+> (conditional object-field construction: `defined`, `filterDefined`, `some`, `truthy`) is the
+> canonical fix — `StructX.defined("key", maybeUndefined)` yields `{}` or `{ key: value }`. See
+> [FP mindset](#fp-mindset).
 
 ## No type assertions
 
@@ -366,8 +367,8 @@ reach for a cast, the right answer is usually one of:
 - A return-type annotation or `satisfies` — when you just need to pin a literal's type
 
 If none of those work, that's a sign the shape is wrong. The one sanctioned exception is the
-generic type-manipulation inside `@projitect/internal`'s `*X` utilities, where a contained cast at
-the boundary is sometimes unavoidable.
+generic type-manipulation inside the `*X` utilities (in `@nunofyobiz/effect-extras`, or the slim
+`@projitect/internal` residue), where a contained cast at the boundary is sometimes unavoidable.
 
 ## FP mindset
 
@@ -387,8 +388,10 @@ Before writing inline transformation logic, ask in order:
    `HashSet`, etc. The Effect modules are wide and well-tested — most "manipulate this data shape"
    needs already exist there.
    When you're unsure what's available, check the [Effect docs](https://effect.website/).
-2. Does a generic utility already exist in `@projitect/internal`? The `*X` modules
-   (`StructX`, `RecordX`, …) extend the corresponding Effect module with patterns we repeat.
+2. Does a generic utility already exist in `@nunofyobiz/effect-extras`? Its `*X` modules
+   (`StructX`, `RecordX`, `ArrayX`, `OptionX`, …) extend the corresponding Effect module with
+   patterns we repeat. (A few projitect-specific extras live in the slim `@projitect/internal` —
+   see [Where utilities live](#where-utilities-live).)
 3. Can the logic be expressed as a generic utility another call site could reuse?
 
 If yes to any: use or extract it. The calling code stays focused on intent while the utility
@@ -399,8 +402,8 @@ recognizable transformation, that cluster is a utility waiting to be named:
 
 1. **Name it in the abstract** — strip the domain nouns and describe what the steps do to the data
    shape (e.g. "filter to present items, then group by key").
-2. **Check Effect and `@projitect/internal`** — does an equivalent already exist? If so, replace
-   the cluster with it.
+2. **Check Effect and `@nunofyobiz/effect-extras`** — does an equivalent already exist? If so,
+   replace the cluster with it.
 3. **If not, extract it** — implement a generic, `dual`-compatible function in the appropriate
    `*X` module, replace the inline steps with a single call, and add exhaustive tests.
 
@@ -477,26 +480,44 @@ same move as the config cascade, applied to domain data.
 
 - **`effect`** (the library) — the first place to look for generic data-manipulation primitives.
   If `Array.foo` already does what you want, use it directly.
-- **`@projitect/internal`** — the shared home for projitect's generic `*X` utilities. It is a
-  **private, never-published** package (`"private": true`) whose code is bundled into each
-  consuming package at build time, so the modules are written once and reachable from every
-  package without ever appearing on npm. Modules are PascalCase (`StructX`, `RecordX`, …),
-  imported as namespaces (`import { StructX } from "@projitect/internal"`), and adapted from
-  StoryCut's `lib/*X` suite. They stay `node:*`-free.
+- **`@nunofyobiz/effect-extras`** — the external home for projitect's generic `*X` utilities, a
+  normal published dependency (peer: `effect@4.0.0-beta.74`, the exact version we pin). It is the
+  `*X` suite adapted from StoryCut's `lib/*X` — `StructX`, `RecordX`, `ArrayX`, `OptionX`,
+  `PredicateX`, `NonNullableX`, `StringX`, `ResultX`, `OrderX`, `SchemaX`, and more. Modules are
+  PascalCase, imported as namespaces (`import { StructX } from "@nunofyobiz/effect-extras"`), and
+  stay `node:*`-free. New generic utilities belong **here** — open a PR upstream rather than
+  re-adding them locally.
+- **`@projitect/internal`** — a slim, **private, never-published** package (`"private": true`,
+  bundled into the consuming package at build time) holding only the projitect-specific `*X` extras
+  not yet upstreamed to `@nunofyobiz/effect-extras`: `RecordX` JSON-tree ops (`deepMerge`,
+  `deepMergeReducer`, `canonicalize`, `deleteByPath`), `StringX` line-editing (`replaceLineRange`,
+  `insertBeforeLine`), and `PredicateX.isPlainObject`. When one of these graduates upstream, delete
+  it from here.
 - A utility used by only one package can still start local to that package and graduate to
-  `@projitect/internal` the moment a second package wants it.
+  `@nunofyobiz/effect-extras` (or, if projitect-specific, `@projitect/internal`) once a second
+  package wants it.
 
 ### Check existing utilities first
 
-`@projitect/internal` ships these modules — check here before writing a new one:
+`@nunofyobiz/effect-extras` ships a wide `*X` surface — check there before writing a new one:
 
-| Module         | What it covers                                                                                         |
-| -------------- | ------------------------------------------------------------------------------------------------------ |
-| `StructX`      | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `truthy`, …) |
-| `PredicateX`   | `isNonEmptyString`, `isPlainObject` (no `Predicate.isRecord` in v4), `matchRefine`                     |
-| `NonNullableX` | `match` (nullable/non-nullable branches), `map`, `lift`                                                |
-| `RecordX`      | `collectBy`, `deepMerge`, `deepMergeReducer`, `canonicalize`, `deleteByPath`, `modifyIfExists`, …      |
-| `StringX`      | `surround`, `splitLines`, `replaceLineRange`, `insertBeforeLine`                                       |
+| Module                                                                             | What it covers                                                                                              |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `StructX`                                                                          | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `some`, `truthy`) |
+| `PredicateX`                                                                       | `isNonEmptyString`, `matchRefine`                                                                           |
+| `NonNullableX`                                                                     | `match` (nullable/non-nullable branches), `map`, `lift`, `fromNullableOrThrow`, `nullableOrder`             |
+| `RecordX`                                                                          | `collectBy`, `modifyIfExists`, `upsert`, `getOrThrow`, `keysAs`, `isNonEmptyRecord`                         |
+| `StringX`                                                                          | `prepend`, `surround`, `ensurePrepend`                                                                      |
+| `OrderX`                                                                           | `rankedEnum`                                                                                                |
+| `ArrayX`, `OptionX`, `ResultX`, `SchemaX`, `EffectX`, `MapX`, `SetX`, `NumberX`, … | the rest of the Effect-module extensions — browse the package                                               |
+
+The slim `@projitect/internal` holds only the projitect-specific extras not yet upstreamed:
+
+| Module       | What it covers                                                               |
+| ------------ | ---------------------------------------------------------------------------- |
+| `PredicateX` | `isPlainObject` (no `Predicate.isRecord` in v4 — the "is this JSON?" guard)  |
+| `RecordX`    | `deepMerge`, `deepMergeReducer`, `canonicalize`, `deleteByPath` (JSON trees) |
+| `StringX`    | `replaceLineRange`, `insertBeforeLine` (line-range text editing)             |
 
 ### Illustrative patterns
 
@@ -507,8 +528,8 @@ These are the _shapes_ to reach for, named generically — not references to exi
 - **`chunkBy`** — group _consecutive_ items by a key, instead of a manual loop tracking
   "current group" state.
 
-When you find yourself writing either by hand, that's the signal to check Effect / `@projitect/core`
-first and extract if it's missing.
+When you find yourself writing either by hand, that's the signal to check Effect /
+`@nunofyobiz/effect-extras` first and extract (or upstream) it if it's missing.
 
 ### Designing a good utility
 
@@ -575,9 +596,9 @@ const sorted = Array.sort(
 | `Array.sort(array, order)`                | Sort an array by a single order             |
 | `Array.sortBy(order1, order2, ...)`       | Sort an array by multiple orders (combined) |
 
-Specialized helpers — sorting enum-like values by explicit rank (`rankedEnum`), or wrapping an
-order to push nulls last (`nullableOrder`) — belong in an `OrderX` / `NonNullableX` module in
-`@projitect/internal`; create them the first time they're needed rather than re-deriving inline.
+Specialized helpers — sorting enum-like values by explicit rank (`OrderX.rankedEnum`), or wrapping
+an order to push nulls last (`NonNullableX.nullableOrder`) — come from `@nunofyobiz/effect-extras`;
+import them rather than re-deriving inline.
 
 ### Composing and applying
 

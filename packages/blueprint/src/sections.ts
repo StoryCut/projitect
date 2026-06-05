@@ -18,8 +18,8 @@
  * to bundle — the blueprint author always provides their own.
  */
 
+import { StructX } from "@nunofyobiz/effect-extras"
 import type { Blueprint, Permission } from "@projitect/core"
-import { StructX } from "@projitect/internal"
 import { regionFile } from "./constructors.js"
 
 export interface SectionSpec {

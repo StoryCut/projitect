@@ -2,7 +2,7 @@
   "name": "@projitect/internal",
   "version": "0.0.0",
   "private": true,
-  "description": "Private, never-published generic utilities (Effect-extension *X modules). Bundled into the published packages at build time.",
+  "description": "Private, never-published projitect-specific Effect-extension helpers not yet upstreamed to @nunofyobiz/effect-extras (RecordX JSON-tree ops, StringX line-editing, PredicateX.isPlainObject). Bundled into the consuming package at build time.",
   "license": "MIT",
   "type": "module",
   "exports": {
