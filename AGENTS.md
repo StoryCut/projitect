@@ -483,7 +483,7 @@ same move as the config cascade, applied to domain data.
 - **`@nunofyobiz/effect-extras`** — the external home for projitect's generic `*X` utilities, a
   normal published dependency (peer: `effect@4.0.0-beta.74`, the exact version we pin). It is the
   `*X` suite adapted from StoryCut's `lib/*X` — `StructX`, `RecordX`, `ArrayX`, `OptionX`,
-  `PredicateX`, `NonNullableX`, `StringX`, `ResultX`, `OrderX`, `SchemaX`, and more. Modules are
+  `PredicateX`, `NonNullableX`, `StringX`, `ResultX`, `OrderX`, `SchemaX`, `WarnResult`, and more. Modules are
   PascalCase, imported as namespaces (`import { StructX } from "@nunofyobiz/effect-extras"`), and
   stay `node:*`-free. New generic utilities belong **here** — open a PR upstream rather than
   re-adding them locally.
@@ -501,15 +501,16 @@ same move as the config cascade, applied to domain data.
 
 `@nunofyobiz/effect-extras` ships a wide `*X` surface — check there before writing a new one:
 
-| Module                                                                             | What it covers                                                                                              |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `StructX`                                                                          | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `some`, `truthy`) |
-| `PredicateX`                                                                       | `isNonEmptyString`, `matchRefine`                                                                           |
-| `NonNullableX`                                                                     | `match` (nullable/non-nullable branches), `map`, `lift`, `fromNullableOrThrow`, `nullableOrder`             |
-| `RecordX`                                                                          | `collectBy`, `modifyIfExists`, `upsert`, `getOrThrow`, `keysAs`, `isNonEmptyRecord`                         |
-| `StringX`                                                                          | `prepend`, `surround`, `ensurePrepend`                                                                      |
-| `OrderX`                                                                           | `rankedEnum`                                                                                                |
-| `ArrayX`, `OptionX`, `ResultX`, `SchemaX`, `EffectX`, `MapX`, `SetX`, `NumberX`, … | the rest of the Effect-module extensions — browse the package                                               |
+| Module                                                                             | What it covers                                                                                                                                           |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StructX`                                                                          | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `some`, `truthy`)                                              |
+| `PredicateX`                                                                       | `isNonEmptyString`, `matchRefine`                                                                                                                        |
+| `NonNullableX`                                                                     | `match` (nullable/non-nullable branches), `map`, `lift`, `fromNullableOrThrow`, `nullableOrder`                                                          |
+| `RecordX`                                                                          | `collectBy`, `modifyIfExists`, `upsert`, `getOrThrow`, `keysAs`, `isNonEmptyRecord`                                                                      |
+| `StringX`                                                                          | `prepend`, `surround`, `ensurePrepend`                                                                                                                   |
+| `OrderX`                                                                           | `rankedEnum`                                                                                                                                             |
+| `WarnResult`                                                                       | inclusive-or result — a success value, warnings, or both (`SuccessOnly` / `WarningsOnly` / `SuccessWithWarnings`; `match`, `mapSuccess` / `mapWarnings`) |
+| `ArrayX`, `OptionX`, `ResultX`, `SchemaX`, `EffectX`, `MapX`, `SetX`, `NumberX`, … | the rest of the Effect-module extensions — browse the package                                                                                            |
 
 The slim `@projitect/internal` holds only the projitect-specific extras not yet upstreamed:
 

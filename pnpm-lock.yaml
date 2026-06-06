@@ -120,8 +120,8 @@ importers:
   packages/blueprint:
     dependencies:
       "@nunofyobiz/effect-extras":
-        specifier: 1.0.0
-        version: 1.0.0(effect@4.0.0-beta.74)
+        specifier: 2.0.0
+        version: 2.0.0(effect@4.0.0-beta.74)
     devDependencies:
       "@projitect/core":
         specifier: workspace:*
@@ -190,8 +190,8 @@ importers:
   packages/cli-internals:
     dependencies:
       "@nunofyobiz/effect-extras":
-        specifier: 1.0.0
-        version: 1.0.0(effect@4.0.0-beta.74)
+        specifier: 2.0.0
+        version: 2.0.0(effect@4.0.0-beta.74)
     devDependencies:
       "@projitect/blueprint":
         specifier: workspace:*
@@ -1757,10 +1757,10 @@ packages:
       }
     engines: { node: ">= 8" }
 
-  "@nunofyobiz/effect-extras@1.0.0":
+  "@nunofyobiz/effect-extras@2.0.0":
     resolution:
       {
-        integrity: sha512-KTnJB4Vfu1v3rWBscC9e2MmfbJ8tTZu/vH81Og58SRw8BwdcopTm9Ok50jhGh+CnvTDDg23hZk9pf+4jx288dA==,
+        integrity: sha512-2S4sXnCLfn0IKsnkAUHj8gekpPK+7uB6XdPDHwvwebAyjhND6UonMlhBCzZm7Siq8GUwuw6RS3nH8kcLDMyjiQ==,
       }
     engines: { node: ">=22" }
     peerDependencies:
@@ -8971,7 +8971,7 @@ snapshots:
       "@nodelib/fs.scandir": 2.1.5
       fastq: 1.20.1
 
-  "@nunofyobiz/effect-extras@1.0.0(effect@4.0.0-beta.74)":
+  "@nunofyobiz/effect-extras@2.0.0(effect@4.0.0-beta.74)":
     dependencies:
       effect: 4.0.0-beta.74
 

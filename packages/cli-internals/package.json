@@ -25,7 +25,7 @@
     "tc": "tsc --build"
   },
   "dependencies": {
-    "@nunofyobiz/effect-extras": "1.0.0"
+    "@nunofyobiz/effect-extras": "2.0.0"
   },
   "devDependencies": {
     "@projitect/blueprint": "workspace:*",
