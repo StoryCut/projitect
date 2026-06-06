@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { Effect, Match } from "effect"
-import { RecordX } from "@projitect/internal"
+import { RecordX } from "@nunofyobiz/effect-extras"
 import type { Errors } from "@projitect/core"
 import type { FilePlan, ProjectPlan, RegionPlanFile, MergePlanFile } from "./plan.js"
 import { findRegion, renderRegion, upsertRegion } from "./region.js"

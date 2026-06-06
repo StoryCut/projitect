@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { Effect } from "effect"
 import { Errors } from "@projitect/core"
-import { StringX } from "@projitect/internal"
+import { StringX } from "@nunofyobiz/effect-extras"
 
 const IMPORTS_START = "// pjt:imports start"
 const IMPORTS_END = "// pjt:imports end"

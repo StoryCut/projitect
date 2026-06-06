@@ -58,9 +58,6 @@ importers:
       prettier:
         specifier: ^3.4.0
         version: 3.8.3
-      tstyche:
-        specifier: ^4.0.0
-        version: 4.3.0(typescript@5.9.3)
       tsx:
         specifier: ^4.22.3
         version: 4.22.3
@@ -120,8 +117,8 @@ importers:
   packages/blueprint:
     dependencies:
       "@nunofyobiz/effect-extras":
-        specifier: 2.0.0
-        version: 2.0.0(effect@4.0.0-beta.74)
+        specifier: 3.0.0
+        version: 3.0.0(effect@4.0.0-beta.74)
     devDependencies:
       "@projitect/core":
         specifier: workspace:*
@@ -190,8 +187,8 @@ importers:
   packages/cli-internals:
     dependencies:
       "@nunofyobiz/effect-extras":
-        specifier: 2.0.0
-        version: 2.0.0(effect@4.0.0-beta.74)
+        specifier: 3.0.0
+        version: 3.0.0(effect@4.0.0-beta.74)
     devDependencies:
       "@projitect/blueprint":
         specifier: workspace:*
@@ -199,9 +196,6 @@ importers:
       "@projitect/core":
         specifier: workspace:*
         version: link:../core
-      "@projitect/internal":
-        specifier: workspace:*
-        version: link:../internal
       "@types/node":
         specifier: ^22.10.0
         version: 22.19.19
@@ -213,15 +207,6 @@ importers:
         version: 5.9.3
 
   packages/core:
-    devDependencies:
-      effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
-  packages/internal:
     devDependencies:
       effect:
         specifier: 4.0.0-beta.74
@@ -1757,10 +1742,10 @@ packages:
       }
     engines: { node: ">= 8" }
 
-  "@nunofyobiz/effect-extras@2.0.0":
+  "@nunofyobiz/effect-extras@3.0.0":
     resolution:
       {
-        integrity: sha512-2S4sXnCLfn0IKsnkAUHj8gekpPK+7uB6XdPDHwvwebAyjhND6UonMlhBCzZm7Siq8GUwuw6RS3nH8kcLDMyjiQ==,
+        integrity: sha512-Fp5qrpPb7jcdwnp5AHmxK8LzUOXWLiCdkIpZ4wj8gQFMahbrVHxRaqZv+6VZuW8dEh8UiXJOf4HzygdDjbO/Pg==,
       }
     engines: { node: ">=22" }
     peerDependencies:
@@ -7396,19 +7381,6 @@ packages:
         integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==,
       }
 
-  tstyche@4.3.0:
-    resolution:
-      {
-        integrity: sha512-X5mSVCivhCSDKHr9tWfCH0kmEo5cLApZILK5XfssTIirc9wEvcSYhCaixj5TSR/39cIC7U5TQD+wtGKsYh7nlw==,
-      }
-    engines: { node: ">=20.9" }
-    hasBin: true
-    peerDependencies:
-      typescript: ">=4.7"
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
   tsx@4.22.3:
     resolution:
       {
@@ -8971,7 +8943,7 @@ snapshots:
       "@nodelib/fs.scandir": 2.1.5
       fastq: 1.20.1
 
-  "@nunofyobiz/effect-extras@2.0.0(effect@4.0.0-beta.74)":
+  "@nunofyobiz/effect-extras@3.0.0(effect@4.0.0-beta.74)":
     dependencies:
       effect: 4.0.0-beta.74
 
@@ -12905,10 +12877,6 @@ snapshots:
 
   tslib@2.8.1:
     optional: true
-
-  tstyche@4.3.0(typescript@5.9.3):
-    optionalDependencies:
-      typescript: 5.9.3
 
   tsx@4.22.3:
     dependencies:

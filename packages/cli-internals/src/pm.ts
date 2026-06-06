@@ -2,9 +2,8 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { spawn } from "node:child_process"
 import { Array, Effect, Match, Option, Predicate } from "effect"
-import { StructX } from "@nunofyobiz/effect-extras"
+import { PredicateX, StructX } from "@nunofyobiz/effect-extras"
 import { Errors } from "@projitect/core"
-import { PredicateX } from "@projitect/internal"
 
 export type PackageManager = "pnpm" | "npm" | "yarn" | "bun"
 
@@ -116,11 +115,11 @@ export const readProjitectMetadata = (params: {
     const pkgJsonPath = path.join(params.projectRoot, "node_modules", params.pkg, "package.json")
     try {
       const parsed: unknown = JSON.parse(await fs.readFile(pkgJsonPath, "utf8"))
-      if (!PredicateX.isPlainObject(parsed)) {
+      if (!PredicateX.unsafeIsRecord(parsed)) {
         return null
       }
       const meta = parsed["projitect"]
-      if (!PredicateX.isPlainObject(meta)) {
+      if (!PredicateX.unsafeIsRecord(meta)) {
         return null
       }
       const type = meta["type"]

@@ -20,7 +20,6 @@
     "tc:clean": "tsc --build --clean",
     "tc:watch": "tsc --build --watch",
     "test": "vitest run",
-    "test:types": "tstyche",
     "test:watch": "vitest",
     "version-packages": "changeset version"
   },
@@ -50,7 +49,6 @@
     "knip": "^6.0.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.4.0",
-    "tstyche": "^4.0.0",
     "tsx": "^4.22.3",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.18.0",

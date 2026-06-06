@@ -1,5 +1,5 @@
 import { Data, Effect, String } from "effect"
-import { StringX } from "@projitect/internal"
+import { StringX } from "@nunofyobiz/effect-extras"
 import { Errors } from "@projitect/core"
 
 /**

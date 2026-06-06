@@ -69,7 +69,7 @@ One tool, one config, one command. Adapted from StoryCut's and effect-clue's fla
 - For files ESLint doesn't parse (MDX, YAML, JSON5, CSS) the `pnpm format` script invokes Prettier directly. `lint-staged` covers them automatically on commit.
 - The rule set is ported from StoryCut's: `typescript-eslint` **strict + stylistic** type-checked presets, `unicorn`'s **`flat/all`** preset, `eslint-plugin-import` (syntactic rules only — the resolver-backed ones are redundant with tsc), and StoryCut's core-quality rules (`eqeqeq`, `no-else-return`, `prefer-template`, `strict-boolean-expressions`, …). Each comes with a small list of overrides for rules that clash with Effect-heavy code (`unicorn/no-null`, `no-array-reduce`, `prefer-json-parse-buffer`, etc.) or with NodeNext resolution (`import/no-useless-path-segments` is omitted — it strips the `/index.js` NodeNext requires). See [eslint.config.js](./eslint.config.js) for the canonical list with rationale.
 - `eslint-plugin-package-json` validates every `package.json` in the monorepo: required fields, npm-standard property order, alphabetized dependencies. Catches "would-publish-but-broken" mistakes alongside the `publish-dry-run` CI job.
-- Filenames are kebab-case (`unicorn/filename-case`), except the `*X` modules in `@projitect/internal` — the projitect-specific residue of the `*X` suite, whose generic modules now live in `@nunofyobiz/effect-extras` — which keep their PascalCase namespace names.
+- Filenames are kebab-case (`unicorn/filename-case`) — uniformly, now that the PascalCase `*X` utility modules live in the external `@nunofyobiz/effect-extras` rather than in this repo.
 
 Per-package sandbox enforcement at lint time (the "soft" half of the soft sandbox):
 
@@ -367,8 +367,8 @@ reach for a cast, the right answer is usually one of:
 - A return-type annotation or `satisfies` — when you just need to pin a literal's type
 
 If none of those work, that's a sign the shape is wrong. The one sanctioned exception is the
-generic type-manipulation inside the `*X` utilities (in `@nunofyobiz/effect-extras`, or the slim
-`@projitect/internal` residue), where a contained cast at the boundary is sometimes unavoidable.
+generic type-manipulation inside the `*X` utilities (in `@nunofyobiz/effect-extras`), where a
+contained cast at the boundary is sometimes unavoidable.
 
 ## FP mindset
 
@@ -390,8 +390,7 @@ Before writing inline transformation logic, ask in order:
    When you're unsure what's available, check the [Effect docs](https://effect.website/).
 2. Does a generic utility already exist in `@nunofyobiz/effect-extras`? Its `*X` modules
    (`StructX`, `RecordX`, `ArrayX`, `OptionX`, …) extend the corresponding Effect module with
-   patterns we repeat. (A few projitect-specific extras live in the slim `@projitect/internal` —
-   see [Where utilities live](#where-utilities-live).)
+   patterns we repeat — see [Where utilities live](#where-utilities-live).
 3. Can the logic be expressed as a generic utility another call site could reuse?
 
 If yes to any: use or extract it. The calling code stays focused on intent while the utility
@@ -487,38 +486,28 @@ same move as the config cascade, applied to domain data.
   PascalCase, imported as namespaces (`import { StructX } from "@nunofyobiz/effect-extras"`), and
   stay `node:*`-free. New generic utilities belong **here** — open a PR upstream rather than
   re-adding them locally.
-- **`@projitect/internal`** — a slim, **private, never-published** package (`"private": true`,
-  bundled into the consuming package at build time) holding only the projitect-specific `*X` extras
-  not yet upstreamed to `@nunofyobiz/effect-extras`: `RecordX` JSON-tree ops (`deepMerge`,
-  `deepMergeReducer`, `canonicalize`, `deleteByPath`), `StringX` line-editing (`replaceLineRange`,
-  `insertBeforeLine`), and `PredicateX.isPlainObject`. When one of these graduates upstream, delete
-  it from here.
-- A utility used by only one package can still start local to that package and graduate to
-  `@nunofyobiz/effect-extras` (or, if projitect-specific, `@projitect/internal`) once a second
-  package wants it.
+- A utility used by only one package can start local to that package, then graduate to
+  `@nunofyobiz/effect-extras` (open a PR upstream) once it's generic enough or a second package
+  wants it. projitect keeps **no** in-repo `*X` package — every generic helper it once carried
+  (`unsafeIsRecord`, the `RecordX` JSON-tree ops, the `StringX` line-editing helpers) now lives
+  upstream.
 
 ### Check existing utilities first
 
 `@nunofyobiz/effect-extras` ships a wide `*X` surface — check there before writing a new one:
 
-| Module                                                                             | What it covers                                                                                                                                           |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StructX`                                                                          | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `some`, `truthy`)                                              |
-| `PredicateX`                                                                       | `isNonEmptyString`, `matchRefine`                                                                                                                        |
-| `NonNullableX`                                                                     | `match` (nullable/non-nullable branches), `map`, `lift`, `fromNullableOrThrow`, `nullableOrder`                                                          |
-| `RecordX`                                                                          | `collectBy`, `modifyIfExists`, `upsert`, `getOrThrow`, `keysAs`, `isNonEmptyRecord`                                                                      |
-| `StringX`                                                                          | `prepend`, `surround`, `ensurePrepend`                                                                                                                   |
-| `OrderX`                                                                           | `rankedEnum`                                                                                                                                             |
-| `WarnResult`                                                                       | inclusive-or result — a success value, warnings, or both (`SuccessOnly` / `WarningsOnly` / `SuccessWithWarnings`; `match`, `mapSuccess` / `mapWarnings`) |
-| `ArrayX`, `OptionX`, `ResultX`, `SchemaX`, `EffectX`, `MapX`, `SetX`, `NumberX`, … | the rest of the Effect-module extensions — browse the package                                                                                            |
+| Module                                                                             | What it covers                                                                                                                                                   |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StructX`                                                                          | conditional object fields under `exactOptionalPropertyTypes` (`defined`, `filterDefined`, `some`, `truthy`)                                                      |
+| `PredicateX`                                                                       | `isNonEmptyString`, `matchRefine`, `unsafeIsRecord` (the "is this a JSON object" guard — no `Predicate.isRecord` in v4)                                          |
+| `NonNullableX`                                                                     | `match` (nullable/non-nullable branches), `map`, `lift`, `fromNullableOrThrow`, `nullableOrder`                                                                  |
+| `RecordX`                                                                          | `collectBy`, `modifyIfExists`, `upsert`, `getOrThrow`, `keysAs`, `isNonEmptyRecord`; JSON trees: `deepMerge`, `deepMergeReducer`, `canonicalize`, `deleteByPath` |
+| `StringX`                                                                          | `prepend`, `surround`, `ensurePrepend`, `replaceLineRange`, `insertBeforeLine`                                                                                   |
+| `OrderX`                                                                           | `rankedEnum`                                                                                                                                                     |
+| `WarnResult`                                                                       | inclusive-or result — a success value, warnings, or both (`SuccessOnly` / `WarningsOnly` / `SuccessWithWarnings`; `match`, `mapSuccess` / `mapWarnings`)         |
+| `ArrayX`, `OptionX`, `ResultX`, `SchemaX`, `EffectX`, `MapX`, `SetX`, `NumberX`, … | the rest of the Effect-module extensions — browse the package                                                                                                    |
 
-The slim `@projitect/internal` holds only the projitect-specific extras not yet upstreamed:
-
-| Module       | What it covers                                                               |
-| ------------ | ---------------------------------------------------------------------------- |
-| `PredicateX` | `isPlainObject` (no `Predicate.isRecord` in v4 — the "is this JSON?" guard)  |
-| `RecordX`    | `deepMerge`, `deepMergeReducer`, `canonicalize`, `deleteByPath` (JSON trees) |
-| `StringX`    | `replaceLineRange`, `insertBeforeLine` (line-range text editing)             |
+These all now live upstream — projitect carries no in-repo `*X` package.
 
 ### Illustrative patterns
 

@@ -3,9 +3,6 @@
   "workspaces": {
     ".": {
       "entry": [".claude/skills/kanban/scripts/*.ts"]
-    },
-    "packages/internal": {
-      "entry": ["src/**/*.ts", "test/**/*.tst.ts"]
     }
   }
 }

@@ -307,23 +307,6 @@ export default tseslint.config(
     },
   },
 
-  // ===== @projitect/internal: the *X utility modules keep their PascalCase names =====
-  //
-  // The Effect-extension modules (`RecordX`, `StringX`, `PredicateX`) are named in PascalCase by
-  // convention — the namespace and the file match, and AGENTS.md refers to them that way. The
-  // generic `*X` surface lives in `@nunofyobiz/effect-extras`; this package holds only the
-  // projitect-specific helpers not yet upstreamed there. Allow PascalCase filenames here;
-  // kebab-case still covers `index.ts`.
-  {
-    files: ["packages/internal/**/*.ts"],
-    rules: {
-      "unicorn/filename-case": [
-        "error",
-        { cases: { kebabCase: true, pascalCase: true } },
-      ],
-    },
-  },
-
   // ===== @projitect/test-kit is an in-memory FS by definition =====
   //
   // If a test-kit consumer needs real disk access in their tests, they should bypass
