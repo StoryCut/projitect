@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
 import { Array, Effect, Match, Option } from "effect"
-import { PredicateX, RecordX, StringX } from "@projitect/internal"
+import { PredicateX, RecordX, StringX } from "@nunofyobiz/effect-extras"
 import type { Errors, PjtLock } from "@projitect/core"
 import { findRegion } from "./region.js"
 
@@ -75,7 +75,7 @@ const removeMergeKeys = async (full: string, keys: readonly string[]): Promise<b
   } catch {
     return false
   }
-  if (!PredicateX.isPlainObject(parsed)) {
+  if (!PredicateX.unsafeIsRecord(parsed)) {
     return false
   }
 

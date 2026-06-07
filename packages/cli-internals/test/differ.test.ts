@@ -224,7 +224,7 @@ describe("diffPlan — seed kind", () => {
   })
 })
 
-// Deep-merge behavior is covered by @projitect/internal's RecordX.deepMerge tests.
+// Deep-merge behavior is covered by @nunofyobiz/effect-extras' RecordX.deepMerge tests.
 
 describe("renderPlanDiff", () => {
   it("short-circuits to a single 'in sync' line when nothing drifts", () => {

@@ -1,5 +1,5 @@
+import { StructX } from "@nunofyobiz/effect-extras"
 import { ProjitectConfig } from "@projitect/core"
-import { StructX } from "@projitect/internal"
 
 /** Partial config with mutable properties — for building up an override layer locally. */
 export type WritablePartialConfig = {

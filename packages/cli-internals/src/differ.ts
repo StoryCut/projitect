@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs"
 import path from "node:path"
 import { Array, Effect, Match } from "effect"
 import type { PjtLock, Errors } from "@projitect/core"
-import { RecordX } from "@projitect/internal"
+import { RecordX } from "@nunofyobiz/effect-extras"
 import { findRegion } from "./region.js"
 import type {
   FilePlan,

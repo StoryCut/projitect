@@ -1,7 +1,7 @@
 import { Effect } from "effect"
+import { StructX } from "@nunofyobiz/effect-extras"
 import type { Blueprint, Permission, Errors, BlueprintFileSystem } from "@projitect/core"
 import { ChangeSet } from "@projitect/core"
-import { StructX } from "@projitect/internal"
 
 /**
  * Spec for a region-mode blueprint: replace or insert the marked section in a shared text file.

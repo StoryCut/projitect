@@ -1,7 +1,7 @@
 import { Array, Data, Effect, Match, Option, Record, Schema, pipe } from "effect"
+import { NonNullableX, PredicateX, RecordX, StructX } from "@nunofyobiz/effect-extras"
 import { ChangeSet, Errors, PjtLock } from "@projitect/core"
 import type { Blueprint } from "@projitect/core"
-import { NonNullableX, PredicateX, RecordX, StructX } from "@projitect/internal"
 import { isDirectoryBlueprint } from "@projitect/blueprint"
 import type { DirectoryBlueprint } from "@projitect/blueprint"
 import { makeRealLayer } from "./filesystem-impl.js"

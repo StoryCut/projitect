@@ -2,9 +2,9 @@ import path from "node:path"
 import { promises as fs } from "node:fs"
 import { pathToFileURL } from "node:url"
 import { Array, Effect, Match, Predicate } from "effect"
+import { PredicateX, StructX } from "@nunofyobiz/effect-extras"
 import { Errors } from "@projitect/core"
 import type { BlueprintFileSystem, Blueprint } from "@projitect/core"
-import { PredicateX, StructX } from "@projitect/internal"
 import type { DirectoryBlueprint } from "@projitect/blueprint"
 
 /**
@@ -103,13 +103,13 @@ export const loadBlueprintFile = (params: {
 }
 
 const isProjitectFile = (v: unknown): v is ProjitectFile =>
-  PredicateX.isPlainObject(v) && v["_tag"] === "ProjitectConfig"
+  PredicateX.unsafeIsRecord(v) && v["_tag"] === "ProjitectConfig"
 
 const describe = (v: unknown): string =>
   Match.value(v).pipe(
     Match.when(Predicate.isUndefined, () => "undefined"),
     Match.when(Predicate.isNull, () => "null"),
     Match.when(Array.isArray, () => "Array"),
-    Match.when(PredicateX.isPlainObject, () => 'object without `_tag: "ProjitectConfig"`'),
+    Match.when(PredicateX.unsafeIsRecord, () => 'object without `_tag: "ProjitectConfig"`'),
     Match.orElse((value) => typeof value),
   )
