@@ -32,6 +32,9 @@
     "@projitect/core": "workspace:*",
     "effect": "4.0.0-beta.74"
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "projitect": {
     "type": "blueprint",
     "import": "import { tsconfig } from \"@projitect/blueprint-tsconfig\"",
