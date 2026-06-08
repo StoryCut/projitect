@@ -41,5 +41,17 @@
       matchFileNames: ["package.json", "apps/website/package.json"],
       rangeStrategy: "pin",
     },
+
+    /* ******************************************************
+     * SECTION: engines are floors, not pins
+     * Carve `engines` out of the `rangeStrategy: "pin"` rule above — `engines.node` is a deliberate
+     * floor, not a pin. Backstops the org-wide guard in nunofyobiz/renovate-config:js-base.json5.
+     * (pnpm lives only in `packageManager`, deliberately left Renovate-managed.)
+     ****************************************************** */
+    {
+      matchFileNames: ["package.json", "apps/website/package.json"],
+      matchDepTypes: ["engines"],
+      enabled: false,
+    },
   ],
 }

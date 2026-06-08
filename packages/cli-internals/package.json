@@ -38,5 +38,8 @@
     "@projitect/blueprint": "workspace:*",
     "@projitect/core": "workspace:*",
     "effect": "4.0.0-beta.74"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
