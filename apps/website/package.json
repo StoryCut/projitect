@@ -14,7 +14,7 @@
     "@astrojs/mdx": "^5.0.6",
     "@astrojs/starlight": "^0.39.0",
     "astro": "^6.0.0",
-    "sharp": "^0.34.0"
+    "sharp": "0.34.5"
   },
   "devDependencies": {
     "@projitect/blueprint": "workspace:*",
@@ -22,9 +22,9 @@
     "@projitect/blueprint-tsconfig": "workspace:*",
     "@projitect/blueprint-vitest": "workspace:*",
     "@projitect/core": "workspace:*",
-    "@types/node": "^22.10.0",
+    "@types/node": "22.19.19",
     "effect": "4.0.0-beta.74",
     "projitect": "workspace:*",
-    "typescript": "^5.7.0"
+    "typescript": "5.9.3"
   }
 }

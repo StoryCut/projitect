@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "effect": "4.0.0-beta.74",
-    "typescript": "^5.7.0"
+    "typescript": "5.9.3"
   },
   "peerDependencies": {
     "effect": "4.0.0-beta.74"
