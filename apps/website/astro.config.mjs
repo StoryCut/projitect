@@ -13,15 +13,15 @@ export default defineConfig({
       sidebar: [
         {
           label: "Start here",
-          autogenerate: { directory: "docs", collapsed: false },
+          items: [{ autogenerate: { directory: "docs", collapsed: false } }],
         },
         {
           label: "Examples",
-          autogenerate: { directory: "examples" },
+          items: [{ autogenerate: { directory: "examples" } }],
         },
         {
           label: "Errors",
-          autogenerate: { directory: "errors" },
+          items: [{ autogenerate: { directory: "errors" } }],
         },
       ],
       customCss: ["./src/styles/custom.css"],
