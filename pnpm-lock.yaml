@@ -15,7 +15,7 @@ importers:
         specifier: 2.31.0
         version: 2.31.0(@types/node@22.19.19)
       '@effect/language-service':
-        specifier: ^0.86.2
+        specifier: 0.86.2
         version: 0.86.2
       '@eslint-community/eslint-plugin-eslint-comments':
         specifier: 4.7.1
@@ -106,8 +106,8 @@ importers:
         specifier: 22.19.19
         version: 22.19.19
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       projitect:
         specifier: workspace:*
         version: link:../../packages/projitect
@@ -119,7 +119,7 @@ importers:
     dependencies:
       '@nunofyobiz/effect-extras':
         specifier: 3.0.0
-        version: 3.0.0(effect@4.0.0-beta.74)
+        version: 3.0.0(effect@4.0.0-beta.78)
     devDependencies:
       '@projitect/core':
         specifier: workspace:*
@@ -128,8 +128,8 @@ importers:
         specifier: workspace:*
         version: link:../test-kit
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -143,8 +143,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -161,8 +161,8 @@ importers:
         specifier: workspace:*
         version: link:../test-kit
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -179,8 +179,8 @@ importers:
         specifier: workspace:*
         version: link:../test-kit
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -189,7 +189,7 @@ importers:
     dependencies:
       '@nunofyobiz/effect-extras':
         specifier: 3.0.0
-        version: 3.0.0(effect@4.0.0-beta.74)
+        version: 3.0.0(effect@4.0.0-beta.78)
     devDependencies:
       '@projitect/blueprint':
         specifier: workspace:*
@@ -201,8 +201,8 @@ importers:
         specifier: 22.19.19
         version: 22.19.19
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -210,8 +210,8 @@ importers:
   packages/core:
     devDependencies:
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -235,8 +235,8 @@ importers:
         specifier: 22.19.19
         version: 22.19.19
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -247,8 +247,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       effect:
-        specifier: 4.0.0-beta.74
-        version: 4.0.0-beta.74
+        specifier: 4.0.0-beta.78
+        version: 4.0.0-beta.78
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -2231,8 +2231,8 @@ packages:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
     engines: {node: '>= 0.4'}
 
-  effect@4.0.0-beta.74:
-    resolution: {integrity: sha512-Yx+Kh12U+i2FmjwEfKs+ePFmpMd43RPD1oGqc/VraSS9bYzvF0Ff3PojwEFEVEewp8xc92Uxu28gTspU4qyvHA==}
+  effect@4.0.0-beta.78:
+    resolution: {integrity: sha512-j79Rl9QpHwMz/ZJWLNpZoiVj9N7zHqiLKN5EcYd/A8J1oqejILWQLfc4HPlvqHqKC8SK55LJ+X4gy4ONJ+JpfQ==}
 
   electron-to-chromium@1.5.361:
     resolution: {integrity: sha512-Q6Hts7N9FnJc5LeGRINFvLhCI9xZmNtTDe5ZbcVezQz7cU4a8Aua3GH1b8J2XY8Al9PF+OCwYqhgsOOheMdvkA==}
@@ -5430,9 +5430,9 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@nunofyobiz/effect-extras@3.0.0(effect@4.0.0-beta.74)':
+  '@nunofyobiz/effect-extras@3.0.0(effect@4.0.0-beta.78)':
     dependencies:
-      effect: 4.0.0-beta.74
+      effect: 4.0.0-beta.78
 
   '@oslojs/encoding@1.1.0': {}
 
@@ -6502,7 +6502,7 @@ snapshots:
       es-errors: 1.3.0
       gopd: 1.2.0
 
-  effect@4.0.0-beta.74:
+  effect@4.0.0-beta.78:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.8.0
